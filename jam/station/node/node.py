@@ -1,11 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Self, Sequence
 
 from uuid import uuid4, UUID
 
-DEFAULTS: dict[type, Any] = {int: 0, float: 0.0, int | float: 0.0}
-
-print(DEFAULTS[int | float])
+DEFAULTS: dict[type, Any] = {int: 0, float: 0.0, int | float: 0}
 
 
 def get_type_default[T](typ: type[T]) -> T:
@@ -15,8 +13,9 @@ def get_type_default[T](typ: type[T]) -> T:
 class Block:
     inputs: dict[str, type] = {}
     outputs: dict[str, type] = {}
+    config: dict[str, type] = {}
 
-    def __init__(self, uid: UUID | None = None):
+    def __init__(self, name: str | None = None, uid: UUID | None = None):
         self._uid: UUID = uid or uuid4()
         self._results: dict[str, Any] = {
             name: get_type_default(typ) for name, typ in self.outputs.items()
@@ -24,13 +23,17 @@ class Block:
         self._arguments: dict[str, Any] = {
             name: get_type_default(typ) for name, typ in self.inputs.items()
         }
+        self._configuration: dict[str, Any] = {
+            name: get_type_default(typ) for name, typ in self.config.items()
+        }
         self._stale: bool = False
+        self._name: str = name or self.__class__.__name__
 
     def __repr__(self) -> str:
         return f"{self}{self._arguments}{self._results}"
 
     def __str__(self) -> str:
-        return f"{block.name}<{block.uid}>"
+        return f"{self.name}<{self.uid}>"
 
     @property
     def uid(self) -> UUID:
@@ -38,13 +41,11 @@ class Block:
 
     @property
     def name(self) -> str:
-        return self.__class__.__name__
+        return self._name
 
     def __getitem__(self, name: str):
         if name not in self.outputs:
-            raise KeyError(
-                f"{name} is not an output of {Block.__class__.__name__} Block"
-            )
+            raise KeyError(f"{name} is not an output of the {self.name} Block")
 
         # If stale update the values
         if self._stale:
@@ -56,16 +57,27 @@ class Block:
     def __setitem__(self, name: str, value: Any):
         if name not in self.inputs:
             raise KeyError(f"{name} is not an argument of the {self.name} Block")
-        assert (
-            isinstance(value, self.inputs[name]),
-            f"{type(value)} is not type for the input"
-            f"{name} in the {self.name} Block",
-        )
+        assert isinstance(
+            value, self.inputs[name]
+        ), f"{type(value)} is not the type for the input {name} in the {self.name} Block"
 
         if self._arguments[name] == value:
             return
 
         self._arguments[name] = value
+        self._stale = True
+
+    def set_config(self, name: str, value: Any):
+        if name not in self.config:
+            raise KeyError(f"{name} is not a config of the {self.name} Block")
+        assert isinstance(
+            value, self.config[name]
+        ), f"{type(value)} is not the type for the config {name} in the {self.name} Block"
+
+        if self._configuration[name] == value:
+            return
+
+        self._configuration[name] = value
         self._stale = True
 
     def func(self, **kwargs) -> dict[str, Any]:
@@ -90,11 +102,9 @@ class VariableBlock(Block):
     def __setitem__(self, name: str, value: Any):
         if name not in self.outputs:
             raise KeyError(f"{name} if not an output of the {self.name} Block")
-        assert (
-            isinstance(value, self.outputs[name]),
-            f"{type(value)} is not type for the output"
-            f"{name} in the {self.name} Block",
-        )
+        assert isinstance(
+            value, self.outputs[name]
+        ), f"{type(value)} is not type for the output {name} in the {self.name} Block"
 
         self._results[name] = value
 
@@ -107,7 +117,7 @@ class Connection:
     target: Block
     input: str
 
-    uid: UUID
+    uid: UUID = field(default_factory=uuid4)
 
 
 class Graph:
@@ -119,12 +129,19 @@ class Graph:
         # For every block (with inputs) we its
         self._inputs: dict[UUID, dict[str, Connection]] = {}
 
-        # The finals are the blocks which the graph is trying to 'compute'
-        self._finals: tuple[Block, ...] = ()
+    def add_connection(self, connection: Connection):
+        connections = self._inputs[connection.target.uid]
+        if connection.input in connections:
+            old = connections[connection.input]
+            del self._connections[old.uid]
 
-    def compute_finals(self):
-        for final in self._finals:
-            self.compute(final)
+        connections[connection.input] = connection
+        self._connections[connection.uid] = connection
+
+    def add_block(self, block: Block):
+        self._blocks[block.uid] = block
+
+        self._inputs[block.uid] = {}
 
     def compute(self, target=None):
         """
@@ -133,9 +150,51 @@ class Graph:
         This has the benefit of skipping blocks that aren't connected to the output
         even if they're in the graph.
 
-        This can actually take any block in the graph so for debugging you can query
+        This can take any block in the graph so for debugging you can query
         any block.
         """
+
+        depths: dict[UUID, int] = {}
+
+        def _find_predicessors(block: Block, seen: set = set()):
+            if block.uid in depths:
+                return depths[int] + 1
+
+            if block.uid in seen:
+                raise RecursionError(f"Block {block} references itself")
+            seen = seen.union({block.uid})
+
+            depth = 0
+
+            connections = self._inputs[block.uid]
+            for connection in connections.values():
+                depth = max(_find_predicessors(connection.source, seen), depth)
+
+            depths[block.uid] = depth
+
+            return depth + 1
+
+        # Step One
+        max_depth = _find_predicessors(target)
+
+        print(depths)
+
+        # Step Two
+        layers = [list() for _ in range(max_depth)]
+        for uid, depth in depths.items():
+            layers[depth].append(self._blocks[uid])
+        layers.append([target])
+
+        print(layers)
+
+        # We can skip the first layer as they have no connections
+        for layer in layers[1:]:
+            for block in layer:
+                for connection in self._inputs[block.uid].values():
+                    block[connection.input] = connection.source[connection.output]
+
+        target()
+        print(repr(target))
 
         # Step one:
         # Walk backwards from the target while keeping track of already seen blocks.

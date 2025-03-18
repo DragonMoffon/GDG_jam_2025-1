@@ -1,4 +1,4 @@
-from .node import Block
+from .node import Block, VariableBlock
 
 
 class MultiplyBlock(Block):
@@ -36,3 +36,22 @@ class TestNoOutputBlock(Block):
 
     def func(self, a: int, b: float):
         return {}
+
+
+# -- VARIABLES --
+
+
+class IntVariableBlock(Block):
+    config = {"x": int}
+    outputs = {"x": int}
+
+    def func(self):
+        return self._configuration
+
+
+class FloatVariableBlock(Block):
+    config = {"x": int}
+    outputs = {"x": int}
+
+    def func(self):
+        return self._configuration
