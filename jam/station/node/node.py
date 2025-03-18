@@ -136,3 +136,19 @@ class Graph:
         This can actually take any block in the graph so for debugging you can query
         any block.
         """
+
+        # Step one:
+        # Walk backwards from the target while keeping track of already seen blocks.
+        # Using this walk order every seen block based on the number of blocks
+        # that need to be computed first. This should leave all the connectionless
+        # blocks with zero and the rest from there
+
+        # Step two:
+        # sort the blocks based on the number of preceding blocks
+
+        # Step three:
+        # for each block run through their connections getting the values and setting
+        # their inputs. This only works because of the sorting
+
+        # Step four:
+        # profit???
