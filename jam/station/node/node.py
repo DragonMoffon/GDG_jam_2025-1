@@ -26,6 +26,12 @@ class Block:
         }
         self._stale: bool = False
 
+    def __repr__(self) -> str:
+        return f"{self}{self._arguments}{self._results}"
+
+    def __str__(self) -> str:
+        return f"{block.name}<{block.uid}>"
+
     @property
     def uid(self) -> UUID:
         return self._uid
@@ -101,14 +107,32 @@ class Connection:
     target: Block
     input: str
 
+    uid: UUID
+
 
 class Graph:
 
     def __init__(self):
-        self.psuedo_blocks: list[Block] = []
-        self.psuedo_connections: list[Connection] = []
-        self.blocks: list[Block] = []
-        self.connections: list[Connection] = []
+        self._blocks: dict[UUID, Block] = {}
+        self._connections: dict[UUID, Block] = {}
 
-    def add_block(self, block: Block, connections: Sequence[Connection]):
-        pass
+        # For every block (with inputs) we its
+        self._inputs: dict[UUID, dict[str, Connection]] = {}
+
+        # The finals are the blocks which the graph is trying to 'compute'
+        self._finals: tuple[Block, ...] = ()
+
+    def compute_finals(self):
+        for final in self._finals:
+            self.compute(final)
+
+    def compute(self, target=None):
+        """
+        Starting from the target block we walk backwards through the connections
+        building a directed connection graph which we then run through forwards.
+        This has the benefit of skipping blocks that aren't connected to the output
+        even if they're in the graph.
+
+        This can actually take any block in the graph so for debugging you can query
+        any block.
+        """
