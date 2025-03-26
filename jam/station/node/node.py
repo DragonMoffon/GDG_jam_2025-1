@@ -1,9 +1,47 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Self, Sequence
-
+from enum import Enum, StrEnum
 from uuid import uuid4, UUID
 
-DEFAULTS: dict[type, Any] = {int: 0, float: 0.0, int | float: 0}
+number = int | float
+
+
+class Var:
+    __value__: Var = None
+
+    def __new__(cls):
+        if cls.__value__ is None:
+            cls.__value__ = object.__new__(cls)
+        return cls.__value__
+
+    def __str__(self):
+        return "Var"
+
+
+class CastableTypes(Enum):
+    BOOL = bool
+    INT = int
+    FLOAT = float
+
+
+class ComparisonOpperators(StrEnum):
+    LT = "<"
+    GT = ">"
+    LE = "<="
+    GE = ">="
+    NE = "!="
+    EQ = "=="
+
+
+DEFAULTS: dict[type, Any] = {
+    int: 0,
+    float: 0.0,
+    number: 0,
+    Var: Var(),
+    CastableTypes: CastableTypes.BOOL,
+    ComparisonOpperators: ComparisonOpperators.EQ,
+}
 
 
 def get_type_default[T](typ: type[T]) -> T:
@@ -89,26 +127,6 @@ class Block:
         return rslt
 
 
-class VariableBlock(Block):
-
-    def __init__(self, name: str, uid: UUID | None = None):
-        Block.__init__(self, uid)
-        self._name = name
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def __setitem__(self, name: str, value: Any):
-        if name not in self.outputs:
-            raise KeyError(f"{name} if not an output of the {self.name} Block")
-        assert isinstance(
-            value, self.outputs[name]
-        ), f"{type(value)} is not type for the output {name} in the {self.name} Block"
-
-        self._results[name] = value
-
-
 @dataclass
 class Connection:
     source: Block
@@ -124,26 +142,52 @@ class Graph:
 
     def __init__(self):
         self._blocks: dict[UUID, Block] = {}
-        self._connections: dict[UUID, Block] = {}
+        self._connections: dict[UUID, Connection] = {}
 
-        # For every block (with inputs) we its
-        self._inputs: dict[UUID, dict[str, Connection]] = {}
+        self._inputs: dict[UUID, dict[str, UUID]] = {}
+        self._outputs: dict[UUID, dict[str, list[UUID]]] = {}
 
-    def add_connection(self, connection: Connection):
-        connections = self._inputs[connection.target.uid]
-        if connection.input in connections:
-            old = connections[connection.input]
+    def add_connection(self, connection: Connection) -> Connection | None:
+        inputs = self._inputs[connection.target.uid]
+        outputs = self._outputs[connection.source.uid]
+        old = None
+        if connection.input in inputs:
+            old = self._connections[inputs[connection.input]]
+            self._outputs[old.source.uid][old.output].remove(old.uid)
             del self._connections[old.uid]
 
-        connections[connection.input] = connection
+        inputs[connection.input] = connection.uid
+        outputs[connection.output].append(connection.uid)
         self._connections[connection.uid] = connection
+
+        return old
+
+    def remove_connection(self, connection: Connection):
+        inputs = self._inputs[connection.target.uid]
+        outputs = self._outputs[connection.source.uid]
+
+        outputs[connection.output].remove(connection)
+        del inputs[connection.input]
+        del self._connections[connection.uid]
 
     def add_block(self, block: Block):
         self._blocks[block.uid] = block
 
         self._inputs[block.uid] = {}
+        self._outputs[block.uid] = {name: [] for name in block.outputs}
 
-    def compute(self, target=None):
+    def remove_block(self, block: Block):
+        for connection in self._inputs[block.uid].values():
+            self.remove_connection(connection)
+
+        for outputs in self._outputs[block.uid].values():
+            for connection in outputs:
+                self.remove_connection(connection)
+
+        del self._inputs[block.uid]
+        del self._outputs[block.uid]
+
+    def compute(self, target: Block):
         """
         Starting from the target block we walk backwards through the connections
         building a directed connection graph which we then run through forwards.
@@ -158,7 +202,7 @@ class Graph:
 
         def _find_predicessors(block: Block, seen: set = set()):
             if block.uid in depths:
-                return depths[int] + 1
+                return depths[block.uid] + 1
 
             if block.uid in seen:
                 raise RecursionError(f"Block {block} references itself")
@@ -167,7 +211,8 @@ class Graph:
             depth = 0
 
             connections = self._inputs[block.uid]
-            for connection in connections.values():
+            for uid in connections.values():
+                connection = self._connections[uid]
                 depth = max(_find_predicessors(connection.source, seen), depth)
 
             depths[block.uid] = depth
@@ -177,24 +222,20 @@ class Graph:
         # Step One
         max_depth = _find_predicessors(target)
 
-        print(depths)
-
         # Step Two
         layers = [list() for _ in range(max_depth)]
         for uid, depth in depths.items():
             layers[depth].append(self._blocks[uid])
         layers.append([target])
 
-        print(layers)
-
         # We can skip the first layer as they have no connections
         for layer in layers[1:]:
             for block in layer:
-                for connection in self._inputs[block.uid].values():
+                for uid in self._inputs[block.uid].values():
+                    connection = self._connections[uid]
                     block[connection.input] = connection.source[connection.output]
 
-        target()
-        print(repr(target))
+        return target()
 
         # Step one:
         # Walk backwards from the target while keeping track of already seen blocks.
@@ -211,3 +252,5 @@ class Graph:
 
         # Step four:
         # profit???
+
+        # TODO: Branching and Looping

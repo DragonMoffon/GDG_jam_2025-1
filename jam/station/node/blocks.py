@@ -1,57 +1,146 @@
-from .node import Block, VariableBlock
-
-
-class MultiplyBlock(Block):
-    inputs = {"a": int | float, "b": int | float}
-    outputs = {"x": int | float}
-
-    def func(self, a: int | float, b: int | float):
-        return {"x": a * b}
-
-
-class TestBlock(Block):
-    inputs = {
-        "SKDA:SDKAsdADSA": int,
-        "SDKKKKDKAKKKKKKKKKK": float,
-        "1": int,
-        "2": int,
-        "3": int,
-        "4": int,
-    }
-    outputs: {"sigma": int}
-
-    def func(self, **kwds):
-        return {"sigma": 100}
-
-
-class TestNoInputBlock(Block):
-    outputs = {"a": int, "b": float}
-
-    def func(self):
-        return {"a": 16, "b": 24.0}
-
-
-class TestNoOutputBlock(Block):
-    inputs = {"a": int, "b": float}
-
-    def func(self, a: int, b: float):
-        return {}
-
+from uuid import UUID
+from typing import TypeVar, Any
+from math import copysign
+from .node import (
+    Block,
+    get_type_default,
+    number,
+    Var,
+    CastableTypes,
+    ComparisonOpperators,
+)
 
 # -- VARIABLES --
 
 
-class IntVariableBlock(Block):
-    config = {"x": int}
-    outputs = {"x": int}
+class VariableBlock(Block):
 
-    def func(self):
-        return self._configuration
+    def func(self, **kwds) -> dict[str, Any]:
+        self._configuration.update(kwds)
+        return dict(**self._configuration)
 
 
-class FloatVariableBlock(Block):
-    config = {"x": int}
-    outputs = {"x": int}
+T = TypeVar("T")
 
-    def func(self):
-        return self._configuration
+
+class DynamicVariableBlock(VariableBlock):
+
+    def __init__(self, name: str | None = None, uid: UUID | None = None):
+        self.outputs = dict(**self.outputs)
+        self.inputs = dict(**self.inputs)
+        self.config = self.outputs | self.inputs
+        Block.__init__(self, name, uid)
+
+    def add_variable(
+        self, var: str, typ: type[T], dflt: T | None = None, output: bool = True
+    ) -> None:
+        if var in self.outputs or var in self.inputs:
+            return
+
+        self.config[var] = typ
+        self._configuration[var] = dflt if dflt is not None else get_type_default(typ)
+
+        if output:
+            self.outputs[var] = typ
+            self._results[var] = self._configuration[var]
+            self._stale = True
+        else:
+            self.inputs[var] = typ
+            self._arguments[var] = self._configuration[var]
+
+
+# -- OPERATORS --
+
+
+class AddBlock(Block):
+    inputs = {"a": number, "b": number}
+    outputs = {"x": number}
+
+    def func(self, a: number, b: number):
+        return {"x": a + b}
+
+
+class SubtractBlock(Block):
+    inputs = {"a": number, "b": number}
+    outputs = {"x": number}
+
+    def func(self, a: number, b: number):
+        return {"x": a - b}
+
+
+class DivideBlock(Block):
+    inputs = {"a": number, "b": number}
+    outputs = {"x": number}
+
+    def func(self, a: number, b: number):
+        if isinstance(b, int):
+            return {"x": a // b}
+        return {"x": a / b}
+
+
+class MultiplyBlock(Block):
+    inputs = {"a": number, "b": number}
+    outputs = {"x": number}
+
+    def func(self, a: number, b: number):
+        return {"x": a * b}
+
+
+# -- FUNCTIONS --
+
+
+class CastBlock(Block):
+    inputs = {"x": Var}
+    config = {"type": CastableTypes}
+    outputs = {"x": Var}
+
+    def func(self, x: Any):
+        return {"x", self._configuration["type"](x)}
+
+
+class AbsoluteBlock(Block):
+    inputs = {"x": number}
+    outputs = {"x": number}
+
+    def func(self, x: number):
+        return {"x", abs(x)}
+
+
+class ModuloBlock(Block):
+    inputs = {"x": number, "m": number}
+    outputs = {"x": number}
+
+    def func(self, x: number, m: number):
+        return {"x", x % m}
+
+
+class SignBlock(Block):
+    inputs = {"x": number}
+    outputs = {"x": number}
+
+    def func(self, x: number):
+        return {"x": copysign(1, x)}
+
+
+class CommparisonBlock(Block):
+    inputs = {"a": number, "b": number}
+    config = {"op": ComparisonOpperators}
+    outputs = {"x": number}
+
+    def func(self, a: number, b: number):
+        v = False
+        match self._configuration["op"]:
+            case ComparisonOpperators.LT:
+                v = a < b
+            case ComparisonOpperators.GT:
+                v = a > b
+            case ComparisonOpperators.LE:
+                v = a <= b
+            case ComparisonOpperators.GE:
+                v = a >= b
+            case ComparisonOpperators.NE:
+                v = a != b
+            case ComparisonOpperators.EQ:
+                b = a == b
+
+        return {"x": v}
