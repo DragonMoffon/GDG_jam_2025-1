@@ -4,7 +4,9 @@ from enum import Enum, auto
 from arcade import View, Vec2, draw_line, key
 from arcade.future import background
 
-from jam.station.node import node, render, blocks
+from jam.node import node, render, blocks
+
+from resources import style
 
 import resources.ase as ase
 from pathlib import Path
@@ -76,7 +78,7 @@ class BlockDebugView(View):
     def on_key_press(self, symbol, modifier):
         match self._mode:
             case EditorMode.NONE:
-                if symbol == ADD_NODE_BUTTON:
+                if symbol == ADD_BLOCK_BUTTON:
                     self._selected_block = None
                     self._offset = Vec2()
                     self._mode = EditorMode.ADD_NODE
@@ -189,7 +191,7 @@ class BlockDebugView(View):
                 self._input: str = ""
 
     def on_draw(self):
-        self.clear(color=render.BACKGROUND_COLOUR)
+        self.clear(color=style.editor.colors.background)
         self.background.draw()
         self._renderer.draw()
 
@@ -200,6 +202,6 @@ class BlockDebugView(View):
                     self._start_pos[1],
                     self._mouse_pos[0],
                     self._mouse_pos[1],
-                    render.CONNECTION_COLOUR,
-                    render.LINE_THICKNESS,
+                    style.editor.colors.connection,
+                    style.editor.line_thickness,
                 )
