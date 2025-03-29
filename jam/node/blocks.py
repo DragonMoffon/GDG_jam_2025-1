@@ -13,7 +13,7 @@ from .node import (
 # -- VARIABLES --
 
 
-class VariableBlock(Block):
+class Variable(Block):
 
     def func(self, **kwds) -> dict[str, Any]:
         self._configuration.update(kwds)
@@ -23,7 +23,7 @@ class VariableBlock(Block):
 T = TypeVar("T")
 
 
-class DynamicVariableBlock(VariableBlock):
+class DynamicVariable(Variable):
 
     def __init__(self, name: str | None = None, uid: UUID | None = None):
         self.outputs = dict(**self.outputs)
@@ -52,7 +52,7 @@ class DynamicVariableBlock(VariableBlock):
 # -- OPERATORS --
 
 
-class AddBlock(Block):
+class Add(Block):
     inputs = {"a": number, "b": number}
     outputs = {"x": number}
 
@@ -60,7 +60,7 @@ class AddBlock(Block):
         return {"x": a + b}
 
 
-class SubtractBlock(Block):
+class Subtract(Block):
     inputs = {"a": number, "b": number}
     outputs = {"x": number}
 
@@ -68,7 +68,7 @@ class SubtractBlock(Block):
         return {"x": a - b}
 
 
-class DivideBlock(Block):
+class Divide(Block):
     inputs = {"a": number, "b": number}
     outputs = {"x": number}
 
@@ -78,7 +78,7 @@ class DivideBlock(Block):
         return {"x": a / b}
 
 
-class MultiplyBlock(Block):
+class Multiply(Block):
     inputs = {"a": number, "b": number}
     outputs = {"x": number}
 
@@ -89,43 +89,45 @@ class MultiplyBlock(Block):
 # -- FUNCTIONS --
 
 
-class CastBlock(Block):
+class Cast(Block):
     inputs = {"x": Var}
     config = {"type": CastableTypes}
     outputs = {"x": Var}
 
     def func(self, x: Any):
-        return {"x", self._configuration["type"](x)}
+        return {"x", self._configuration["type"].value(x)}
 
 
-class AbsoluteBlock(Block):
+class Absolute(Block):
     inputs = {"x": number}
     outputs = {"x": number}
 
     def func(self, x: number):
-        return {"x", abs(x)}
+        return {"x", x.__class__(abs(x))}
 
 
-class ModuloBlock(Block):
+class Modulo(Block):
     inputs = {"x": number, "m": number}
     outputs = {"x": number}
 
     def func(self, x: number, m: number):
-        return {"x", x % m}
+        if m == 0:
+            return {"x": 0}
+        return {"x": x.__class__(x % m)}
 
 
-class SignBlock(Block):
+class Sign(Block):
     inputs = {"x": number}
     outputs = {"x": number}
 
     def func(self, x: number):
-        return {"x": copysign(1, x)}
+        return {"x": x.__class__(copysign(1, x))}
 
 
-class CommparisonBlock(Block):
+class Commparison(Block):
     inputs = {"a": number, "b": number}
     config = {"op": ComparisonOpperators}
-    outputs = {"x": number}
+    outputs = {"x": bool}
 
     def func(self, a: number, b: number):
         v = False
@@ -141,12 +143,12 @@ class CommparisonBlock(Block):
             case ComparisonOpperators.NE:
                 v = a != b
             case ComparisonOpperators.EQ:
-                b = a == b
+                v = a == b
 
         return {"x": v}
 
 
-class MaxBlock(Block):
+class Max(Block):
     inputs = {"a": number, "b": number}
     outputs = {"x": number}
 
@@ -154,9 +156,17 @@ class MaxBlock(Block):
         return {"x": max(a, b)}
 
 
-class MinBlock(Block):
+class Min(Block):
     inputs = {"a": number, "b": number}
     outputs = {"x": number}
 
     def func(self, a: number, b: number):
         return {"x": min(a, b)}
+
+
+class Condition(Block):
+    inputs = {"a": number, "b": number, "c": bool}
+    outputs = {"x": number}
+
+    def func(self, a: number, b: number, c: bool):
+        return {"x": a if c else b}

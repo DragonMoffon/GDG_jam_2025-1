@@ -11,7 +11,8 @@ from resources import style
 
 editor = style.editor
 
-BASE_GROUP = Group(order=1)
+BASE_GROUP = Group(order=2)
+HIGHLIGHT_GROUP = Group(order=1)
 SHADOW_GROUP = Group(order=0)
 
 
@@ -29,7 +30,7 @@ class IONodeRenderer:
         string: bool = True,
     ):
         self.name = text
-        self._str = text if string else ""
+        self._str = text
         self._typ = typ
         self._value = value
 
@@ -291,14 +292,24 @@ class BlockRenderer:
             editor.colors.block,
         )
         self._shadow = RoundedRectangle(
-            bottom_left.x - 2,
-            bottom_left.y - 10,
+            bottom_left.x - editor.drop_x,
+            bottom_left.y - editor.drop_y,
             self.width,
             self.height,
             editor.block.radius,
             14,
-            (0, 0, 0, 128),
+            editor.colors.shadow,
         )
+        self._select = RoundedRectangle(
+            bottom_left.x - editor.block.select,
+            bottom_left.y - editor.block.select,
+            self.width + 2 * editor.block.select,
+            self.height + 2 * editor.block.select,
+            editor.block.radius + editor.block.select,
+            14,
+            editor.colors.select,
+        )
+        self._select.visible = False
         self._header = RoundedRectangle(
             bottom_left.x,
             bottom_left.y + self.height - editor.block.header,
@@ -311,17 +322,26 @@ class BlockRenderer:
 
         self.update_position(bottom_left)
 
+    def select(self):
+        self._select.visible = True
+
+    def deselect(self):
+        self._select.visible = False
+
     def connect_renderer(self, batch: Batch, group=True):
         if group:
             self._title.group = BASE_GROUP
             self._box.group = BASE_GROUP
             self._header.group = BASE_GROUP
 
+            self._select.group = HIGHLIGHT_GROUP
+
             self._shadow.group = SHADOW_GROUP
 
         self._title.batch = batch
         self._shadow.batch = batch
         self._box.batch = batch
+        self._select.batch = batch
         self._header.batch = batch
 
         for io_node in self._inputs.values():
@@ -337,6 +357,7 @@ class BlockRenderer:
         self._title.group = None
         self._box.group = None
         self._header.group = None
+        self._select.group = None
         self._shadow.group = None
         self.connect_renderer(None, False)
 
@@ -347,8 +368,15 @@ class BlockRenderer:
             bottom_left.x + editor.block.radius,
             bottom_left.y + self.height - editor.block.header / 2.0,
         )
-        self._shadow.position = bottom_left.x - 2, bottom_left.y - 10
+        self._shadow.position = (
+            bottom_left.x - editor.drop_x,
+            bottom_left.y - editor.drop_y,
+        )
         self._box.position = bottom_left
+        self._select.position = (
+            bottom_left.x - editor.block.select,
+            bottom_left.y - editor.block.select,
+        )
         self._header.position = (
             bottom_left.x,
             bottom_left.y + self.height - editor.block.header,
@@ -475,12 +503,12 @@ class ConnectionRenderer:
             p1.x, p1.y, p2.x, p2.y, editor.line_thickness, editor.colors.connection
         )
         self._drop_shadow = Line(
-            p1.x - 2,
-            p1.y - 10,
-            p2.x - 2,
-            p2.y - 10,
+            p1.x - editor.drop_x,
+            p1.y - editor.drop_y,
+            p2.x - editor.drop_x,
+            p2.y - editor.drop_y,
             editor.line_thickness,
-            [0, 0, 0, 128],
+            editor.colors.shadow,
         )
 
     def update_position(self):
@@ -488,13 +516,13 @@ class ConnectionRenderer:
         p2 = self._target._inputs[self._connection.input].node
 
         self._line.x = p1.x
-        self._drop_shadow.x = p1.x - 2
+        self._drop_shadow.x = p1.x - editor.drop_x
         self._line.y = p1.y
-        self._drop_shadow.y = p1.y - 10
+        self._drop_shadow.y = p1.y - editor.drop_y
         self._line.x2 = p2.x
-        self._drop_shadow.x2 = p2.x - 2
+        self._drop_shadow.x2 = p2.x - editor.drop_x
         self._line.y2 = p2.y
-        self._drop_shadow.y2 = p2.y - 10
+        self._drop_shadow.y2 = p2.y - editor.drop_y
 
     def connect_renderer(self, batch: Batch, group: bool = True):
         if group:

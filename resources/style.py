@@ -14,12 +14,14 @@ __all__ = ("STYLE",)
 class Colors:
     base: RGBA255
     background: RGBA255
+    dark: RGBA255
     accent: RGBA255
     highlight: RGBA255
 
 
 @dataclass
 class EditorColors:
+    shadow: RGBA255
     block: RGBA255
     background: RGBA255
     accent: RGBA255
@@ -40,6 +42,8 @@ class Editor:
     point_radius: float
     line_thickness: float
     padding: float
+    drop_x: int
+    drop_y: int
     colors: EditorColors
     block: EditorBlock
 
@@ -77,7 +81,11 @@ class Style:
         editor_raw = self._raw["Editor"]
         editor_colors = EditorColors(
             **{
-                name: self._raw["Colors"][color]
+                name: (
+                    tuple(color)
+                    if isinstance(color, list)
+                    else tuple(self._raw["Colors"][color])
+                )
                 for name, color in editor_raw["Colors"].items()
             }
         )
@@ -87,6 +95,8 @@ class Style:
             editor_raw["point_radius"],
             editor_raw["line_thickness"],
             editor_raw["padding"],
+            editor_raw["drop_x"],
+            editor_raw["drop_y"],
             editor_colors,
             editor_block,
         )

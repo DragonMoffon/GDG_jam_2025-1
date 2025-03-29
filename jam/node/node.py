@@ -24,6 +24,9 @@ class CastableTypes(Enum):
     INT = int
     FLOAT = float
 
+    def __str__(self):
+        return str(self.value.__name__)
+
 
 class ComparisonOpperators(StrEnum):
     LT = "<"
@@ -37,6 +40,7 @@ class ComparisonOpperators(StrEnum):
 DEFAULTS: dict[type, Any] = {
     int: 0,
     float: 0.0,
+    bool: False,
     number: 0,
     Var: Var(),
     CastableTypes: CastableTypes.BOOL,
