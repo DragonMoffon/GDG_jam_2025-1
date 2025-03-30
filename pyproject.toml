@@ -23,6 +23,9 @@ dev = [
     "black"
 ]
 
+[tool.setuptools]
+packages = ['jam', 'resources']
+
 [tool.ruff.lint]
 select = [
     "F",        # Pyflakes
