@@ -47,6 +47,17 @@ DEFAULTS: dict[type, Any] = {
     ComparisonOpperators: ComparisonOpperators.EQ,
 }
 
+STR_CAST: dict[str, type] = {
+    "int": int,
+    "float": float,
+    "bool": bool,
+    "number": number,
+    "var": Var,
+    "CastableTypes": CastableTypes,
+    "ComparisonOpperators": ComparisonOpperators,
+}
+CAST_STR: dict[type, str] = {typ: name for name, typ in STR_CAST.items()}
+
 
 def get_type_default[T](typ: type[T]) -> T:
     return DEFAULTS[typ]
@@ -56,8 +67,9 @@ class Block:
     inputs: dict[str, type] = {}
     outputs: dict[str, type] = {}
     config: dict[str, type] = {}
+    __accessible__: bool = True
 
-    def __init__(self, name: str | None = None, uid: UUID | None = None):
+    def __init__(self, name: str | None = None, uid: UUID | None = None, **kwds):
         self._uid: UUID = uid or uuid4()
         self._results: dict[str, Any] = {
             name: get_type_default(typ) for name, typ in self.outputs.items()
@@ -70,6 +82,11 @@ class Block:
         }
         self._stale: bool = False
         self._name: str = name or self.__class__.__name__
+
+        for kwd in kwds:
+            if kwd not in self._configuration:
+                raise KeyError(f"{kwd} is not a configuration of the {self.name} table")
+            self._configuration[kwd] = kwds[kwd]
 
     def __repr__(self) -> str:
         return f"{self}{self._arguments}{self._results}"
@@ -144,21 +161,44 @@ class Connection:
 
 class Graph:
 
-    def __init__(self):
+    def __init__(self, name: str = ""):
+        self._name: str = name
         self._blocks: dict[UUID, Block] = {}
         self._connections: dict[UUID, Connection] = {}
 
         self._inputs: dict[UUID, dict[str, UUID]] = {}
         self._outputs: dict[UUID, dict[str, list[UUID]]] = {}
 
+        self._blocks_locked: bool = False
+        self._connections_locked: bool = False
+
+    def get_block(self, block: UUID) -> Block | None:
+        if block not in self._blocks:
+            return None
+        return self._blocks[block]
+
+    def get_connection(self, connection: UUID) -> Connection | None:
+        if connection not in self._connections:
+            return None
+        return self._connections[connection]
+
+    def lock_blocks(self):
+        self._blocks_locked = True
+
+    def lock_connections(self):
+        self._connections_locked = True
+
     def add_connection(self, connection: Connection) -> Connection | None:
+        if self._connections_locked:
+            return
+
         inputs = self._inputs[connection.target.uid]
         outputs = self._outputs[connection.source.uid]
         old = None
         if connection.input in inputs:
             old = self._connections[inputs[connection.input]]
             self._outputs[old.source.uid][old.output].remove(old.uid)
-            del self._connections[old.uid]
+            self._connections.pop(old.uid)
 
         inputs[connection.input] = connection.uid
         outputs[connection.output].append(connection.uid)
@@ -167,29 +207,54 @@ class Graph:
         return old
 
     def remove_connection(self, connection: Connection):
+        if self._connections_locked:
+            return
+
         inputs = self._inputs[connection.target.uid]
         outputs = self._outputs[connection.source.uid]
 
-        outputs[connection.output].remove(connection)
-        del inputs[connection.input]
-        del self._connections[connection.uid]
+        outputs[connection.output].remove(connection.uid)
+        inputs.pop(connection.input)
+        self._connections.pop(connection.uid)
 
     def add_block(self, block: Block):
+        if self._blocks_locked:
+            return
+
         self._blocks[block.uid] = block
 
         self._inputs[block.uid] = {}
         self._outputs[block.uid] = {name: [] for name in block.outputs}
 
     def remove_block(self, block: Block):
-        for connection in self._inputs[block.uid].values():
+        if self._blocks_locked:
+            return
+        for connection_uid in tuple(self._inputs[block.uid].values()):
+            connection = self._connections[connection_uid]
             self.remove_connection(connection)
 
         for outputs in self._outputs[block.uid].values():
-            for connection in outputs:
+            for connection_uid in outputs:
+                connection = self._connections[connection_uid]
                 self.remove_connection(connection)
 
-        del self._inputs[block.uid]
-        del self._outputs[block.uid]
+        self._inputs.pop(block.uid)
+        self._outputs.pop(block.uid)
+
+        self._blocks.pop(block.uid)
+
+    def get_connections(self, block: Block) -> list[Connection]:
+        if block.uid not in self._blocks:
+            return []
+        connections = []
+        for connection_uid in self._inputs[block.uid].values():
+            connections.append(self._connections[connection_uid])
+
+        for outputs in self._outputs[block.uid].values():
+            for connection_uid in outputs:
+                connections.append(self._connections[connection_uid])
+
+        return connections
 
     def compute(self, target: Block):
         """
@@ -258,3 +323,12 @@ class Graph:
         # profit???
 
         # TODO: Branching and Looping
+
+    def __str__(self):
+        return (
+            f"{self._name} \n"
+            f"BLOCKS: \n\t"
+            f"{"\n\t".join(f"{block.uid} : {block.inputs} : {block.outputs}" for block in self._blocks.values())}\n"
+            f"CONNECTIONS: \n\t"
+            f"{"\n\t".join(f"{connection.source.uid} <{connection.output}> -> {connection.target.uid} <{connection.input}>" for connection in self._connections.values())}\n"
+        )

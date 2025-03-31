@@ -12,28 +12,28 @@ from .node import (
 
 # -- VARIABLES --
 
+T = TypeVar("T")
+
 
 class Variable(Block):
+
+    def __init__(self, name: str | None = None, uid: UUID | None = None, **kwds):
+        self.outputs = dict(**self.outputs)
+        self.inputs = dict(**self.inputs)
+        self.config = self.outputs | self.inputs | self.config
+        self.locked: bool = False
+        Block.__init__(self, name, uid, **kwds)
 
     def func(self, **kwds) -> dict[str, Any]:
         self._configuration.update(kwds)
         return dict(**self._configuration)
 
-
-T = TypeVar("T")
-
-
-class DynamicVariable(Variable):
-
-    def __init__(self, name: str | None = None, uid: UUID | None = None):
-        self.outputs = dict(**self.outputs)
-        self.inputs = dict(**self.inputs)
-        self.config = self.outputs | self.inputs
-        Block.__init__(self, name, uid)
-
     def add_variable(
         self, var: str, typ: type[T], dflt: T | None = None, output: bool = True
     ) -> None:
+        if self.locked:
+            return
+
         if var in self.outputs or var in self.inputs:
             return
 
@@ -47,6 +47,9 @@ class DynamicVariable(Variable):
         else:
             self.inputs[var] = typ
             self._arguments[var] = self._configuration[var]
+
+    def lock(self):
+        self.locked = True
 
 
 # -- OPERATORS --
@@ -170,3 +173,18 @@ class Condition(Block):
 
     def func(self, a: number, b: number, c: bool):
         return {"x": a if c else b}
+
+
+BLOCKS = {typ.__name__: typ for typ in Block.__subclasses__() if typ.__accessible__}
+BLOCKS.update(
+    {typ.__name__: typ for typ in Variable.__subclasses__() if typ.__accessible__}
+)
+
+
+def update_block_mapping():
+    BLOCKS.update(
+        {typ.__name__: typ for typ in Block.__subclasses__() if typ.__accessible__}
+    )
+    BLOCKS.update(
+        {typ.__name__: typ for typ in Variable.__subclasses__() if typ.__accessible__}
+    )

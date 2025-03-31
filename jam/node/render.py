@@ -559,10 +559,15 @@ class GraphRenderer:
         if block.uid not in self._blocks:
             return
 
+        connections = self._graph.get_connections(block)
+
+        for connection in connections:
+            self.remove_connection(connection)
+
         renderer = self._blocks[block.uid]
         renderer.disconnect_renderer()
 
-        del self._blocks[block.uid]
+        self._blocks.pop(block.uid)
 
     def move_block(self, block, bottom_left: Vec2):
         if block.uid not in self._blocks:
@@ -614,9 +619,9 @@ class GraphRenderer:
         renderer = self._connections[connection.uid]
         renderer.disconnect_renderer()
 
-        del self._connections[connection.uid]
+        self._connections.pop(connection.uid)
 
-        if not len(self._graph._outputs[connection.source.uid][connection.output]):
+        if len(self._graph._outputs[connection.source.uid][connection.output]) <= 1:
             self._blocks[connection.source.uid].set_node_active(
                 connection.output, False, True
             )

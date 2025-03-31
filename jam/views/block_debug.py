@@ -4,8 +4,8 @@ from enum import Enum, auto
 from arcade import View, Vec2, draw_line, key, MOUSE_BUTTON_RIGHT
 from arcade.future import background
 
-from jam.node import node, render, blocks
-from jam.gui import core
+from jam.node import node, render, blocks, loading
+from jam.gui import core, util
 
 from resources import style
 
@@ -23,6 +23,7 @@ class EditorMode:
 
 
 ADD_BLOCK_BUTTON = key.N
+SAVE_GRAPH = key.S
 
 
 class BlockDebugView(View):
@@ -35,12 +36,20 @@ class BlockDebugView(View):
             )
         self._back: View | None = back
 
-        self._graph = node.Graph()
+        self._graph, positions = loading.read_graph(Path("graph.toml"))
+        # self._graph = node.Graph("DebugGraph")
         self._renderer = render.GraphRenderer(self.window.rect, self._graph)
         self._gui = core.Gui(self.window.rect)
 
-        self.inputs = blocks.DynamicVariable("Input")
-        self.outputs = blocks.DynamicVariable("Output")
+        for block in self._graph._blocks.values():
+            self._renderer.add_block(block, Vec2(*positions.get(block.uid, (0.0, 0.0))))
+
+        for connection in self._graph._connections.values():
+            self._renderer.add_connection(connection)
+
+        """
+        self.inputs = blocks.Variable("Input")
+        self.outputs = blocks.Variable("Output")
 
         self.inputs.add_variable("a", node.number, 12)
         self.inputs.add_variable("b", node.number, 16)
@@ -55,11 +64,12 @@ class BlockDebugView(View):
         self._or = self._renderer.add_block(
             self.outputs, Vec2(self.width - 200, self.height * 0.5)
         )
+        """
 
         # Editor State
         self._mode = EditorMode.NONE
         self._mouse_pos = None
-        self._popup: core.Popup | None = None
+        self._popup: util.Popup | None = None
 
         # Drag Block
         self._selected_block: render.BlockRenderer = None
@@ -92,9 +102,9 @@ class BlockDebugView(View):
         dx = style.editor.padding if right else -style.editor.padding
         dy = style.editor.padding if top else -style.editor.padding
 
-        return core.SelectionPopup(
+        return util.SelectionPopup(
             tuple(
-                core.PopupAction(typ.__name__, create_block, typ)
+                util.PopupAction(typ.__name__, create_block, typ)
                 for typ in node.Block.__subclasses__()
             ),
             (pos[0] + dx, pos[1] + dy),
@@ -109,6 +119,8 @@ class BlockDebugView(View):
                     self._selected_block = None
                     self._offset = Vec2()
                     self._mode = EditorMode.ADD_NODE
+                if symbol == SAVE_GRAPH:
+                    loading.write_graph(Path("graph.toml"), self._graph, self._renderer)
 
     def on_mouse_motion(self, x, y, dx, dy):
         self._mouse_pos = (x, y)
@@ -138,7 +150,7 @@ class BlockDebugView(View):
                         else:
                             value = block._block._results[io_node.name]
 
-                        self._popup = core.InfoPopup(str(value), (x, y))
+                        self._popup = util.InfoPopup(str(value), (x, y))
                         self._gui.add_element(self._popup)
 
                         break
@@ -199,13 +211,9 @@ class BlockDebugView(View):
                 # b) we are dragging a node
                 # otherwise drag the block
                 if clicked_block is not None:
-                    if button == MOUSE_BUTTON_RIGHT and not (
-                        clicked_block._block == self.inputs
-                        or clicked_block._block == self.outputs
-                    ):
+                    if button == MOUSE_BUTTON_RIGHT:
                         self._renderer.remove_block(clicked_block._block)
                         self._graph.remove_block(clicked_block._block)
-                        return
 
                     if io_node := clicked_block.find_output_node((x, y)):
                         if self._selected_block is not None:

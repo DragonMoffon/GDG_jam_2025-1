@@ -1,0 +1,77 @@
+[Config]
+name = "DebugGraph"
+blocks = false
+connections = false
+
+[[Block.Variables]]
+uid = "5fec7ad1b05c49ef820b864fe49fd3f3"
+inputs = {}
+outputs = {a = "number", b = "number", c = "number"}
+
+[[Block.Variables]]
+uid = "e5dda7bdad3845f6b89a7fae3ff5c859"
+inputs = {result = "number"}
+outputs = {}
+
+[[Block.Data]]
+uid = "5fec7ad1b05c49ef820b864fe49fd3f3"
+name = "Input"
+type = "Variable"
+config = {a = 12, b = 16, c = 19}
+position = [100, 360.0]
+
+[[Block.Data]]
+uid = "e5dda7bdad3845f6b89a7fae3ff5c859"
+name = "Output"
+type = "Variable"
+config = {result = 2}
+position = [1080, 360.0]
+
+[[Block.Data]]
+uid = "91e4995e821448faba0c4d99044f3583"
+name = "Multiply"
+type = "Multiply"
+config = {}
+position = [382.0, 436.0]
+
+[[Block.Data]]
+uid = "54d6995cc83542388939fa9fa2121046"
+name = "Modulo"
+type = "Modulo"
+config = {}
+position = [578.0, 310.0]
+
+[[Connection.Data]]
+uid = "b92ae2e5837e478a94cc10fb3504f427"
+source = "5fec7ad1b05c49ef820b864fe49fd3f3"
+target = "91e4995e821448faba0c4d99044f3583"
+output = "a"
+input = "a"
+
+[[Connection.Data]]
+uid = "6719f926b544430e8559e08548d9bbfe"
+source = "5fec7ad1b05c49ef820b864fe49fd3f3"
+target = "91e4995e821448faba0c4d99044f3583"
+output = "b"
+input = "b"
+
+[[Connection.Data]]
+uid = "b1601b8f1c564b4d8752b31b383b04da"
+source = "5fec7ad1b05c49ef820b864fe49fd3f3"
+target = "54d6995cc83542388939fa9fa2121046"
+output = "c"
+input = "m"
+
+[[Connection.Data]]
+uid = "190072fb7e114d46b2cb7494cf8394c0"
+source = "91e4995e821448faba0c4d99044f3583"
+target = "54d6995cc83542388939fa9fa2121046"
+output = "x"
+input = "x"
+
+[[Connection.Data]]
+uid = "e03e6c536d654b61b16bc29938fd8b95"
+source = "54d6995cc83542388939fa9fa2121046"
+target = "e5dda7bdad3845f6b89a7fae3ff5c859"
+output = "x"
+input = "result"

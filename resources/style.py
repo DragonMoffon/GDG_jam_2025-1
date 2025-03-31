@@ -4,7 +4,7 @@ import tomllib
 from arcade import load_font
 from arcade.types import RGBA255
 
-import resources.rust as rust
+import resources.styles as styles
 
 
 __all__ = ("STYLE",)
@@ -102,5 +102,5 @@ class Style:
         )
 
 
-with path(rust) as pth:
+with path(styles, "rust") as pth:
     STYLE = Style(pth)
