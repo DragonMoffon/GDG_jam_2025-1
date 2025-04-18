@@ -1,17 +1,17 @@
 from uuid import UUID, uuid4
-from typing import Callable
 
-from pyglet.shapes import Batch, Group, RoundedRectangle
-from arcade import get_window, Camera2D, Rect, Text
+from pyglet.graphics import Batch, Group
+from arcade import get_window, Camera2D, Rect
 
-from resources import style
+SHADOW_GROUP = Group(0)
+SPACING_GROUP = Group(1)
+PRIMARY_GROUP = Group(2)
+HIGHLIGHT_GROUP = Group(3)
 
-SHADOW = Group(0)
-HIGHLIGHT = Group(1)
-PRIMARY = Group(2)
-OVERLAY_SHADOW = Group(3)
-OVERLAY_HIGHTLIGHT = Group(4)
-OVERLAY_PRIMARY = Group(5)
+OVERLAY_SHADOW_GROUP = Group(4)
+OVERLAY_SPACING_GROUP = Group(5)
+OVERLAY_PRIMARY_GROUP = Group(6)
+OVERLAY_HIGHLIGHT_GROUP = Group(7)
 
 
 class Element:
@@ -59,3 +59,9 @@ class Gui:
         self._elements.pop(element.uid)
 
         element.gui = None
+
+
+class Frame:
+
+    def __init__(self) -> None:
+        pass
