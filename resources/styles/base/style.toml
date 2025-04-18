@@ -1,0 +1,52 @@
+name = 'rust'
+
+[Application]
+base_width = 1280
+base_height = 720
+min_width = 1280
+min_height = 720
+
+application_name = ""
+application_icon = ""
+
+[Colors]
+shadow = [0, 0, 0, 128]
+dark = [25, 15, 22, 255]
+base = [51, 29, 44, 255]
+background = [63, 46, 62, 255]
+accent = [167, 130, 149, 255]
+highlight = [239, 225, 209, 255]
+
+[Text]
+[Text.Normal]
+name = "monofur"
+path = "font/monof55.ttf"
+size = 12
+[Text.Header]
+name = "monofur"
+path = "font/monof55.ttf"
+size = 20
+
+[Format]
+point_radius = 3
+corner_radius = 12
+select_radius = 4
+header_size = 24
+footer_size = 12
+line_thickness = 2
+padding = 2
+drop_x = 2
+drop_y = 10
+
+[Game]
+background = 'image/stars1.png'
+
+[Game.Panels]
+settings_tag = 'image/icons1.png'
+editor_tag = 'image/icons2.png'
+comms_tag = 'image/icons3.png'
+info_tag = 'image/icons4.png'
+panel_speed = 0.4
+
+[Game.Editor]
+background = 'image/grid.png'

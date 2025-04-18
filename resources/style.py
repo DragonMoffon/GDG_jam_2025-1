@@ -1,4 +1,5 @@
 from importlib.resources import path
+from pathlib import Path
 from dataclasses import dataclass
 import tomllib
 from arcade import load_font
@@ -12,6 +13,7 @@ __all__ = ("STYLE",)
 
 @dataclass
 class Colors:
+    shadow: RGBA255
     base: RGBA255
     background: RGBA255
     dark: RGBA255
@@ -47,23 +49,50 @@ class Editor:
     colors: EditorColors
     block: EditorBlock
 
+@dataclass
+class Format:
+    point_radius: float
+    corner_radius: float
+    select_radius: float
+    header_size: float
+    footer_size: float
+    line_thickness: float
+    padding: float
+    drop_x: float
+    drop_y: float
+
+@dataclass
+class Panels:
+    settings_tag: Path
+    editor_tag: Path
+    comms_tag: Path
+    info_tag: Path
+    panel_speed: float
+
+@dataclass
+class Editor:
+    background: Path
+
+@dataclass
+class Game:
+    background: Path
+    panels: Panels
+    editor: Editor
 
 @dataclass
 class TextFormat:
     name: str
     path: str
-    size: str
-
+    size: float
 
 @dataclass
 class Text:
     normal: TextFormat
     header: TextFormat
 
-
 class Style:
 
-    def __init__(self, source):
+    def __init__(self, source: Path):
         with open(source / "style.toml", "rb") as fp:
             self._raw = tomllib.load(fp)
 
@@ -78,29 +107,25 @@ class Style:
         load_font(source / self.text.normal.path)
         load_font(source / self.text.header.path)
 
-        editor_raw = self._raw["Editor"]
-        editor_colors = EditorColors(
-            **{
-                name: (
-                    tuple(color)
-                    if isinstance(color, list)
-                    else tuple(self._raw["Colors"][color])
-                )
-                for name, color in editor_raw["Colors"].items()
-            }
+        self.format = Format(
+            **self._raw['Format']
         )
-        editor_block = EditorBlock(**editor_raw["Block"])
 
-        self.editor = Editor(
-            editor_raw["point_radius"],
-            editor_raw["line_thickness"],
-            editor_raw["padding"],
-            editor_raw["drop_x"],
-            editor_raw["drop_y"],
-            editor_colors,
-            editor_block,
+        panel_data = self._raw['Game']['Panels']
+        self.game = Game(
+            source / self._raw['Game']['background'],
+            Panels(
+                settings_tag=source / panel_data['settings_tag'],
+                editor_tag=source / panel_data['editor_tag'],
+                comms_tag=source / panel_data['comms_tag'],
+                info_tag=source / panel_data['info_tag'],
+                panel_speed=panel_data['panel_speed']
+            ),
+            Editor(
+                source / self._raw['Game']['Editor']['background']
+            )
         )
 
 
-with path(styles, "rust") as pth:
+with path(styles, 'base') as pth:
     STYLE = Style(pth)
