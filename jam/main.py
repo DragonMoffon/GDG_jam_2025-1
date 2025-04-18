@@ -1,12 +1,7 @@
-from arcade import Window
-
-from .views.block_debug import BlockDebugView
-
-
-class JamWindow(Window): ...
-
+from .application import Window
+from .views.game import GameView
 
 def main():
-    win = JamWindow()
-    win.show_view(BlockDebugView())
+    win = Window()
+    win.show_view(GameView())
     win.run()
