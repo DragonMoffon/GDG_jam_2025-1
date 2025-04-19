@@ -1,16 +1,20 @@
 from uuid import UUID
+from enum import Enum
+
 from pyglet.graphics import Batch, Group
 from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
+from arcade.clock import GLOBAL_CLOCK
+
 from .core import Element
-
-from jam.input import Button, Axis
-
+from jam.input import inputs, Button, Axis
 from resources import style
 
 ACTIVE_GROUP = Group(0)
 SHADOW_GROUP = Group(1)
 TAG_GROUP = Group(2)
+
+
 
 class Frame(Element):
 
@@ -130,6 +134,16 @@ class Frame(Element):
         self._show_shadow = show
         self._tag_shadow.visible = show
 
+    def select(self):
+        self.show_body = True
+        self.show_shadow = False
+        self.on_select()
+
+    def hide(self):
+        self.show_body = False
+        self.show_shadow = True
+        self.on_hide()
+
     def contains_point(self, point: tuple[float, float]) -> bool:
         return (
             (0 <= point[0] - self._panel.x <= self._panel.width and 0 <= point[1] - self._panel.y <= self._panel.height )
@@ -144,3 +158,167 @@ class Frame(Element):
 
     def on_draw(self):...
     def on_update(self, delta_time: float):...
+
+    def on_select(self):...
+    def on_hide(self):...
+
+
+class FrameAnimationMode(Enum):
+    NONE = 0
+    SHOW = 1
+    HIDE = 2
+
+
+class FrameController:
+
+    def __init__(self, frames: tuple[Frame, ...], position: tuple[float, float]) -> None:
+        self._frames: tuple[Frame, ...] = frames
+
+        self._pos: tuple[float, float] = position
+
+        self._selected_frame: Frame | None = None
+        self._next_frame: Frame | None = None
+        self._pending_frame: Frame | None = None
+
+        self._animation_time: float = 0.0
+        self._animation_mode: Enum = FrameAnimationMode.NONE
+
+    def select_frame(self, frame: Frame):
+        if frame == self._selected_frame:
+            return
+        
+        if frame not in self._frames:
+            raise ValueError(f'{frame} is not controlled by this controller.')
+
+        if self._selected_frame is not None:
+            self._animation_mode = FrameAnimationMode.HIDE
+            self._animation_time = GLOBAL_CLOCK.time
+            if self._next_frame is None:
+                self._next_frame = frame
+            else:
+                self._pending_frame = frame
+        elif self._next_frame is None:
+            self._next_frame = frame
+            frame.select()
+
+            self._animation_mode = FrameAnimationMode.SHOW
+            self._animation_time = GLOBAL_CLOCK.time
+        else:
+            self._pending_frame = frame
+
+    def select_frame_by_idx(self, frame_idx: int):
+        if not (0 <= frame_idx < len(self._frames)):
+            raise IndexError(f'The controller only has {len(self._frames)} frames to select')
+        self.select_frame(self._frames[frame_idx])
+
+    def deselect_frame(self):
+        if self._selected_frame is None or self._animation_mode != FrameAnimationMode.NONE:
+            return
+        
+        self._animation_mode = FrameAnimationMode.HIDE
+        self._animation_time = GLOBAL_CLOCK.time
+    
+    def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:
+        if input == inputs.PRIMARY_CLICK and pressed:
+            cursor = inputs.cursor
+            close_frame = True
+            for frame in self._frames:
+                if frame.contains_point(cursor):
+                    close_frame = False
+                    if frame == self._selected_frame or frame == self._next_frame:
+                        continue
+                    self._pending_frame = frame
+                    return
+            
+            if self._animation_mode != FrameAnimationMode.HIDE and close_frame:
+                self.deselect_frame()
+
+        if self._selected_frame is not None:
+            self._selected_frame.on_input(input, modifiers, pressed)
+        
+        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+            self._next_frame.on_input(input, modifiers, pressed)
+
+    def on_axis_change(self, axis: Axis, value_1: float, value_2: float):
+        if self._selected_frame is not None:
+            self._selected_frame.on_axis_change(axis, value_1, value_2)
+        
+        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+            self._next_frame.on_axis_change(axis, value_1, value_2)
+
+    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:
+        if self._selected_frame is not None:
+            self._selected_frame.on_cursor_motion(x, y, dx, dy)
+        
+        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+            self._next_frame.on_cursor_motion(x, y, dx, dy)
+
+    def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool | None:
+        if self._selected_frame is not None:
+            self._selected_frame.on_cursor_scroll(x, y, scroll_x, scroll_y)
+        
+        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+            self._next_frame.on_cursor_scroll(x, y, scroll_x, scroll_y)
+
+    def on_draw(self):
+        if self._selected_frame is not None:
+            self._selected_frame.on_draw()
+        
+        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+            self._next_frame.on_draw()
+
+    def on_update(self, delta_time: float):
+        time = GLOBAL_CLOCK.time
+        length = time - self._animation_time
+        fraction = length / style.game.panels.panel_speed
+
+        if self._selected_frame is not None and self._animation_mode == FrameAnimationMode.HIDE:
+            if fraction >= 1.0:
+                self._selected_frame.hide()
+                self._selected_frame.update_position(self._pos)
+                self._selected_frame = None
+
+                if self._next_frame is not None:
+                    self._next_frame.select()
+                    
+                    self._animation_mode = FrameAnimationMode.SHOW
+                    self._animation_time = time + style.game.panels.panel_speed - length
+                else:
+                    self._animation_mode = FrameAnimationMode.NONE
+                    self._animation_time = 0.0
+            else:
+                x = self._pos[0] - (1 - fraction)**3 * self._selected_frame.panel_width
+                self._selected_frame.update_position((x, self._pos[1]))
+        elif self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+            if fraction >= 1.0:
+                self._selected_frame = self._next_frame
+                self._next_frame = None
+
+                self._animation_mode = FrameAnimationMode.NONE
+                self._animation_time = 0.0
+
+                self._selected_frame.update_position((self._pos[0] - self._selected_frame.panel_width, self._pos[1]))
+            else:
+                x = self._pos[0] - (1 - (1 - fraction)**3) * self._next_frame.panel_width
+                self._next_frame.update_position((x, self._pos[1]))
+
+        if self._pending_frame is not None and self._animation_mode == FrameAnimationMode.NONE:
+            self.select_frame(self._pending_frame)
+
+        if self._selected_frame is not None:
+            self._selected_frame.on_update(delta_time)
+        
+        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+            self._next_frame.on_update(delta_time)
+
+    @property
+    def selected_frame(self) -> Frame | None:
+        return self._selected_frame
+    
+    @property
+    def next_frame(self) -> Frame | None:
+        return self._next_frame
+    
+    @property
+    def pending_frame(self) -> Frame | None:
+        return self._pending_frame
