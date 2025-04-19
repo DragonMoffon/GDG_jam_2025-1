@@ -218,14 +218,18 @@ class EditorFrame(Frame):
             self._gui.remove_element(self._popup)
             self._popup = None
             self._mode = EditorMode.NONE
-            return
+        elif input == inputs.SECONDARY_CLICK:
+            self._gui.remove_element(self._popup)
+            self._popup = None
+            self._mode = EditorMode.NONE
 
     def input_drag_block_mode(self, input: Button, modifiers: int, pressed: bool):
         if pressed:
             return
         
-        self._selected_block = None
-        self._mode = EditorMode.NONE
+        if input == inputs.PRIMARY_CLICK:
+            self._selected_block = None
+            self._mode = EditorMode.NONE
 
     def input_drag_connection_mode(self, input: Button, modifiers: int, pressed: bool):
         if pressed:
@@ -390,4 +394,4 @@ class EditorFrame(Frame):
         )
     
     def get_cursor_pos(self) -> tuple[float, float]:
-        return inputs.cursor[0] - self._panel.x, inputs.cursor[1] - self._panel.y
+        return inputs.cursor[0] - self._panel.x - style.format.footer_size, inputs.cursor[1] - self._panel.y - style.format.footer_size
