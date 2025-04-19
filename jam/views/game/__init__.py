@@ -1,10 +1,15 @@
 from enum import Enum
 
 from pyglet.graphics import Batch
+from pyglet.shapes import RoundedRectangle
+from arcade import SpriteSolidColor, draw_sprite, LRBT
+from arcade.camera.default import ViewportProjector
 
 from jam.view import View
 from jam.gui.frame import Frame
-from jam.input import inputs, Button
+from jam.input import inputs, Button, Axis
+
+from jam.graphics.clip import ClippingMask
 
 from .editor import EditorFrame
 from .settings import SettingsFrame
@@ -45,8 +50,13 @@ class GameView(View):
 
     def on_draw(self) -> bool | None:
         self.clear()
-        with self.window._ctx.enabled(self.window._ctx.BLEND):
-            self._batch.draw()
+        if self._active_frame is not None:
+            self._active_frame.on_draw()
+
+        if self._next_frame is not None and self._frame_animation == FrameAnimationMode.SHOW:
+            self._next_frame.on_draw()
+
+        self._batch.draw()
 
     def on_update(self, delta_time: float) -> bool | None:
         if self._active_frame is not None and self._frame_animation == FrameAnimationMode.HIDE:
@@ -99,6 +109,13 @@ class GameView(View):
 
             self._frame_animation = FrameAnimationMode.HIDE if self._active_frame is not None else FrameAnimationMode.SHOW
             self._frame_time = self.window.time
+
+    
+        if self._active_frame is not None:
+            self._active_frame.on_update(delta_time)
+
+        if self._next_frame is not None and self._frame_animation == FrameAnimationMode.SHOW:
+            self._next_frame.on_update(delta_time)
         
 
     def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:
@@ -110,9 +127,36 @@ class GameView(View):
                     if frame is self._active_frame or frame is self._next_frame:
                         continue
                     self._pending_frame = frame
-                    break
+                    return
 
             if self._active_frame is not None and self._frame_animation != FrameAnimationMode.HIDE and close_frame:
                 self._frame_time = self.window.time
                 self._frame_animation = FrameAnimationMode.HIDE
-                
+                return
+
+        if self._active_frame is not None:
+            self._active_frame.on_input(input, modifiers, pressed)
+        
+        if self._next_frame is not None and self._frame_animation == FrameAnimationMode.SHOW:
+            self._next_frame.on_input(input, modifiers, pressed)
+
+    def on_axis_change(self, axis: Axis, value_1: float, value_2: float):
+        if self._active_frame is not None:
+            self._active_frame.on_axis_change(axis, value_1, value_2)
+        
+        if self._next_frame is not None and self._frame_animation == FrameAnimationMode.SHOW:
+            self._next_frame.on_axis_change(axis, value_1, value_2)
+
+    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:
+        if self._active_frame is not None:
+            self._active_frame.on_cursor_motion(x, y, dx, dy)
+        
+        if self._next_frame is not None and self._frame_animation == FrameAnimationMode.SHOW:
+            self._next_frame.on_cursor_motion(x, y, dx, dy)
+    
+    def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool | None:
+        if self._active_frame is not None:
+            self._active_frame.on_cursor_scroll(x, y,scroll_x, scroll_y)
+        
+        if self._next_frame is not None and self._frame_animation == FrameAnimationMode.SHOW:
+            self._next_frame.on_cursor_scroll(x, y,scroll_x, scroll_y)

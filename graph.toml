@@ -25,7 +25,7 @@ uid = "e5dda7bdad3845f6b89a7fae3ff5c859"
 name = "Output"
 type = "Variable"
 config = {result = 2}
-position = [1080, 360.0]
+position = [700, 360.0]
 
 [[Block.Data]]
 uid = "91e4995e821448faba0c4d99044f3583"

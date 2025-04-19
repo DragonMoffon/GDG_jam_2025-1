@@ -313,6 +313,7 @@ class MultiInput:
             self.alt = value
         else:
             self.base = value
+
  
 class MultiMods:
 
@@ -333,6 +334,12 @@ class MultiMods:
             self.alt = value
         else:
             self.base = value
+
+    def __and__(self, other: int) -> int:
+        return other & self.base
+    
+    def __rand__(self, other: int) -> int:
+        return self.__and__(other)
 
 
 class InputManager:
@@ -647,6 +654,10 @@ class InputManager:
     TEST_INPUT = MultiInput(Keys.A, ControllerButtons.BOTTOM_FACE)
 
     PRIMARY_CLICK = MultiInput(MouseButtons.LEFT, ControllerButtons.BOTTOM_FACE)
-    SECONDARY_CLOCK = MultiInput(MouseButtons.RIGHT, ControllerButtons.LEFT_FACE)
+    SECONDARY_CLICK = MultiInput(MouseButtons.RIGHT, ControllerButtons.LEFT_FACE)
+
+
+    SAVE_INPUT = MultiInput(Keys.S, ControllerButtons.GUIDE)
+    SAVE_MOD = MultiMods(KeyModifiers.MOD_CTRL)
 
 inputs = InputManager()

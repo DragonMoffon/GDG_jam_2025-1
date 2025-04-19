@@ -49,4 +49,4 @@ info_tag = 'image/icons4.png'
 panel_speed = 0.4
 
 [Game.Editor]
-background = 'image/grid.png'
+background = 'image/grid1.png'

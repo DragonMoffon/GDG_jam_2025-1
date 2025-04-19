@@ -9,11 +9,10 @@ from jam.gui import core, util
 
 from resources import style
 
-import resources.ase as ase
 from pathlib import Path
 
 
-class EditorMode:
+class EditorMode(Enum):
     NONE = 0
     DRAG_BLOCK = auto()
     DRAG_CONNECTION = auto()
@@ -30,10 +29,7 @@ class BlockDebugView(View):
 
     def __init__(self, back: View | None = None):
         View.__init__(self)
-        with path(ase) as pth:
-            self.background = background.background_from_file(
-                pth / "grid_1.png", size=self.size
-            )
+        self.background = background.background_from_file(style.game.editor.background, size=self.size)
         self._back: View | None = back
 
         self._graph, positions = loading.read_graph(Path("graph.toml"))
@@ -99,8 +95,8 @@ class BlockDebugView(View):
         top = pos[1] > self.center_y
         right = pos[0] > self.center_x
 
-        dx = style.editor.padding if right else -style.editor.padding
-        dy = style.editor.padding if top else -style.editor.padding
+        dx = style.format.padding if right else -style.format.padding
+        dy = style.format.padding if top else -style.format.padding
 
         return util.SelectionPopup(
             tuple(
@@ -166,7 +162,7 @@ class BlockDebugView(View):
                 action = self._popup.get_hovered_item((x, y))
                 self._popup.highlight_action(action)
 
-    def on_mouse_drag(self, x, y, dx, dy, button, modifier):
+    def on_mouse_drag(self, x, y, dx, dy, button, modifiers):
         self._mouse_pos = (x, y)
         match self._mode:
             case EditorMode.NONE:
@@ -190,7 +186,7 @@ class BlockDebugView(View):
             case EditorMode.ADD_BLOCK:
                 self.on_mouse_motion(x, y, dx, dy)
 
-    def on_mouse_press(self, x, y, button, modifier):
+    def on_mouse_press(self, x, y, button, modifiers):
         self._mouse_pos = (x, y)
 
         match self._mode:
@@ -276,7 +272,7 @@ class BlockDebugView(View):
                 self._mode = EditorMode.NONE
                 return
 
-    def on_mouse_release(self, x, y, button, modifier):
+    def on_mouse_release(self, x, y, button, modifiers):
         self._mouse_pos = (x, y)
         match self._mode:
             case EditorMode.NONE:
@@ -327,7 +323,7 @@ class BlockDebugView(View):
                 self._input: str = ""
 
     def on_draw(self):
-        self.clear(color=style.editor.colors.background)
+        self.clear(color=style.colors.background)
         self.background.draw()
         self._renderer.draw()
 
@@ -338,8 +334,8 @@ class BlockDebugView(View):
                     self._start_pos[1],
                     self._mouse_pos[0],
                     self._mouse_pos[1],
-                    style.editor.colors.connection,
-                    style.editor.line_thickness,
+                    style.colors.highlight,
+                    style.format.line_thickness,
                 )
 
         if self._popup is not None and self._mode == EditorMode.NONE:

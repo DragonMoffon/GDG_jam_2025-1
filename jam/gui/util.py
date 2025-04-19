@@ -1,10 +1,11 @@
-from uuid import UUID, uuid4
-from typing import Callable
+from uuid import UUID
+from typing import Callable, Any
 
-from pyglet.shapes import Batch, Group, RoundedRectangle
-from arcade import get_window, Camera2D, Rect, Text
+from pyglet.graphics import Batch
+from pyglet.shapes import RoundedRectangle
+from arcade import Text
 
-from .core import Element, OVERLAY_SHADOW, OVERLAY_PRIMARY, OVERLAY_HIGHTLIGHT
+from .core import Element, OVERLAY_SHADOW_GROUP, OVERLAY_PRIMARY_GROUP
 from resources import style
 
 
@@ -28,23 +29,23 @@ class Popup(Element):
             bottom_left[1],
             width,
             height,
-            style.editor.padding,
+            style.format.padding,
             14,
-            style.editor.colors.block,
+            style.colors.base,
         )
         self._shadow = RoundedRectangle(
-            bottom_left[0] - 2 * style.editor.drop_x,
-            bottom_left[1] - 2 * style.editor.drop_y,
+            bottom_left[0] - 2 * style.format.drop_x,
+            bottom_left[1] - 2 * style.format.drop_y,
             width,
             height,
-            style.editor.padding,
+            style.format.padding,
             14,
-            style.editor.colors.shadow,
+            style.colors.shadow,
         )
 
     def connect_renderer(self, batch: Batch | None):
-        self._body.group = batch and OVERLAY_PRIMARY
-        self._shadow.group = batch and OVERLAY_SHADOW
+        self._body.group = batch and OVERLAY_PRIMARY_GROUP
+        self._shadow.group = batch and OVERLAY_SHADOW_GROUP
 
         self._body.batch = batch
         self._shadow.batch = batch
@@ -62,17 +63,17 @@ class InfoPopup(Popup):
     ):
         self._text = Text(
             text,
-            bottom_left[0] + style.editor.padding,
-            bottom_left[1] + style.editor.padding,
-            style.editor.colors.connection,
+            bottom_left[0] + style.format.padding,
+            bottom_left[1] + style.format.padding,
+            style.colors.highlight,
             style.text.normal.size,
             font_name=style.text.normal.name,
             anchor_y="bottom",
         )
         Popup.__init__(
             self,
-            self._text.content_width + 2 * style.editor.padding,
-            self._text.content_height + 2 * style.editor.padding,
+            self._text.content_width + 2 * style.format.padding,
+            self._text.content_height + 2 * style.format.padding,
             bottom_left,
             uid,
         )
@@ -80,13 +81,13 @@ class InfoPopup(Popup):
     def connect_renderer(self, batch: Batch | None):
         Popup.connect_renderer(self, batch)
 
-        self._text.group = batch and OVERLAY_PRIMARY
+        self._text.group = batch and OVERLAY_PRIMARY_GROUP
         self._text.batch = batch
 
 
 class PopupAction:
 
-    def __init__(self, name, action: Callable, *args, **kwds):
+    def __init__(self, name: str, action: Callable[..., None], *args: Any, **kwds: Any):
         self.name = name
         self.action = action
         self._args = args
@@ -113,7 +114,7 @@ class SelectionPopup(Popup):
                 name,
                 0.0,
                 0.0,
-                style.editor.colors.accent,
+                style.colors.accent,
                 style.text.normal.size,
                 anchor_y="bottom",
                 font_name=style.text.normal.name,
@@ -128,22 +129,22 @@ class SelectionPopup(Popup):
             name: RoundedRectangle(
                 0.0,
                 0.0,
-                text_width + 2 * style.editor.padding,
-                text_height + 2 * style.editor.padding,
-                style.editor.padding,
+                text_width + 2 * style.format.padding,
+                text_height + 2 * style.format.padding,
+                style.format.padding,
                 14,
-                style.editor.colors.background,
+                style.colors.background,
             )
             for name in self.actions
         }
 
         width = (
             max(panel.width for panel in self._action_panels.values())
-            + 2 * style.editor.padding
+            + 2 * style.format.padding
         )
         height = (
             sum(panel.height for panel in self._action_panels.values())
-            + (len(actions) + 1) * style.editor.padding
+            + (len(actions) + 1) * style.format.padding
         )
 
         bottom = position[1] - height if top else position[1]
@@ -152,13 +153,13 @@ class SelectionPopup(Popup):
         for idx, action in enumerate(actions):
             y = (
                 bottom
-                + style.editor.padding
-                + idx * (3 * style.editor.padding + text_height)
+                + style.format.padding
+                + idx * (3 * style.format.padding + text_height)
             )
-            self._action_panels[action.name].position = left + style.editor.padding, y
+            self._action_panels[action.name].position = left + style.format.padding, y
             self._action_text[action.name].position = (
-                left + 2 * style.editor.padding,
-                y + style.editor.padding,
+                left + 2 * style.format.padding,
+                y + style.format.padding,
             )
         Popup.__init__(self, width, height, (left, bottom), uid)
 
@@ -167,10 +168,10 @@ class SelectionPopup(Popup):
 
         for action in self.actions:
             p = self._action_panels[action]
-            p.group = batch and OVERLAY_PRIMARY
+            p.group = batch and OVERLAY_PRIMARY_GROUP
             p.batch = batch
             t = self._action_text[action]
-            t.group = batch and OVERLAY_PRIMARY
+            t.group = batch and OVERLAY_PRIMARY_GROUP
             t.batch = batch
 
     def get_hovered_item(self, point: tuple[float, float]):
@@ -193,27 +194,27 @@ class SelectionPopup(Popup):
 
         if only or not highlight:
             self._action_panels[name].color = (
-                style.editor.colors.block
+                style.colors.base
                 if highlight
-                else style.editor.colors.background
+                else style.colors.background
             )
             self._action_text[name].color = (
-                style.editor.colors.connection
+                style.colors.highlight
                 if highlight
-                else style.editor.colors.accent
+                else style.colors.accent
             )
             return
 
         for action in self.actions:
             h = action == name
             self._action_panels[action].color = (
-                style.editor.colors.block if h else style.editor.colors.background
+                style.colors.base if h else style.colors.background
             )
             self._action_text[action].color = (
-                style.editor.colors.connection if h else style.editor.colors.accent
+                style.colors.highlight if h else style.colors.accent
             )
 
     def clear_highlight(self):
         for action in self.actions:
-            self._action_panels[action].color = style.editor.colors.background
-            self._action_text[action].color = style.editor.colors.accent
+            self._action_panels[action].color = style.colors.background
+            self._action_text[action].color = style.colors.accent
