@@ -4,6 +4,7 @@ from enum import Enum, auto
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
 from arcade import Rect, LBWH, Vec2, draw_line, Camera2D
+from arcade.clock import GLOBAL_CLOCK
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
@@ -234,6 +235,8 @@ class EditorFrame(Frame):
             if clicked_block is not None:
                 self._renderer.remove_block(clicked_block._block)
                 self._graph.remove_block(clicked_block._block)
+        elif input == inputs.SAVE_INPUT and modifiers & inputs.SAVE_MOD:
+            loading.write_graph(Path(f"graph_{id(self._graph)}_{GLOBAL_CLOCK.time}.toml"), self._graph, self._renderer)
 
     def input_add_block_mode(self, input: Button, modifiers: int, pressed: bool):
         if not pressed:
@@ -414,7 +417,6 @@ class EditorFrame(Frame):
     def on_update(self, delta_time: float):
         if self._output_block is not None:
             self._graph.compute(self._output_block)
-
 
     def create_block_popup(self, pos: tuple[float, float]):
         def create_block(block_type: type):
