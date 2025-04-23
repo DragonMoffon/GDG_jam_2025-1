@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from sys import platform
-from enum import StrEnum, IntEnum, Enum
+from enum import StrEnum, IntEnum
+from typing import Callable
 from math import pow
 
 from pyglet.input import Controller
@@ -293,6 +294,11 @@ class Keys(IntEnum):
 
 Button = Keys | MouseButtons | ControllerButtons
 Axis = ControllerAxes | str
+
+OnInputCallable = Callable[[Button, int, bool], None]
+OnAxisChangeCallable = Callable[[Axis, float, float], None]
+OnCursorMotionCallable = Callable[[float, float, float, float], None]
+OnCursorScrollCallable = Callable[[float, float, float, float], None]
 
 class MultiInput:
 
@@ -655,7 +661,6 @@ class InputManager:
 
     PRIMARY_CLICK = MultiInput(MouseButtons.LEFT, ControllerButtons.BOTTOM_FACE)
     SECONDARY_CLICK = MultiInput(MouseButtons.RIGHT, ControllerButtons.LEFT_FACE)
-
 
     SAVE_INPUT = MultiInput(Keys.S, ControllerButtons.GUIDE)
     SAVE_MOD = MultiMods(KeyModifiers.MOD_CTRL)

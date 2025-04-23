@@ -304,6 +304,7 @@ class FrameController:
 
         if self._pending_frame is not None and self._animation_mode == FrameAnimationMode.NONE:
             self.select_frame(self._pending_frame)
+            self._pending_frame = None
 
         if self._selected_frame is not None:
             self._selected_frame.on_update(delta_time)

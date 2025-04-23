@@ -44,8 +44,6 @@ def read_graph(pth: Path) -> tuple[Graph, dict[UUID, tuple[float, float]]]:
         if uid is not None:
             uid = UUID(uid)
 
-        print(uid)
-
         if uid in variables:
             block: Variable = typ(block_data.get("name", None), uid)
             config = block_data.get("config", {})

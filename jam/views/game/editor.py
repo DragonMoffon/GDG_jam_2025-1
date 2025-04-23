@@ -3,7 +3,7 @@ from enum import Enum, auto
 
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
-from arcade import LBWH, Vec2, draw_line
+from arcade import Rect, LBWH, Vec2, draw_line, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
@@ -22,6 +22,43 @@ class EditorMode(Enum):
     CHANGE_CONFIG = auto()
     ADD_BLOCK = auto()
     ADD_NODE = auto()
+
+
+class Editor:
+
+    def __init__(self, region: Rect, graph_src: Path | None = None) -> None:
+        self._region: Rect = region#
+
+        # Graph
+        graph_src = graph_src if graph_src is not None else Path("graph.toml")
+        self._graph, positions = loading.read_graph(graph_src)
+
+        # Rendering
+        self._camera = Camera2D(region)
+        self._background = background.background_from_file(style.game.editor.background, size=(int(region.size.x), int(region.size.y)))
+        self._gui = core.Gui(self._camera)
+
+        # Editor State
+        self._mode: EditorMode = EditorMode.NONE
+
+    def set_mode_none(self):
+        pass
+
+    def set_mode_drag_block(self, block):
+        pass
+
+    def set_mode_drag_connection(self, block):
+        pass
+
+    def set_mode_change_value(self):
+        pass
+
+    def set_mode_add_block(self):
+        pass
+
+    def set_mode_add_node(self):
+        pass
+
 
 class EditorFrame(Frame):
 
@@ -51,9 +88,13 @@ class EditorFrame(Frame):
         self._graph, positions = loading.read_graph(Path("graph.toml"))
         # self._graph = node.Graph("DebugGraph")
         self._renderer = render.GraphRenderer(clip_rect, self._graph)
-        self._gui = core.Gui(clip_rect)
+        self._camera = Camera2D(clip_rect)
+        self._gui = core.Gui(self._camera)
 
+        self._output_block: node.Block | None = None
         for block in self._graph._blocks.values():
+            if block.name == 'Output':
+                self._output_block = block
             self._renderer.add_block(block, Vec2(*positions.get(block.uid, (0.0, 0.0))))
 
         for connection in self._graph._connections.values():
@@ -369,6 +410,11 @@ class EditorFrame(Frame):
                         self._popup = None
 
                 self._gui.draw()
+
+    def on_update(self, delta_time: float):
+        if self._output_block is not None:
+            self._graph.compute(self._output_block)
+
 
     def create_block_popup(self, pos: tuple[float, float]):
         def create_block(block_type: type):
