@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 from enum import EnumMeta, Enum as _Enum
-from typing import Self, TypeVar, Any, Generic
+from dataclasses import dataclass, field
+from typing import Self, TypeVar, Any, Generic, Protocol
 
 # -- Cursed Default Enum Stuff --
 class DefaultEnumMeta(EnumMeta):
@@ -18,11 +19,13 @@ _value_type = int | float | str | bool
 
 T = TypeVar('T', int, float, str, bool, covariant=True)
 O = TypeVar('O', int, float, str, bool, covariant=True)
+
+
 class Value(Generic[T]):
     __auto_castable__: set[type[_value_type]] = set()
+    _typ: type[T]
 
-    def __init__(self, typ: type[T], value: T) -> None:
-        self._typ: type[T] = typ
+    def __init__(self, value: T) -> None:
         self._value: T = value
 
     @property
@@ -42,97 +45,155 @@ class Value(Generic[T]):
     def __eq__(self, value: Value[Any]) -> bool: # type: ignore
         return value.type == self.type and value.value == self.value
 
-    def __cast__(self, other: Value[O]) -> Self:
-        return self.__class__(self._typ, self._typ(other.value))
+    @classmethod
+    def __cast__(cls, other: Value[O]) -> Self:
+        return cls(cls._typ(other.value))
     
-    def __acast__(self, other: Value[O]) -> Self:
-        if other.type not in self.__auto_castable__:
-            raise TypeError(f'Cannot cast {other.type} into {self.type} automatically, you must use an explicit cast')
-        return self.__cast__(other)
+    @classmethod
+    def __acast__(cls, other: Value[O]) -> Self:
+        if other.type not in cls.__auto_castable__:
+            raise TypeError(f'Cannot cast {other.type} into {cls._typ} automatically, you must use an explicit cast')
+        return cls.__cast__(other)
+
 
 class IntValue(Value[int]):
     __auto_castable__ = {float, bool}
+    _typ = int
     
     def __init__(self, value: int | None = None) -> None:
-        super().__init__(int, value or 0)
+        super().__init__(value or 0)
+
+    def __add__(self, other: Value[int] | Value[float]):
+        try:
+            if other.type == float:
+                return FloatValue(float(self.value + other.value))
+            elif other.type == int:
+                return IntValue(int(self.value + other.value))
+        except AttributeError:
+            raise ValueError(f'Cannot add {other} to {self} as {other} is not a valid Value Type.')
+
+        raise ValueError(f'Cannot add {other} to {self} as {other} is not an int or float value.')
+        
+    def __bool__(self):
+        return bool(self.value)
+
 
 class FloatValue(Value[float]):
     __auto_castable__ = {int, bool}
+    _typ = float
 
     def __init__(self, value: float | None = None) -> None:
-        super().__init__(float, value or 0.0)
+        super().__init__(value or 0.0)
+
 
 class StrValue(Value[str]):
     __auto_castable__ = {bool}
+    _typ = str
 
     def __init__(self, value: str | None = None) -> None:
-        super().__init__(str, value or "")
+        super().__init__(value or "")
+
 
 class BoolValue(Value[bool]):
     __auto_castable__ = {str}
+    _typ = bool
 
     def __init__(self, value: bool | None = None) -> None:
-        super().__init__(bool, value or False)
+        super().__init__(value or False)
+
 
 OperationValue = IntValue | FloatValue | StrValue | BoolValue
 ControlValue = Enum | OperationValue
 
-class BlockResult:
 
-    def __init__(self) -> None:
-        self._inputs: dict[str, OperationValue]
-        self._dynamic_inputs: dict[str, tuple[OperationValue]]
-        self._config: dict[str, OperationValue]
-        self._outputs: dict[str, OperationValue]
-        self._dynamic_outputs: dict[str, tuple[OperationValue]]
+class BlockOperation(Protocol):
+    def __call__(self, config: dict[str, ControlValue], **kwds: OperationValue | tuple[OperationValue, ...]) -> dict[str, OperationValue | tuple[OperationValue, ...]]: ...
 
-class Block:
-    inputs: dict[str, type[OperationValue]] = dict()
-    outputs: dict[str, type[OperationValue]] = dict()
-    config: dict[str, type[ControlValue]] = dict()
 
-    input_args: set[str] = set()
-    output_args: set[str] = set()
+@dataclass
+class BlockComputation:
+    source: UUID
+    type: BlockType
+    inputs: dict[str, OperationValue | tuple[OperationValue, ...]]
+    outputs: dict[str, OperationValue | tuple[OperationValue, ...]]
+    config: dict[str, ControlValue]
+    exception: Exception | None = None
 
-    def __init__(self, name: str | None = None, uid: UUID | None = None, **kwds: ControlValue):
-        self._uid: UUID = uid or uuid4()
-        self._name: str = name or self.__class__.__name__
-        self._configuration: dict[str, ControlValue] = {
-            name: typ() for name, typ in self.config.items()
-        }
-
-        for kwd in kwds:
-            if kwd not in self._configuration:
-                raise KeyError(f"{kwd} is not a configuration of the {self._name} table")
-            self._configuration[kwd] = kwds[kwd]
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-    def __str__(self) -> str:
-        return f"{self._name}<{self._uid}>"
-
-    @property
-    def uid(self) -> UUID:
-        return self._uid
-
-    @property
-    def name(self) -> str:
-        return self._name
+    def get_arg_input(self, name: str) -> tuple[OperationValue, ...]:
+        if name not in self.type.variable_inputs:
+            raise KeyError(f'{name} is not a variable length input of the {self.type.name} block')
+        return self.inputs[name] # type: ignore
+    
+    def get_input(self, name: str) -> OperationValue:
+        if name in self.type.variable_inputs:
+            raise KeyError(f'{name} is a variable length input of the {self.type.name} block')
+        return self.inputs[name] # type: ignore
+    
+    def get_arg_output(self, name: str) -> tuple[OperationValue, ...]:
+        if name not in self.type.variable_outputs:
+            raise KeyError(f'{name} is not a variable length output of the {self.type.name} block')
+        return self.outputs[name] # type: ignore
+    
+    def get_output(self, name: str) -> OperationValue:
+        if name in self.type.variable_outputs:
+            raise KeyError(f'{name} is a variable length output of the {self.type.name} block')
+        return self.outputs[name] # type: ignore
     
     def get_config(self, name: str) -> ControlValue:
-        if name not in self.config:
-            raise KeyError(f"{name} is not a config of the {self._name} Block")
-        return self._configuration[name]
+        return self.config[name]
 
-    def set_config(self, name: str, value: ControlValue):
-        if name not in self.config:
-            raise KeyError(f"{name} is not a config of the {self._name} Block")
-        assert isinstance(
-            value, self.config[name]
-        ), f"{type(value)} is not the type for the config {name} in the {self._name} Block"
 
-        if self._configuration[name] == value:
-            return
+@dataclass
+class BlockType:
+    name: str
+    operation: BlockOperation
 
-        self._configuration[name] = value
+    inputs: dict[str, type[OperationValue]]
+    outputs: dict[str, type[OperationValue]]
+    config: dict[str, type[ControlValue]]
+
+    variable_inputs: set[str]
+    variable_outputs: set[str]
+
+    def compute(self, block: Block, **kwds: OperationValue | tuple[OperationValue, ...]) -> BlockComputation:
+        exception = None
+        try:
+            if self.inputs.keys() != kwds.keys():
+                raise TypeError(f'{self.name} Block <{block.uid}> missing inputs: {set(self.inputs.keys()).difference(kwds.keys())}')
+            result = self.operation(block.config, **kwds)
+        except Exception as e:
+            exception = e
+            result = {}
+        return BlockComputation(block.uid, self, kwds, result, block.config.copy(), exception)
+
+
+@dataclass
+class Block:
+    type: BlockType
+    config: dict[str, ControlValue]
+    uid: UUID = field(default_factory=uuid4)
+
+
+@dataclass
+class Branch: ...
+
+
+@dataclass
+class Connection:
+    source: Block
+    output: str
+
+    target: Block
+    input: str
+
+    branch: Branch | None = None
+    uid: UUID = field(default_factory=uuid4)
+
+
+class Graph:
+
+    def __init__(self, name: str = "graph", *, future: bool = False) -> None:
+        self._name: str = name
+
+        self._blocks: dict[UUID, Block] = {}
+        self._connections: dict[UUID, Block] = {}
