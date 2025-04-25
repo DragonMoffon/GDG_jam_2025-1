@@ -1,0 +1,34 @@
+[Config]
+name = "DebugGraph"
+blocks = false
+connections = false
+
+[[Block.Variables]]
+uid = "5fec7ad1b05c49ef820b864fe49fd3f3"
+name = "Input"
+inputs = {}
+outputs = {a = "float", b = "float", c = "float"}
+
+[[Block.Variables]]
+uid = "e5dda7bdad3845f6b89a7fae3ff5c859"
+name = "Output"
+inputs = {result = "float"}
+outputs = {}
+
+[[Block.Data]]
+uid = "5fec7ad1b05c49ef820b864fe49fd3f3"
+type = "Input"
+config = {a = 12, b = 16, c = 19}
+position = [100, 360.0]
+
+[[Block.Data]]
+uid = "e5dda7bdad3845f6b89a7fae3ff5c859"
+type = "Output"
+config = {}
+position = [700, 360.0]
+
+[[Block.Data]]
+uid = "91e4995e821448faba0c4d99044f3583"
+type = "Multiply"
+config = {}
+position = [382.0, 436.0]

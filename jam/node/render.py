@@ -6,11 +6,11 @@ from arcade import Vec2, Camera2D, Text, get_window
 from pyglet.graphics import Batch, Group
 from pyglet.shapes import Line, RoundedRectangle, Circle
 
-from .node import Block, Connection, Graph
-
 from resources import style
 
-format = style.format
+from .node import Block, Connection, Graph
+
+formatting = style.format
 colors = style.colors
 
 BASE_GROUP = Group(order=2)
@@ -50,7 +50,7 @@ class IONodeRenderer:
         self.panel_text: Text | None = None
         self._panel_text_scroll: int = 0
 
-        width = format.padding
+        width = formatting.padding
         height = 0.0
 
         self.text = Text(
@@ -63,12 +63,12 @@ class IONodeRenderer:
             anchor_y="center",
         )
         width += self.text.content_width
-        height = max(height, self.text.content_height + 2 * format.padding)
+        height = max(height, self.text.content_height + 2 * formatting.padding)
 
         if node:
             color = colors.highlight if active else colors.accent
-            self.node = Circle(0.0, 0.0, format.point_radius, color=color)
-            size = 2 * (format.point_radius + format.padding)
+            self.node = Circle(0.0, 0.0, formatting.point_radius, color=color)
+            size = 2 * (formatting.point_radius + formatting.padding)
             width += size
             height = max(height, size)
 
@@ -84,9 +84,9 @@ class IONodeRenderer:
             self.panel = RoundedRectangle(
                 0.0,
                 0.0,
-                self.panel_text.content_width + 2 * format.padding,
-                style.text.normal.size + 2 * format.padding,
-                format.padding,
+                self.panel_text.content_width + 2 * formatting.padding,
+                style.text.normal.size + 2 * formatting.padding,
+                formatting.padding,
                 color=colors.background,
             )
             width += self.panel.width
@@ -102,25 +102,25 @@ class IONodeRenderer:
         r = l + self.width
 
         if self._is_left:
-            node_x = l + format.padding + format.point_radius
-            text_x = node_x + format.padding + format.point_radius
-            panel_x = text_x + self.text.content_width + format.padding
+            node_x = l + formatting.padding + formatting.point_radius
+            text_x = node_x + formatting.padding + formatting.point_radius
+            panel_x = text_x + self.text.content_width + formatting.padding
         else:
-            node_x = r - format.padding - format.point_radius
-            text_x = l + format.padding
-            panel_x = text_x + self.text.content_width + format.padding
+            node_x = r - formatting.padding - formatting.point_radius
+            text_x = l + formatting.padding
+            panel_x = text_x + self.text.content_width + formatting.padding
 
         y = b + self.height * 0.5
 
-        self.text.position = text_x, y + format.padding
+        self.text.position = text_x, y + formatting.padding
         if self._has_node:
             self.node.position = node_x, y
         if self._has_panel:
             panel_y = y - self.panel.height * 0.5
             self.panel.position = panel_x, panel_y
             self.panel_text.position = (
-                panel_x + format.padding,
-                panel_y + format.padding,
+                panel_x + formatting.padding,
+                panel_y + formatting.padding,
             )
 
     def connect_renderer(self, batch: Batch, group: bool = True):
@@ -172,9 +172,7 @@ class IONodeRenderer:
         self._is_active = active
 
         if self._has_node:
-            self.node.color = (
-                colors.highlight if active else colors.accent
-            )
+            self.node.color = colors.highlight if active else colors.accent
 
     def contains_point(self, point: tuple[float, float]):
         l, b = self._bottom_left
@@ -194,8 +192,8 @@ class IONodeRenderer:
 
         x, y = self.node.position
         return (
-            abs(point[0] - x) <= format.point_radius
-            and abs(point[1] - y) <= format.point_radius
+            abs(point[0] - x) <= formatting.point_radius
+            and abs(point[1] - y) <= formatting.point_radius
         )
 
 
@@ -267,12 +265,12 @@ class BlockRenderer:
         self.max_output_width = max_output_width
         self.max_config_width = max_config_width
 
-        self.height = format.header_size + format.footer_size + body_height
+        self.height = formatting.header_size + formatting.footer_size + body_height
 
         self._title = Text(
             block.name,
-            bottom_left.x + format.corner_radius,
-            bottom_left.y + self.height - format.header_size / 2.0,
+            bottom_left.x + formatting.corner_radius,
+            bottom_left.y + self.height - formatting.header_size / 2.0,
             colors.base,
             font_size=style.text.normal.size,
             font_name=style.text.normal.name,
@@ -280,8 +278,8 @@ class BlockRenderer:
         )
 
         self.width = max(
-            max_input_width + max_output_width + max_config_width + 2 * format.padding,
-            self._title.content_width + 2 * format.corner_radius,
+            max_input_width + max_output_width + max_config_width + 2 * formatting.padding,
+            self._title.content_width + 2 * formatting.corner_radius,
         )
 
         self._box = RoundedRectangle(
@@ -289,35 +287,35 @@ class BlockRenderer:
             bottom_left.y,
             self.width,
             self.height,
-            format.corner_radius,
+            formatting.corner_radius,
             14,
             colors.base,
         )
         self._shadow = RoundedRectangle(
-            bottom_left.x - format.drop_x,
-            bottom_left.y - format.drop_y,
+            bottom_left.x - formatting.drop_x,
+            bottom_left.y - formatting.drop_y,
             self.width,
             self.height,
-            format.corner_radius,
+            formatting.corner_radius,
             14,
             colors.shadow,
         )
         self._select = RoundedRectangle(
-            bottom_left.x - format.select_radius,
-            bottom_left.y - format.select_radius,
-            self.width + 2 * format.select_radius,
-            self.height + 2 * format.select_radius,
-            format.corner_radius + format.select_radius,
+            bottom_left.x - formatting.select_radius,
+            bottom_left.y - formatting.select_radius,
+            self.width + 2 * formatting.select_radius,
+            self.height + 2 * formatting.select_radius,
+            formatting.corner_radius + formatting.select_radius,
             14,
             colors.highlight,
         )
         self._select.visible = False
         self._header = RoundedRectangle(
             bottom_left.x,
-            bottom_left.y + self.height - format.header_size,
+            bottom_left.y + self.height - formatting.header_size,
             self.width,
-            format.header_size,
-            (0, format.corner_radius, format.corner_radius, 0),
+            formatting.header_size,
+            (0, formatting.corner_radius, formatting.corner_radius, 0),
             14,
             colors.accent,
         )
@@ -367,28 +365,28 @@ class BlockRenderer:
         self.bottom_left = bottom_left
 
         self._title.position = (
-            bottom_left.x + format.corner_radius,
-            bottom_left.y + self.height - format.header_size / 2.0,
+            bottom_left.x + formatting.corner_radius,
+            bottom_left.y + self.height - formatting.header_size / 2.0,
         )
         self._shadow.position = (
-            bottom_left.x - format.drop_x,
-            bottom_left.y - format.drop_y,
+            bottom_left.x - formatting.drop_x,
+            bottom_left.y - formatting.drop_y,
         )
         self._box.position = bottom_left
         self._select.position = (
-            bottom_left.x - format.select_radius,
-            bottom_left.y - format.select_radius,
+            bottom_left.x - formatting.select_radius,
+            bottom_left.y - formatting.select_radius,
         )
         self._header.position = (
             bottom_left.x,
-            bottom_left.y + self.height - format.header_size,
+            bottom_left.y + self.height - formatting.header_size,
         )
 
         input_x = bottom_left.x
         output_x = bottom_left.x + self.width
-        config_x = bottom_left.x + self.max_input_width + format.padding
+        config_x = bottom_left.x + self.max_input_width + formatting.padding
 
-        start_y = bottom_left.y + self.height - format.header_size
+        start_y = bottom_left.y + self.height - formatting.header_size
 
         y = start_y
         for io_node in self._inputs.values():
@@ -502,14 +500,14 @@ class ConnectionRenderer:
         p2 = self._target._inputs[self._connection.input].node
 
         self._line = Line(
-            p1.x, p1.y, p2.x, p2.y, format.line_thickness, colors.highlight
+            p1.x, p1.y, p2.x, p2.y, formatting.line_thickness, colors.highlight
         )
         self._drop_shadow = Line(
-            p1.x - format.drop_x,
-            p1.y - format.drop_y,
-            p2.x - format.drop_x,
-            p2.y - format.drop_y,
-            format.line_thickness,
+            p1.x - formatting.drop_x,
+            p1.y - formatting.drop_y,
+            p2.x - formatting.drop_x,
+            p2.y - formatting.drop_y,
+            formatting.line_thickness,
             colors.shadow,
         )
 
@@ -518,13 +516,13 @@ class ConnectionRenderer:
         p2 = self._target._inputs[self._connection.input].node
 
         self._line.x = p1.x
-        self._drop_shadow.x = p1.x - format.drop_x
+        self._drop_shadow.x = p1.x - formatting.drop_x
         self._line.y = p1.y
-        self._drop_shadow.y = p1.y - format.drop_y
+        self._drop_shadow.y = p1.y - formatting.drop_y
         self._line.x2 = p2.x
-        self._drop_shadow.x2 = p2.x - format.drop_x
+        self._drop_shadow.x2 = p2.x - formatting.drop_x
         self._line.y2 = p2.y
-        self._drop_shadow.y2 = p2.y - format.drop_y
+        self._drop_shadow.y2 = p2.y - formatting.drop_y
 
     def connect_renderer(self, batch: Batch, group: bool = True):
         if group:

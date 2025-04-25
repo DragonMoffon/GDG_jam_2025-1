@@ -5,11 +5,13 @@ connections = false
 
 [[Block.Variables]]
 uid = "5fec7ad1b05c49ef820b864fe49fd3f3"
+name = "Input"
 inputs = {}
 outputs = {a = "number", b = "number", c = "number"}
 
 [[Block.Variables]]
 uid = "e5dda7bdad3845f6b89a7fae3ff5c859"
+name = "Output"
 inputs = {result = "number"}
 outputs = {}
 

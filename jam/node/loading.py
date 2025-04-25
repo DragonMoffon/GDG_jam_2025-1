@@ -2,11 +2,10 @@ from pathlib import Path
 from tomllib import load
 from uuid import UUID, uuid4
 
-from tomlkit import document, nl, table, aot, inline_table, dump
-from arcade import LBWH
+from tomlkit import document, table, aot, inline_table, dump
 
-from .render import GraphRenderer, BlockRenderer
-from .node import Graph, Block, Connection, STR_CAST, CAST_STR
+from .render import GraphRenderer
+from .node import Graph, Connection, STR_CAST, CAST_STR
 from .blocks import BLOCKS, Variable
 
 __all__ = ("read_graph", "write_graph")
@@ -161,7 +160,3 @@ def write_graph(pth: Path, graph: Graph, renderer: GraphRenderer | None = None):
 
     with open(pth, "wt") as fp:
         dump(toml, fp)
-
-
-def write_renderer(pth: Path, renderer: GraphRenderer):
-    toml = document()

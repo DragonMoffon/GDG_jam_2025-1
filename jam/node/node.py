@@ -266,10 +266,9 @@ class Graph:
         This can take any block in the graph so for debugging you can query
         any block.
         """
-
         depths: dict[UUID, int] = {}
 
-        def _find_predicessors(block: Block, seen: set = set()):
+        def _find_predicessors(block: Block, seen: set):
             if block.uid in depths:
                 return depths[block.uid] + 1
 
@@ -289,7 +288,7 @@ class Graph:
             return depth + 1
 
         # Step One
-        max_depth = _find_predicessors(target)
+        max_depth = _find_predicessors(target, set())
 
         # Step Two
         layers = [list() for _ in range(max_depth)]

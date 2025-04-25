@@ -1,79 +1,81 @@
 from __future__ import annotations
 
+from pathlib import Path
+from tomllib import load
 from uuid import UUID, uuid4
-from enum import EnumMeta, Enum as _Enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Self, TypeVar, Any, Generic, Protocol
 
-# -- Cursed Default Enum Stuff --
-class DefaultEnumMeta(EnumMeta):
-    def __call__(cls, value=None, *args, **kwargs) -> type[_Enum]: # type: ignore
-        if value is None:
-            return cls(0)
-        return EnumMeta.__call__(cls, value, *args, **kwargs) # type: ignore
+from tomlkit import document, table, aot, inline_table, dump
 
-
-class Enum(_Enum, metaclass=DefaultEnumMeta):...
 
 _value_type = int | float | str | bool
 
-T = TypeVar('T', int, float, str, bool, covariant=True)
-O = TypeVar('O', int, float, str, bool, covariant=True)
+T_co = TypeVar("T_co", int, float, str, bool, covariant=True)
+O_co = TypeVar("O_co", int, float, str, bool, covariant=True)
 
 
-class Value(Generic[T]):
+class Value(Generic[T_co]):
     __auto_castable__: set[type[_value_type]] = set()
-    _typ: type[T]
+    _typ: type[T_co]
 
-    def __init__(self, value: T) -> None:
-        self._value: T = value
+    def __init__(self, value: T_co) -> None:
+        self._value: T_co = value
 
     @property
-    def type(self):
+    def type(self) -> type[T_co]:
         return self._typ
-    
+
     @property
-    def value(self):
+    def value(self) -> T_co:
         return self._value
-    
+
     def __str__(self):
-        return f'{self._typ}<{self._value}>'
+        return f"{self._typ}<{self._value}>"
 
     def __hash__(self) -> int:
         return hash((self._typ, self.value))
 
-    def __eq__(self, value: Value[Any]) -> bool: # type: ignore
+    def __eq__(self, value: Value[Any]) -> bool:  # type: ignore --
         return value.type == self.type and value.value == self.value
 
     @classmethod
-    def __cast__(cls, other: Value[O]) -> Self:
+    def __cast__(cls, other: Value[O_co]) -> Self:
         return cls(cls._typ(other.value))
-    
+
     @classmethod
-    def __acast__(cls, other: Value[O]) -> Self:
+    def __acast__(cls, other: Value[O_co]) -> Self:
+        if other.type == cls._typ:
+            return other
         if other.type not in cls.__auto_castable__:
-            raise TypeError(f'Cannot cast {other.type} into {cls._typ} automatically, you must use an explicit cast')
+            raise TypeError(
+                f"Cannot cast {other.type} into {cls._typ} automatically, you must use an explicit cast"
+            )
         return cls.__cast__(other)
 
 
 class IntValue(Value[int]):
     __auto_castable__ = {float, bool}
     _typ = int
-    
+
     def __init__(self, value: int | None = None) -> None:
         super().__init__(value or 0)
 
     def __add__(self, other: Value[int] | Value[float]):
         try:
-            if other.type == float:
+            if other.type is float:
                 return FloatValue(float(self.value + other.value))
-            elif other.type == int:
+            elif other.type is int:
                 return IntValue(int(self.value + other.value))
-        except AttributeError:
-            raise ValueError(f'Cannot add {other} to {self} as {other} is not a valid Value Type.')
+        except AttributeError as e:
+            raise ValueError(
+                f"Cannot add {other} to {self} as {other} is not a valid Value Type."
+            ) from e
 
-        raise ValueError(f'Cannot add {other} to {self} as {other} is not an int or float value.')
-        
+        raise ValueError(
+            f"Cannot add {other} to {self} as {other} is not an int or float value."
+        )
+
     def __bool__(self):
         return bool(self.value)
 
@@ -103,97 +105,509 @@ class BoolValue(Value[bool]):
 
 
 OperationValue = IntValue | FloatValue | StrValue | BoolValue
-ControlValue = Enum | OperationValue
+STR_CAST = {"int": IntValue, "float": FloatValue, "bool": BoolValue, "str": StrValue}
 
 
 class BlockOperation(Protocol):
-    def __call__(self, config: dict[str, ControlValue], **kwds: OperationValue | tuple[OperationValue, ...]) -> dict[str, OperationValue | tuple[OperationValue, ...]]: ...
+    def __call__(
+        self,
+        **kwds: OperationValue,
+    ) -> dict[str, OperationValue]: ...
 
 
 @dataclass
 class BlockComputation:
-    source: UUID
-    type: BlockType
-    inputs: dict[str, OperationValue | tuple[OperationValue, ...]]
-    outputs: dict[str, OperationValue | tuple[OperationValue, ...]]
-    config: dict[str, ControlValue]
+    outputs: dict[str, OperationValue]
     exception: Exception | None = None
 
-    def get_arg_input(self, name: str) -> tuple[OperationValue, ...]:
-        if name not in self.type.variable_inputs:
-            raise KeyError(f'{name} is not a variable length input of the {self.type.name} block')
-        return self.inputs[name] # type: ignore
-    
-    def get_input(self, name: str) -> OperationValue:
-        if name in self.type.variable_inputs:
-            raise KeyError(f'{name} is a variable length input of the {self.type.name} block')
-        return self.inputs[name] # type: ignore
-    
-    def get_arg_output(self, name: str) -> tuple[OperationValue, ...]:
-        if name not in self.type.variable_outputs:
-            raise KeyError(f'{name} is not a variable length output of the {self.type.name} block')
-        return self.outputs[name] # type: ignore
-    
-    def get_output(self, name: str) -> OperationValue:
-        if name in self.type.variable_outputs:
-            raise KeyError(f'{name} is a variable length output of the {self.type.name} block')
-        return self.outputs[name] # type: ignore
-    
-    def get_config(self, name: str) -> ControlValue:
-        return self.config[name]
 
-
-@dataclass
 class BlockType:
-    name: str
-    operation: BlockOperation
+    __definitions__: dict[str, BlockType] = {}
 
-    inputs: dict[str, type[OperationValue]]
-    outputs: dict[str, type[OperationValue]]
-    config: dict[str, type[ControlValue]]
+    def __init__(
+        self,
+        name: str,
+        operation: BlockOperation,
+        inputs: dict[str, type[OperationValue]] | None = None,
+        outputs: dict[str, type[OperationValue]] | None = None,
+        config: dict[str, type[OperationValue]] | None = None,
+        *,
+        exclusive: bool = False,
+    ) -> None:
+        if name in self.__definitions__ and not exclusive:
+            raise TypeError(
+                f"A non-exclusive block of type {name} has already been defined"
+            )
+        self.__definitions__[name] = self
+        self.exclusive = exclusive
 
-    variable_inputs: set[str]
-    variable_outputs: set[str]
+        self.name: str = name
+        self.operation: BlockOperation = operation
 
-    def compute(self, block: Block, **kwds: OperationValue | tuple[OperationValue, ...]) -> BlockComputation:
+        self.inputs: dict[str, type[OperationValue]] = inputs or {}
+        self.outputs: dict[str, type[OperationValue]] = outputs or {}
+        self.config: dict[str, type[OperationValue]] = config or {}
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
+    def compute(
+        self, block: Block, **kwds: OperationValue | tuple[OperationValue, ...]
+    ) -> BlockComputation:
         exception = None
         try:
             if self.inputs.keys() != kwds.keys():
-                raise TypeError(f'{self.name} Block <{block.uid}> missing inputs: {set(self.inputs.keys()).difference(kwds.keys())}')
+                raise TypeError(
+                    f"{self.name} Block <{block.uid}> missing inputs: {set(self.inputs.keys()).difference(kwds.keys())}"
+                )
             result = self.operation(block.config, **kwds)
-        except Exception as e:
+        except (TypeError, AttributeError, ValueError, KeyError) as e:
             exception = e
             result = {}
-        return BlockComputation(block.uid, self, kwds, result, block.config.copy(), exception)
+        return BlockComputation(result, exception)
 
 
-@dataclass
 class Block:
-    type: BlockType
-    config: dict[str, ControlValue]
-    uid: UUID = field(default_factory=uuid4)
+
+    def __init__(
+        self, typ: BlockType, uid: UUID | None = None, **kwds: OperationValue
+    ) -> None:
+        self.type: BlockType = typ
+        self.uid: UUID = uid or uuid4()
+
+        self.config: dict[str, OperationValue] = {
+            name: value() for name, value in typ.inputs.items()
+        }
+
+        for kwd, value in kwds.items():
+            if kwd not in self.type.config:
+                raise KeyError(f"{kwd} is not a configuration of the {self.type} block")
+            self.config[kwd] = value
+
+        self.inputs: dict[str, UUID] = {name: None for name in typ.inputs}
+        self.outputs: dict[str, list[UUID]] = {name: [] for name in typ.outputs}
+
+    def __str__(self):
+        return f"{self.type}<{self.uid}>"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def compute(self, **kwds: OperationValue) -> BlockComputation:
+        exception = None
+        try:
+            if self.inputs.keys() != kwds.keys():
+                raise TypeError(
+                    f"{self.name} Block <{self.uid}> missing inputs: {set(self.inputs.keys()).difference(kwds.keys())}"
+                )
+            result = self.operation(**self.config, **kwds)
+        except (TypeError, AttributeError, ValueError, KeyError) as e:
+            exception = e
+            result = {}
+        return BlockComputation(result, exception)
 
 
-@dataclass
-class Branch: ...
-
-
-@dataclass
 class Connection:
-    source: Block
-    output: str
 
-    target: Block
-    input: str
+    def __init__(
+        self,
+        source_: UUID,
+        output_: str,
+        target_: UUID,
+        input_: str,
+        uid: UUID | None = None,
+    ):
+        self.source = source_
+        self.output = output_
 
-    branch: Branch | None = None
-    uid: UUID = field(default_factory=uuid4)
+        self.target = target_
+        self.input = input_
+
+        self.uid = uid or uuid4()
+
+
+# -- BLOCK TYPES --
+
+
+# -- VARIABLES --
+# We don't need to define 'VariableBlock' as a type anymore yippee (just its operation)
+
+
+def __variable(**kwds: OperationValue) -> dict[str, OperationValue]:
+    return kwds
+
+
+# We do need to define value blocks though
+
+
+def __int(Int: IntValue) -> dict[str, IntValue]:
+    return {"Int": IntValue.__acast__(Int)}
+
+
+IntBlock = BlockType("Int", __int, None, {"Int": IntValue}, {"Int": IntValue})
+
+
+def __float(Float: FloatValue) -> dict[str, FloatValue]:
+    return {"FLoat": FloatValue.__acast__(Float)}
+
+
+FloatBlock = BlockType(
+    "Float", __float, None, {"value": FloatValue}, {"value": FloatValue}
+)
+
+
+def __bool(Boolean: BoolValue) -> dict[str, BoolValue]:
+    return {"Boolean": BoolValue.__acast__(Boolean)}
+
+
+BoolBlock = BlockType(
+    "Boolean", __bool, None, {"Boolean": BoolValue}, {"Boolean": BoolValue}
+)
+
+
+def __str(String: StrValue) -> dict[str, StrValue]:
+    return {"String": StrValue.__acast__(String)}
+
+
+StrBlock = BlockType("String", __str, None, {"String": StrValue}, {"String": StrValue})
+
+BLOCK_CAST = {int: IntBlock, float: FloatBlock, bool: BoolBlock, str: StrBlock}
+
+# -- OPERATIONS --
+
+
+def __add(
+    a: IntValue | FloatValue, b: IntValue | FloatValue
+) -> dict[str, IntValue | FloatValue]:
+    if a.type is int and b.type is int:
+        return {"result": IntValue(a.value + b.value)}
+    a_ = FloatValue.__acast__(a)
+    b_ = FloatValue.__acast__(b)
+
+    return {"result": FloatValue(a_.value + b_.value)}
+
+
+AddBlock = BlockType(
+    "Add",
+    __add,
+    {"a": FloatValue, "b": FloatValue},
+    {"result": FloatValue},
+)
+
+
+def __sub(
+    a: IntValue | FloatValue, b: IntValue | FloatValue
+) -> dict[str, IntValue | FloatValue]:
+    if a.type is int and b.type is int:
+        return {"result": IntValue(a.value - b.value)}
+    a_ = FloatValue.__acast__(a)
+    b_ = FloatValue.__acast__(b)
+
+    return {"result": FloatValue(a_.value - b_.value)}
+
+
+SubBlock = BlockType(
+    "Subtract",
+    __sub,
+    {"a": FloatValue, "b": FloatValue},
+    {"result": FloatValue},
+)
+
+
+def __mul(
+    a: IntValue | FloatValue, b: IntValue | FloatValue
+) -> dict[str, IntValue | FloatValue]:
+    if a.type is int and b.type is int:
+        return {"result": IntValue(a.value * b.value)}
+    a_ = FloatValue.__acast__(a)
+    b_ = FloatValue.__acast__(b)
+
+    return {"result": FloatValue(a_.value * b_.value)}
+
+
+MulBlock = BlockType(
+    "Multiply",
+    __mul,
+    {"a": FloatValue, "b": FloatValue},
+    {"result": FloatValue},
+)
+
+
+def __div(
+    a: IntValue | FloatValue, b: IntValue | FloatValue
+) -> dict[str, IntValue | FloatValue]:
+    if a.type is int and b.type is int:
+        return {"result": IntValue(a.value // b.value)}
+    a_ = FloatValue.__acast__(a)
+    b_ = FloatValue.__acast__(b)
+
+    return {"result": FloatValue(a_.value / b_.value)}
+
+
+DivBlock = BlockType(
+    "Divide",
+    __div,
+    {"a": FloatValue, "b": FloatValue},
+    {"result": FloatValue},
+)
+
+# -- Functions --
+
+# cast
+# mod
+# abs
+# sign
+# max
+# min
+
+# -- Logic and Looping --
+
+# if, elif, else
+# for loop
+# while loop
+
+# -- SubGraph --
+
+# TODO: ???
 
 
 class Graph:
 
-    def __init__(self, name: str = "graph", *, future: bool = False) -> None:
+    def __init__(self, name: str = "graph", *, _: None = None) -> None:
         self._name: str = name
 
         self._blocks: dict[UUID, Block] = {}
-        self._connections: dict[UUID, Block] = {}
+        self._connections: dict[UUID, Connection] = {}
+
+    def add_block(self, block: Block) -> None:
+        if block.uid in self._blocks:
+            return
+
+        self._blocks[block.uid] = block
+
+    def remove_block(self, block: Block) -> None:
+        if block.uid not in self._blocks:
+            return
+
+        for uid in block.inputs.values():
+            self.remove_connection(self._connections[uid])
+
+        for output in block.outputs.values():
+            for uid in output:
+                self.remove_connection(self._connections[uid])
+
+        self._blocks.pop(block.uid)
+
+    def add_connection(self, connection: Connection) -> None:
+        if (
+            connection.source not in self._blocks
+            or connection.target not in self._blocks
+        ):
+            return
+
+        if connection.uid in self._connections:
+            return
+
+        source = self._blocks[connection.source]
+        target = self._blocks[connection.target]
+
+        if target.inputs[connection.input] is not None:
+            self.remove_connection(self._connections[target.inputs[connection.input]])
+
+        target.inputs[connection.input] = connection.uid
+        source.outputs[connection.output].append(connection.uid)
+
+    def remove_connection(self, connection: Connection) -> None:
+        if connection.uid not in self._connections:
+            return
+
+        self._blocks[connection.source].outputs[connection.output].remove(
+            connection.uid
+        )
+        self._blocks[connection.target].inputs[connection.input] = None
+
+        self._connections.pop(connection.uid)
+
+    def compute(self, target: Block) -> BlockComputation:
+        """
+        Starting from the target block we walk backwards through the connections
+        building a directed connection graph which we then run through forwards.
+        This has the benefit of skipping blocks that aren't connected to the output
+        even if they're in the graph.
+
+        This can take any block in the graph so for debugging you can query
+        any block.
+        """
+        depths: dict[UUID, int] = {}
+        layers: list[list[Block]] = []
+
+        def _find_predicessors(block: Block, seen: set) -> int:
+            if block.uid in depths:
+                return depths[block.uid] + 1
+
+            if block.uid in seen:
+                raise RecursionError(f"Block {block} refers to itself")
+
+            seen = seen.union([block])
+            depth = 0
+
+            for uid in block.inputs.values():
+                connection = self._connections[uid]
+                input_block = self._blocks[connection.source]
+                depth = max(depth, _find_predicessors(input_block, seen))
+
+            depths[block.uid] = depth
+
+            if depth == len(layers):
+                layers.append([])
+            layers[depth].append(block)
+
+            return depth + 1
+
+        _find_predicessors(target, set())
+
+        computations: dict[UUID, BlockComputation] = {}
+
+        for layer in layers:
+            for block in layer:
+                inputs = {}
+                for name, uid in block.inputs.values():
+                    connection = self._connections[uid]
+                    computation = computations[connection.source]
+                    inputs[name] = computation.outputs[connection.output]
+
+                result: BlockComputation = block.compute(**inputs)
+                computations[block.uid] = result
+                if result.exception is not None and block != target:
+                    # early exit if we hit an exception (and so can't find target value)
+                    computations[target.uid] = BlockComputation({}, result.exception)
+                    break
+
+        return computations[target.uid]
+
+
+def read_graph(path: Path) -> tuple[Graph, dict[UUID, tuple[int, int]]]:
+    with open(path, "rb") as fp:
+        raw_data = load(fp)
+
+    config_table = raw_data["Config"]
+    block_table = raw_data.get("Block", {})
+    connection_table = raw_data.get("Connection", {})
+
+    defined_types = {}
+    for variable_data in block_table.get("Variables", ()):
+        inputs = {name: STR_CAST[typ] for name, typ in variable_data["inputs"].items()}
+        outputs = {
+            name: STR_CAST[typ] for name, typ in variable_data["outputs"].items()
+        }
+        config = {name: outputs[name] for name in outputs if name not in inputs}
+
+        name = variable_data["name"]
+        defined_types[name] = BlockType(
+            name, __variable, inputs, outputs, config, exclusive=True
+        )
+
+    graph = Graph(name=config_table.get("name", ""))
+    positions = {}
+
+    for block_data in block_table.get("Data", ()):
+        uid = block_data.get("uid", None)
+        if uid is not None:
+            uid = UUID(uid)
+
+        type_str = block_data["type"]
+        if type_str in defined_types:
+            block_type = defined_types[type_str]
+        else:
+            block_type = BlockType.__definitions__[type_str]
+
+        config = {
+            name: block_type.config[name](value)
+            for name, value in block_data.get("config", {}).items()
+        }
+
+        block = Block(block_type, uid, **config)
+        positions[block.uid] = tuple(block_data.get("position", (0.0, 0.0)))
+        graph.add_block(block)
+
+    for connection_data in connection_table.get("Data", ()):
+        uid = connection_data.get("uid", None)
+        if uid is not None:
+            uid = UUID(uid)
+
+        graph.add_connection(
+            Connection(
+                UUID(connection_data["source"]),
+                connection_data["output"],
+                UUID(connection_data["target"]),
+                connection_data["input"],
+                uid,
+            )
+        )
+
+    return graph, positions
+
+
+def write_graph(
+    path: Path, graph: Graph, positions: dict[UUID, tuple[int, int]] | None
+) -> None:
+    positions = {} if positions is None else positions
+    toml = document()
+
+    config_table = table()
+    block_table = table()
+    variables = aot()
+    blocks = aot()
+    connection_table = table()
+    connections = aot()
+
+    config_table["name"] = graph._name
+    toml.add("Config", config_table)
+    for block in graph._blocks.values():
+        subtable = table()
+        config = inline_table()
+
+        subtable["uid"] = block.uid.hex
+        subtable["type"] = block.type.name
+        config.update(block.config)
+        block["config"] = config
+        if block.uid in positions:
+            subtable["position"] = positions[block.uid]
+
+        blocks.append(subtable)
+
+        if block.type.exclusive:
+            type_table = table()
+            input_table = inline_table()
+            input_table.update(
+                {name: typ.type for name, typ in block.type.inputs.items()}
+            )
+            output_table = inline_table()
+            output_table.update(
+                {name: typ.type for name, typ in block.type.outputs.items()}
+            )
+            type_table["name"] = block.type.name
+            type_table["input"] = input_table
+            type_table["output"] = output_table
+            variables.append(type_table)
+
+    block_table["Variables"] = variables
+    block_table["Data"] = blocks
+    toml["Block"] = block_table
+
+    for connection in graph._connections.values():
+        subtable = table()
+        subtable["uid"] = connection.uid.hex
+        subtable["source"] = connection.source.hex
+        subtable["output"] = connection.output
+        subtable["target"] = connection.target.hex
+        subtable["input"] = connection.input
+        connections.append(subtable)
+    connection_table["Data"] = connections
+    toml["Connection"] = connection_table
+
+    with open(path, "w", encoding="utf-8") as fp:
+        dump(toml, fp)

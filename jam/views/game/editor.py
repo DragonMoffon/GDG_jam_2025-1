@@ -8,13 +8,14 @@ from arcade.clock import GLOBAL_CLOCK
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
-from jam.node import loading, render, node
+from jam.node import loading, render, node, graph as g
 from jam.gui.frame import Frame, ACTIVE_GROUP
 from jam.gui import util, core
 from jam.graphics.clip import ClippingMask
+from jam.input import inputs, Button, Axis
+
 from resources import style
 
-from jam.input import inputs, Button, Axis
 
 class EditorMode(Enum):
     NONE = 0
@@ -28,15 +29,19 @@ class EditorMode(Enum):
 class Editor:
 
     def __init__(self, region: Rect, graph_src: Path | None = None) -> None:
-        self._region: Rect = region#
+        self._region: Rect = region  #
 
         # Graph
-        graph_src = graph_src if graph_src is not None else Path("graph.toml")
-        self._graph, positions = loading.read_graph(graph_src)
+        self._src: Path | None = graph_src
+        self._graph, positions = (
+            (g.Graph(), {}) if not graph_src else g.read_graph(graph_src)
+        )
 
         # Rendering
         self._camera = Camera2D(region)
-        self._background = background.background_from_file(style.game.editor.background, size=(int(region.size.x), int(region.size.y)))
+        self._background = background.background_from_file(
+            style.game.editor.background, size=(int(region.size.x), int(region.size.y))
+        )
         self._gui = core.Gui(self._camera)
 
         # Editor State
@@ -63,28 +68,39 @@ class Editor:
 
 class EditorFrame(Frame):
 
-    def __init__(self, tag_offset: float, position: tuple[float, float], height: float, show_body: bool = False, show_shadow: bool = True):
+    def __init__(
+        self,
+        tag_offset: float,
+        position: tuple[float, float],
+        height: float,
+        show_body: bool = False,
+        show_shadow: bool = True,
+    ):
         size = 1000, height
 
-        clip_size = int(size[0] - style.format.footer_size), int(size[1] - 2*style.format.footer_size)
+        clip_size = int(size[0] - style.format.footer_size), int(
+            size[1] - 2 * style.format.footer_size
+        )
         clip_rect = LBWH(0.0, 0.0, clip_size[0], clip_size[1])
         self.cliping_mask = ClippingMask(
-            (0.0, 0.0), clip_size,
-            clip_size,
-            group=ACTIVE_GROUP
+            (0.0, 0.0), clip_size, clip_size, group=ACTIVE_GROUP
         )
         self._clip_projector = ViewportProjector(clip_rect)
         with self.cliping_mask.clip:
             with self._clip_projector.activate():
                 RoundedRectangle(
-                0.0, 0.0,
-                size[0] - style.format.footer_size, size[1] - 2*style.format.footer_size,
-                (style.format.corner_radius, style.format.corner_radius, 0.0, 0.0),
-                (12, 12, 1, 1),
-                color=(255, 255, 255, 255),
+                    0.0,
+                    0.0,
+                    size[0] - style.format.footer_size,
+                    size[1] - 2 * style.format.footer_size,
+                    (style.format.corner_radius, style.format.corner_radius, 0.0, 0.0),
+                    (12, 12, 1, 1),
+                    color=(255, 255, 255, 255),
                 ).draw()
 
-        self.background = background.background_from_file(style.game.editor.background, size=clip_size)
+        self.background = background.background_from_file(
+            style.game.editor.background, size=clip_size
+        )
 
         self._graph, positions = loading.read_graph(Path("graph.toml"))
         # self._graph = node.Graph("DebugGraph")
@@ -94,7 +110,7 @@ class EditorFrame(Frame):
 
         self._output_block: node.Block | None = None
         for block in self._graph._blocks.values():
-            if block.name == 'Output':
+            if block.name == "Output":
                 self._output_block = block
             self._renderer.add_block(block, Vec2(*positions.get(block.uid, (0.0, 0.0))))
 
@@ -105,8 +121,9 @@ class EditorFrame(Frame):
             with self._clip_projector.activate():
                 self.background.draw()
 
-
-        Frame.__init__(self, 'EDITOR', tag_offset, position, size, show_body, show_shadow)
+        Frame.__init__(
+            self, "EDITOR", tag_offset, position, size, show_body, show_shadow
+        )
 
         # Editor State
         self._mode = EditorMode.NONE
@@ -129,21 +146,23 @@ class EditorFrame(Frame):
         self.panel: render.IONodeRenderer = None
         self.text_scroll: int = 0
 
-
-    def connect_renderer(self, batch: Batch | None):
+    def connect_renderer(self, batch: Batch | None) -> None:
         Frame.connect_renderer(self, batch)
         self.cliping_mask.batch = batch
 
-    def update_position(self, point: tuple[float, float]):
+    def update_position(self, point: tuple[float, float]) -> None:
         Frame.update_position(self, point)
-        self.cliping_mask.position = point[0] + style.format.footer_size, point[1] + style.format.footer_size
-    
+        self.cliping_mask.position = (
+            point[0] + style.format.footer_size,
+            point[1] + style.format.footer_size,
+        )
+
     @property
-    def show_body(self):
+    def show_body(self) -> bool:
         return self._show_body
-    
+
     @show_body.setter
-    def show_body(self, show: bool):
+    def show_body(self, show: bool) -> bool:
         self._show_body = show
         self._panel.visible = show
         self.cliping_mask.visible = show
@@ -158,12 +177,13 @@ class EditorFrame(Frame):
                 self.input_drag_block_mode(input, modifiers, pressed)
             case EditorMode.DRAG_CONNECTION:
                 self.input_drag_connection_mode(input, modifiers, pressed)
-            case _: ...
+            case _:
+                ...
 
     def input_none_mode(self, input: Button, modifiers: int, pressed: bool):
         if not pressed:
             return
-        
+
         if input == inputs.PRIMARY_CLICK:
             x, y = self.get_cursor_pos()
 
@@ -177,7 +197,7 @@ class EditorFrame(Frame):
                 if block.contains_point((x, y)):
                     clicked_block = block
                     break
-            
+
             # If we are then check to see if:
             # a) we clicking a panel
             # b) we are dragging a node
@@ -231,12 +251,16 @@ class EditorFrame(Frame):
                 if block.contains_point((x, y)):
                     clicked_block = block
                     break
-    
+
             if clicked_block is not None:
                 self._renderer.remove_block(clicked_block._block)
                 self._graph.remove_block(clicked_block._block)
         elif input == inputs.SAVE_INPUT and modifiers & inputs.SAVE_MOD:
-            loading.write_graph(Path(f"graph_{id(self._graph)}_{GLOBAL_CLOCK.time}.toml"), self._graph, self._renderer)
+            loading.write_graph(
+                Path(f"graph_{id(self._graph)}_{GLOBAL_CLOCK.time}.toml"),
+                self._graph,
+                self._renderer,
+            )
 
     def input_add_block_mode(self, input: Button, modifiers: int, pressed: bool):
         if not pressed:
@@ -270,7 +294,7 @@ class EditorFrame(Frame):
     def input_drag_block_mode(self, input: Button, modifiers: int, pressed: bool):
         if pressed:
             return
-        
+
         if input == inputs.PRIMARY_CLICK:
             self._selected_block = None
             self._mode = EditorMode.NONE
@@ -321,8 +345,8 @@ class EditorFrame(Frame):
             self._output: str = ""
             self._target_block: render.BlockRenderer = None
             self._input: str = ""
-    
-    def on_axis_change(self, axis: Axis, value_1: float, value_2: float):...
+
+    def on_axis_change(self, axis: Axis, value_1: float, value_2: float): ...
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:
         x, y = self.get_cursor_pos()
@@ -383,9 +407,12 @@ class EditorFrame(Frame):
                     if self._selected_block is not None:
                         self._selected_block.deselect()
                     self._selected_block = None
-            case _: ...
+            case _:
+                ...
 
-    def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool | None:...
+    def on_cursor_scroll(
+        self, x: float, y: float, scroll_x: float, scroll_y: float
+    ) -> bool | None: ...
 
     def on_draw(self):
         with self.cliping_mask.target:
@@ -425,8 +452,8 @@ class EditorFrame(Frame):
             self._graph.add_block(block)
             self._renderer.add_block(block, Vec2(*self.get_cursor_pos()))
 
-        top = pos[1] > 0.5*self.panel_height
-        right = pos[0] > 0.5*self.panel_width
+        top = pos[1] > 0.5 * self.panel_height
+        right = pos[0] > 0.5 * self.panel_width
 
         dx = style.format.padding if right else -style.format.padding
         dy = style.format.padding if top else -style.format.padding
@@ -440,6 +467,9 @@ class EditorFrame(Frame):
             top,
             right,
         )
-    
+
     def get_cursor_pos(self) -> tuple[float, float]:
-        return inputs.cursor[0] - self._panel.x - style.format.footer_size, inputs.cursor[1] - self._panel.y - style.format.footer_size
+        return (
+            inputs.cursor[0] - self._panel.x - style.format.footer_size,
+            inputs.cursor[1] - self._panel.y - style.format.footer_size,
+        )
