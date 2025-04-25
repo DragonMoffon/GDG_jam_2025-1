@@ -15,7 +15,6 @@ SHADOW_GROUP = Group(1)
 TAG_GROUP = Group(2)
 
 
-
 class Frame(Element):
 
     def __init__(self, name: str, tag_offset: float, position: tuple[float, float], size: tuple[float, float], show_body: bool = False, show_shadow: bool = True, anchor_top: bool = True, uid: UUID | None = None):
@@ -71,8 +70,8 @@ class Frame(Element):
             hide_bottom = tag_offset < radius and 0.0 < tag_offset + self._tag_panel.height
 
         top_radius = 0.0 if hide_top else radius
-        top_segments = 1 if hide_top else 12  
-        
+        top_segments = 1 if hide_top else 12
+
         bottom_radius = 0.0 if hide_bottom else radius
         bottom_segments = 1 if hide_bottom else 12
 
@@ -90,24 +89,24 @@ class Frame(Element):
         self.show_shadow = show_shadow
 
     @property
-    def tag_height(self):
+    def tag_height(self) -> float:
         return self._tag_panel.height
-    
-    @property
-    def panel_width(self):
-        return self._size[0]
 
     @property
-    def panel_height(self):
+    def panel_width(self) -> float:
+        return self._panel.width
+
+    @property
+    def panel_height(self) -> float:
         return self._panel.height
 
-    def connect_renderer(self, batch: Batch | None):
+    def connect_renderer(self, batch: Batch | None) -> None:
         self._tag_shadow.batch = batch
         self._tag_panel.batch = batch
         self._panel.batch = batch
         self._tag_text.batch = batch
 
-    def update_position(self, point: tuple[float, float]):
+    def update_position(self, point: tuple[float, float]) -> None:
         self._position = point
         self._panel.position = point
 
@@ -117,50 +116,52 @@ class Frame(Element):
         self._tag_text.position = self._tag_panel.x + style.format.corner_radius / 2.0, self._tag_panel.y + self._tag_panel.height - style.format.corner_radius, 0.0
 
     @property
-    def show_body(self):
+    def show_body(self) -> bool:
         return self._show_body
 
     @show_body.setter
-    def show_body(self, show: bool):
+    def show_body(self, show: bool) -> None:
         self._show_body = show
         self._panel.visible = show
 
     @property
-    def show_shadow(self):
+    def show_shadow(self) -> bool:
         return self._show_shadow
 
     @show_shadow.setter
-    def show_shadow(self, show: bool):
+    def show_shadow(self, show: bool) -> None:
         self._show_shadow = show
         self._tag_shadow.visible = show
 
-    def select(self):
+    def select(self) -> None:
         self.show_body = True
         self.show_shadow = False
         self.on_select()
 
-    def hide(self):
+    def hide(self) -> None:
         self.show_body = False
         self.show_shadow = True
         self.on_hide()
 
     def contains_point(self, point: tuple[float, float]) -> bool:
         return (
-            (0 <= point[0] - self._panel.x <= self._panel.width and 0 <= point[1] - self._panel.y <= self._panel.height )
-            or
-            (0 <= point[0] - self._tag_panel.x <= self._tag_panel.width and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height)
+            (0 <= point[0] - self._panel.x <= self._panel.width and 0 <= point[1] - self._panel.y <= self._panel.height)
+            or (0 <= point[0] - self._tag_panel.x <= self._tag_panel.width and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height)
         )
-    
-    def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:...
-    def on_axis_change(self, axis: Axis, value_1: float, value_2: float):...
-    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:...
-    def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool | None:...
 
-    def on_draw(self):...
-    def on_update(self, delta_time: float):...
+    def tag_contains_point(self, point: tuple[float, float]) -> bool:
+        return 0 <= point[0] - self._tag_panel.x <= self._tag_panel.width and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
 
-    def on_select(self):...
-    def on_hide(self):...
+    def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None: ...
+    def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> bool | None: ...
+    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None: ...
+    def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool | None: ...
+
+    def on_draw(self) -> None: ...
+    def on_update(self, delta_time: float) -> None: ...
+
+    def on_select(self) -> None: ...
+    def on_hide(self) -> None: ...
 
 
 class FrameAnimationMode(Enum):
@@ -183,10 +184,10 @@ class FrameController:
         self._animation_time: float = 0.0
         self._animation_mode: Enum = FrameAnimationMode.NONE
 
-    def select_frame(self, frame: Frame):
+    def select_frame(self, frame: Frame) -> None:
         if frame == self._selected_frame:
             return
-        
+
         if frame not in self._frames:
             raise ValueError(f'{frame} is not controlled by this controller.')
 
@@ -206,68 +207,71 @@ class FrameController:
         else:
             self._pending_frame = frame
 
-    def select_frame_by_idx(self, frame_idx: int):
+    def select_frame_by_idx(self, frame_idx: int) -> None:
         if not (0 <= frame_idx < len(self._frames)):
             raise IndexError(f'The controller only has {len(self._frames)} frames to select')
         self.select_frame(self._frames[frame_idx])
 
-    def deselect_frame(self):
+    def deselect_frame(self) -> None:
         if self._selected_frame is None or self._animation_mode != FrameAnimationMode.NONE:
             return
-        
+
         self._animation_mode = FrameAnimationMode.HIDE
         self._animation_time = GLOBAL_CLOCK.time
-    
+
     def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:
         if input == inputs.PRIMARY_CLICK and pressed:
             cursor = inputs.cursor
             close_frame = True
             for frame in self._frames:
+                if frame == self._selected_frame and frame.tag_contains_point(cursor):
+                    close_frame = True
+                    break
                 if frame.contains_point(cursor):
                     close_frame = False
                     if frame == self._selected_frame or frame == self._next_frame:
                         continue
                     self._pending_frame = frame
                     return
-            
+
             if self._animation_mode != FrameAnimationMode.HIDE and close_frame:
                 self.deselect_frame()
 
         if self._selected_frame is not None:
             self._selected_frame.on_input(input, modifiers, pressed)
-        
+
         if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
             self._next_frame.on_input(input, modifiers, pressed)
 
-    def on_axis_change(self, axis: Axis, value_1: float, value_2: float):
+    def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> None:
         if self._selected_frame is not None:
             self._selected_frame.on_axis_change(axis, value_1, value_2)
-        
+
         if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
             self._next_frame.on_axis_change(axis, value_1, value_2)
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:
         if self._selected_frame is not None:
             self._selected_frame.on_cursor_motion(x, y, dx, dy)
-        
+
         if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
             self._next_frame.on_cursor_motion(x, y, dx, dy)
 
     def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool | None:
         if self._selected_frame is not None:
             self._selected_frame.on_cursor_scroll(x, y, scroll_x, scroll_y)
-        
+
         if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
             self._next_frame.on_cursor_scroll(x, y, scroll_x, scroll_y)
 
-    def on_draw(self):
+    def on_draw(self) -> None:
         if self._selected_frame is not None:
             self._selected_frame.on_draw()
-        
+
         if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
             self._next_frame.on_draw()
 
-    def on_update(self, delta_time: float):
+    def on_update(self, delta_time: float) -> None:
         time = GLOBAL_CLOCK.time
         length = time - self._animation_time
         fraction = length / style.game.panels.panel_speed
@@ -280,7 +284,7 @@ class FrameController:
 
                 if self._next_frame is not None:
                     self._next_frame.select()
-                    
+
                     self._animation_mode = FrameAnimationMode.SHOW
                     self._animation_time = time + style.game.panels.panel_speed - length
                 else:
@@ -308,18 +312,18 @@ class FrameController:
 
         if self._selected_frame is not None:
             self._selected_frame.on_update(delta_time)
-        
+
         if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
             self._next_frame.on_update(delta_time)
 
     @property
     def selected_frame(self) -> Frame | None:
         return self._selected_frame
-    
+
     @property
     def next_frame(self) -> Frame | None:
         return self._next_frame
-    
+
     @property
     def pending_frame(self) -> Frame | None:
         return self._pending_frame
