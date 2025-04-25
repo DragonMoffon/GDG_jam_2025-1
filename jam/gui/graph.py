@@ -1,3 +1,4 @@
+from uuid import UUID
 from pyglet.graphics import Group, Batch
 from pyglet.text import Label
 from pyglet.shapes import RoundedRectangle
@@ -5,7 +6,7 @@ from pyglet.sprite import Sprite
 
 from resources import style
 
-from jam.node.graph import Graph, Value, OperationValue
+from jam.node.graph import Graph, Value, Block, Connection, BlockComputation, OperationValue
 
 from .core import Element
 
@@ -48,7 +49,7 @@ class TextPanel(Element):
 
     def update_position(self, point: tuple[float, float]) -> None:
         self._panel.position = point
-        self._text.position = point[0] + formating.padding, point[1] + formating.padding
+        self._text.position = point[0] + formating.padding, point[1] + formating.padding, 0.0
 
     def connect_renderer(self, batch: Batch | None = None) -> None:
         self._panel.batch = batch
@@ -64,10 +65,10 @@ class NestedImplementationElement(Element):
         self._sprite.height = formating.corner_radius
 
     def update_position(self, point: tuple[float, float]) -> None:
-        self._sprite.position = point
+        self._sprite.position = point[0], point[1], 0.0
 
     def connect_renderer(self, batch: Batch | None) -> None:
-        self._sprite.batch = batch
+        self._sprite.batch = batch # type: ignore
 
     # TODO: global ctx open graph
 
@@ -83,10 +84,10 @@ class ConnectionNodeElement(Element):
         self._branch: bool = False
 
     def update_position(self, point: tuple[float, float]) -> None:
-        self._sprite.position = point
+        self._sprite.position = point[0], point[1], 0.0
 
     def connect_renderer(self, batch: Batch | None) -> None:
-        self._sprite.batch = batch
+        self._sprite.batch = batch # type: ignore
 
     @property
     def active(self) -> bool:
@@ -125,8 +126,20 @@ class ConnectionNodeElement(Element):
                 self._sprite.image = style.game.editor.node_inactive
 
 
-class BlockElement(Element): ...
+class BlockElement(Element):
+    
+    def __init__(self, block: Block):
+        super().__init__(block.uid)
+        self._bottom_left = (0.0, 0.0)
+        self._block = block
 
+    @property
+    def left(self) -> float:
+        return self._bottom_left[0]
+
+    @property
+    def bottom(self) -> float:
+        return self._bottom_left[1]
 
 class TempValueElement(Element):
 
