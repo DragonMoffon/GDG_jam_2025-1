@@ -236,6 +236,7 @@ class FrameController:
 
             if self._animation_mode != FrameAnimationMode.HIDE and close_frame:
                 self.deselect_frame()
+                return
 
         if self._selected_frame is not None:
             self._selected_frame.on_input(input, modifiers, pressed)
