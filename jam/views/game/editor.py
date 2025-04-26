@@ -3,7 +3,7 @@ from enum import Enum, auto
 
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
-from arcade import LBWH, Vec2, draw_line, Camera2D
+from arcade import LBWH, Vec2, Vec3, draw_line, Camera2D
 from arcade.clock import GLOBAL_CLOCK
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
@@ -89,6 +89,7 @@ class EditorFrame(Frame):
         self._mode = EditorMode.NONE
         self._cursor_pos = None
         self._popup: util.Popup | None = None
+        self._move_camera: bool = False
 
         # Drag Block
         self._selected_block: render.BlockRenderer = None
@@ -142,22 +143,33 @@ class EditorFrame(Frame):
 
     def input_none_mode(self, input: Button, modifiers: int, pressed: bool):
         if not pressed:
+            if input == inputs.PRIMARY_CLICK:
+                self._move_camera = False
+            return
+        
+        if input == inputs.SAVE_INPUT and modifiers & inputs.SAVE_MOD == inputs.SAVE_MOD:
+            self._move_camera = False
+            loading.write_graph(
+                Path(f"graph_{id(self._graph)}_{GLOBAL_CLOCK.time}.toml"),
+                self._graph,
+                self._renderer,
+            )
             return
 
+        x, y = self.get_cursor_pos()
+
+        if self._popup is not None:
+            self._gui.remove_element(self._popup)
+            self._popup = None
+
+        # Find if we are hovering over a block
+        clicked_block = None
+        for block in self._renderer._blocks.values():
+            if block.contains_point((x, y)):
+                clicked_block = block
+                break
+
         if input == inputs.PRIMARY_CLICK:
-            x, y = self.get_cursor_pos()
-
-            if self._popup is not None:
-                self._gui.remove_element(self._popup)
-                self._popup = None
-
-            # Find if we are hovering over a block
-            clicked_block = None
-            for block in self._renderer._blocks.values():
-                if block.contains_point((x, y)):
-                    clicked_block = block
-                    break
-
             # If we are then check to see if:
             # a) we clicking a panel
             # b) we are dragging a node
@@ -192,35 +204,20 @@ class EditorFrame(Frame):
                     self._start_pos = io_node.node.position
                     self._mode = EditorMode.DRAG_CONNECTION
                     return
+            
+            # If we aren't over a block or near a node drag the camera
+            self._move_camera = True
 
-            # If we aren't over a block or near a node create a popup
-            self._popup = self.create_block_popup((x, y))
-            self._gui.add_element(self._popup)
-
-            self._mode = EditorMode.ADD_BLOCK
         elif input == inputs.SECONDARY_CLICK:
-            x, y = self.get_cursor_pos()
-
-            if self._popup is not None:
-                self._gui.remove_element(self._popup)
-                self._popup = None
-
-            # Find if we are hovering over a block
-            clicked_block = None
-            for block in self._renderer._blocks.values():
-                if block.contains_point((x, y)):
-                    clicked_block = block
-                    break
-
             if clicked_block is not None:
                 self._renderer.remove_block(clicked_block._block)
                 self._graph.remove_block(clicked_block._block)
-        elif input == inputs.SAVE_INPUT and modifiers & inputs.SAVE_MOD:
-            loading.write_graph(
-                Path(f"graph_{id(self._graph)}_{GLOBAL_CLOCK.time}.toml"),
-                self._graph,
-                self._renderer,
-            )
+
+            # If we aren't over a block or near a node create a popup
+            self._popup = self.create_block_popup(self.get_cursor_pos_raw())
+            self._gui.add_element(self._popup)
+
+            self._mode = EditorMode.ADD_BLOCK
 
     def input_add_block_mode(self, input: Button, modifiers: int, pressed: bool):
         if not pressed:
@@ -312,6 +309,11 @@ class EditorFrame(Frame):
         x, y = self.get_cursor_pos()
         match self._mode:
             case EditorMode.NONE:
+                if self._move_camera:
+                    pos = self._camera.position
+                    self._camera.position = pos[0] - dx / self._camera.zoom, pos[1] - dy / self._camera.zoom
+                    return
+
                 for block in self._renderer._blocks.values():
                     if block.contains_point((x, y)):
                         if self._selected_block is not None:
@@ -372,12 +374,14 @@ class EditorFrame(Frame):
 
     def on_cursor_scroll(
         self, x: float, y: float, scroll_x: float, scroll_y: float
-    ) -> bool | None: ...
+    ) -> bool | None:
+        if scroll_y != 0:
+            self._camera.zoom = max(0.1, min(1.0, self._camera.zoom + scroll_y / 10))
 
     def on_draw(self):
         with self.cliping_mask.target:
-            with self._clip_projector.activate():
-                self.background.draw()
+            self.background.draw()
+            with self._camera.activate():
                 self._renderer.draw()
 
                 match self._mode:
@@ -398,7 +402,7 @@ class EditorFrame(Frame):
                     if not self._popup.contains_point(self.get_cursor_pos()):
                         self._gui.remove_element(self._popup)
                         self._popup = None
-
+            with self._clip_projector.activate():
                 self._gui.draw()
 
     def on_update(self, delta_time: float):
@@ -428,8 +432,12 @@ class EditorFrame(Frame):
             right,
         )
 
-    def get_cursor_pos(self) -> tuple[float, float]:
+    def get_cursor_pos_raw(self) -> tuple[float, float]:
         return (
             inputs.cursor[0] - self._panel.x - style.format.footer_size,
             inputs.cursor[1] - self._panel.y - style.format.footer_size,
         )
+    
+    def get_cursor_pos(self) -> tuple[float, float]:
+        pos: Vec3 = self._camera.unproject(self.get_cursor_pos_raw())
+        return pos.x, pos.y

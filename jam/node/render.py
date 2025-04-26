@@ -543,7 +543,6 @@ class GraphRenderer:
         self._graph = graph
         self._blocks: dict[UUID, BlockRenderer] = {}
         self._connections: dict[UUID, ConnectionRenderer] = {}
-        self._camera = Camera2D(viewport=viewport)
         self._batch = Batch()
         self._ctx = get_window().ctx
 
@@ -631,6 +630,4 @@ class GraphRenderer:
         )
 
     def draw(self):
-        with self._ctx.enabled(self._ctx.BLEND):
-            with self._camera.activate():
-                self._batch.draw()
+        self._batch.draw()

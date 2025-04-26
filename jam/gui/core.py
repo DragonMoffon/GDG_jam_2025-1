@@ -51,7 +51,6 @@ class Gui:
     def __init__(self, projector: Projector):
         self._ctx = get_window().ctx
         self._batch = Batch()
-        self._camera = projector
         self._elements: dict[UUID, Element] = {}
 
     @property
@@ -59,8 +58,7 @@ class Gui:
         return self._batch
 
     def draw(self):
-        with self._camera.activate():
-            self._batch.draw()
+        self._batch.draw()
 
     def add_element(self, element: Element) -> None:
         if element.uid in self._elements:
