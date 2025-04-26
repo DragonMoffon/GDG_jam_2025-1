@@ -3,12 +3,12 @@ from enum import Enum, auto
 
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
-from arcade import Rect, LBWH, Vec2, draw_line, Camera2D
+from arcade import LBWH, Vec2, draw_line, Camera2D
 from arcade.clock import GLOBAL_CLOCK
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
-from jam.node import loading, render, node, graph as g
+from jam.node import loading, render, node
 from jam.gui.frame import Frame, ACTIVE_GROUP
 from jam.gui import util, core
 from jam.graphics.clip import ClippingMask
@@ -24,46 +24,6 @@ class EditorMode(Enum):
     CHANGE_CONFIG = auto()
     ADD_BLOCK = auto()
     ADD_NODE = auto()
-
-
-class Editor:
-
-    def __init__(self, region: Rect, graph_src: Path | None = None) -> None:
-        self._region: Rect = region  #
-
-        # Graph
-        self._src: Path | None = graph_src
-        self._graph, positions = (
-            (g.Graph(), {}) if not graph_src else g.read_graph(graph_src)
-        )
-
-        # Rendering
-        self._camera = Camera2D(region)
-        self._background = background.background_from_file(
-            style.game.editor.background, size=(int(region.size.x), int(region.size.y))
-        )
-        self._gui = core.Gui(self._camera)
-
-        # Editor State
-        self._mode: EditorMode = EditorMode.NONE
-
-    def set_mode_none(self):
-        pass
-
-    def set_mode_drag_block(self, block):
-        pass
-
-    def set_mode_drag_connection(self, block):
-        pass
-
-    def set_mode_change_value(self):
-        pass
-
-    def set_mode_add_block(self):
-        pass
-
-    def set_mode_add_node(self):
-        pass
 
 
 class EditorFrame(Frame):
