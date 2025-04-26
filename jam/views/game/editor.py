@@ -57,12 +57,16 @@ class Editor:
         self._output: str = ""
         self._input: str = ""
 
-        # Edit Config Value
-        self.text = ""
-        self.panel: gui.TextPanel | None = None
-        self.text_scroll: int = 0
+        # Add Block
+        self._select_position: tuple[float, float] = (0.0, 0.0)
+        self._block_popup: util.SelectionPopup | None = None
 
-    def set_mode_none(self):
+        # Edit Config Value
+        self._text = ""
+        self._panel: gui.TextPanel | None = None
+        self._text_scroll: int = 0
+
+    def set_mode_none(self) -> None:
         self._mode = EditorMode.NONE
 
         if self._selected_block is not None:
@@ -78,36 +82,114 @@ class Editor:
             self._output = ""
             self._input = ""
 
-        if self.panel is not None:
-            # TODO: finish editing panel
-            self.text = ""
-            self.panel = None
-            self.text_scroll = 0
+        if self._block_popup is not None:
+            # TODO: destroy block popup
+            self._select_position = (0.0, 0.0)
+            self._block_popup = None
 
-    def set_mode_drag_block(self, block: gui.BlockElement):
+        if self._panel is not None:
+            # TODO: finish editing panel
+            self._text = ""
+            self._panel = None
+            self._text_scroll = 0
+
+    def set_mode_drag_block(self, block: gui.BlockElement) -> None:
         self._mode = EditorMode.DRAG_BLOCK
 
         cursor = self.get_cursor_pos()
         self._offset = Vec2(cursor[0] - block.left, cursor[1] - block.bottom)
         self._selected_block = block
 
-    def set_mode_drag_connection(self):
+    def set_mode_drag_connection(self) -> None:
         pass
 
-    def set_mode_change_value(self):
+    def set_mode_change_value(self) -> None:
         pass
 
-    def set_mode_add_block(self):
+    def set_mode_add_block(self) -> None:
+        self._mode = EditorMode.ADD_BLOCK
+
+        self._select_position = pos = self.get_cursor_pos()
+        top = pos[1] > 0.5 * self.panel_height
+        right = pos[0] > 0.5 * self.panel_width
+
+        dx = style.format.padding if right else -style.format.padding
+        dy = style.format.padding if top else -style.format.padding
+
+        self._block_popup = util.SelectionPopup(
+            tuple(
+                util.PopupAction(typ.name, self.create_new_block, typ)
+                for typ in graph.available
+            ),
+            (pos[0] + dx, pos[1] + dy),
+            top,
+            right
+        )
+
+    def set_mode_add_node(self) -> None:
         pass
 
-    def set_mode_add_node(self):
+    # -- INPUT METHODS --
+
+    def none_on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
+        if not pressed:
+            return
+
+    def drag_block_on_input(self, button: Button, modifiers: int, pressed: bool) -> None: ...
+
+    def create_connection_on_input(self, button: Button, modifiers: int, pressed: bool) -> None: ...
+
+    def add_block_on_input(self, button: Button, modifiers: int, pressed: bool) -> None: ...
+
+    def edit_config_on_input(self, button: Button, modifiers: int, pressed: bool) -> None: ...
+
+    def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
+        match self._mode:
+            case EditorMode.NONE:
+                self.none_on_input(button, modifiers, pressed)
+            case EditorMode.DRAG_BLOCK:
+                self.drag_block_on_input(button, modifiers, pressed)
+            case EditorMode.ADD_NODE:
+                self.create_connection_on_input(button, modifiers, pressed)
+            case EditorMode.CHANGE_CONFIG:
+                self.edit_config_on_input(button, modifiers, pressed)
+            case _:
+                pass
+
+    # -- AXIS METHODS --
+
+    def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> None:
         pass
+
+    # -- CURSOR METHODS --
+
+    def none_on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None: ...
+    def drag_block_on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None: ...
+    def create_connection_on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None: ...
+
+    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
+        match self._mode:
+            case EditorMode.NONE:
+                self.none_on_cursor_motion(x, y, dx, dy)
+            case EditorMode.DRAG_BLOCK:
+                self.drag_block_on_cursor_motion(x, y, dx, dy)
+            case EditorMode.ADD_NODE:
+                self.create_connection_on_cursor_motion(x, y, dx, dy)
+            case _:
+                pass
+
+    def on_cursor_scroll(
+        self, x: float, y: float, scroll_x: float, scroll_y: float
+    ) -> bool | None: ...
+
+    # -- GAME EVENT METHODS --
 
     def draw(self) -> None: ...
     def on_update(self, delta_time: float) -> None: ...
 
     # -- UTIL METHODS --
     def get_cursor_pos(self) -> tuple[float, float]: ...
+    def create_new_block(self, typ: graph.BlockType) -> None: ...
 
 
 class EditorFrame(Frame):
@@ -145,7 +227,7 @@ class EditorFrame(Frame):
                 ).draw()
 
         self._editor = Editor(clip_rect, Path('graph copy.toml'))
-    
+
         Frame.__init__(self, 'EDITOR', tag_offset, position, size, show_body, show_shadow)
 
     def connect_renderer(self, batch: Batch | None) -> None:
