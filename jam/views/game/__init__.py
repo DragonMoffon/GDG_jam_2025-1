@@ -1,6 +1,7 @@
 from enum import Enum
 
 from pyglet.graphics import Batch
+from arcade.future.background import Background
 
 from jam.view import View
 from jam.gui.frame import Frame, FrameController
@@ -22,6 +23,7 @@ class GameView(View):
     def __init__(self) -> None:
         View.__init__(self)
         self.background_color = style.colors.dark
+        self._background_image = Background.from_file(style.game.background)
         self._batch = Batch()
 
         self._editor_frame = EditorFrame(0.0, (self.width, 0.0), 720)
@@ -41,12 +43,13 @@ class GameView(View):
 
     def on_draw(self) -> bool | None:
         self.clear()
+        self._background_image.draw()
         self._frame_controller.on_draw()
         self._batch.draw()
 
     def on_update(self, delta_time: float) -> bool | None:
         self._frame_controller.on_update(delta_time)
-        
+
     def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:
         self._frame_controller.on_input(input, modifiers, pressed)
 
@@ -55,6 +58,6 @@ class GameView(View):
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:
         self._frame_controller.on_cursor_motion(x, y, dx, dy)
-    
+
     def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool | None:
         self._frame_controller.on_cursor_scroll(x, y, scroll_x, scroll_y)
