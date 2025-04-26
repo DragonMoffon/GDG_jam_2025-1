@@ -39,7 +39,7 @@ drop_x = 2
 drop_y = 10
 
 [Game]
-background = 'image/stars1.png'
+background = 'image/space_station.png'
 
 [Game.Panels]
 settings_tag = 'image/icons1.png'
