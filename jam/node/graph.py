@@ -362,11 +362,13 @@ DivBlock = BlockType(
 
 class Graph:
 
-    def __init__(self, name: str = "graph", *, _: None = None) -> None:
+    def __init__(self, name: str = "graph", available: tuple[BlockType, ...] | None = None, *, _: None = None) -> None:
         self._name: str = name
 
         self._blocks: dict[UUID, Block] = {}
         self._connections: dict[UUID, Connection] = {}
+
+        self.available: tuple[BlockType, ...] = available if available is not None else tuple(BlockType.__definitions__.values())
 
     @property
     def name(self):

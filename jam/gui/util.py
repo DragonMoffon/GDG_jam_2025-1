@@ -5,7 +5,7 @@ from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
 from arcade import Text
 
-from .core import Element, OVERLAY_SHADOW_GROUP, OVERLAY_PRIMARY_GROUP
+from .core import Element, OVERLAY_SHADOW, OVERLAY_PRIMARY, get_shadow_shader
 from resources import style
 
 
@@ -40,12 +40,13 @@ class Popup(Element):
             height,
             style.format.padding,
             14,
-            style.colors.shadow,
+            style.colors.dark,
+            program=get_shadow_shader()
         )
 
     def connect_renderer(self, batch: Batch | None):
-        self._body.group = batch and OVERLAY_PRIMARY_GROUP
-        self._shadow.group = batch and OVERLAY_SHADOW_GROUP
+        self._body.group = OVERLAY_PRIMARY
+        self._shadow.group = OVERLAY_SHADOW
 
         self._body.batch = batch
         self._shadow.batch = batch
@@ -81,7 +82,7 @@ class InfoPopup(Popup):
     def connect_renderer(self, batch: Batch | None):
         Popup.connect_renderer(self, batch)
 
-        self._text.group = batch and OVERLAY_PRIMARY_GROUP
+        self._text.group = OVERLAY_PRIMARY
         self._text.batch = batch
 
 
@@ -168,10 +169,10 @@ class SelectionPopup(Popup):
 
         for action in self.actions:
             p = self._action_panels[action]
-            p.group = batch and OVERLAY_PRIMARY_GROUP
+            p.group = OVERLAY_PRIMARY
             p.batch = batch
             t = self._action_text[action]
-            t.group = batch and OVERLAY_PRIMARY_GROUP
+            t.group = OVERLAY_PRIMARY
             t.batch = batch
 
     def get_hovered_item(self, point: tuple[float, float]):
