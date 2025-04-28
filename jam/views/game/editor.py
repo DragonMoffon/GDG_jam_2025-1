@@ -1,9 +1,10 @@
 from pathlib import Path
 from enum import Enum, auto
+from uuid import UUID
 
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
-from arcade import Rect, LBWH, Vec2, Camera2D
+from arcade import Rect, LBWH, Vec2, Vec3, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
@@ -74,7 +75,11 @@ class GraphController:
 class Editor:
 
     def __init__(self, region: Rect, graph_src: Path | None = None) -> None:
-        self._region: Rect = region  #
+        self._region: Rect = region
+        self._width = self._region.width
+        self._height = self._region.height
+
+        self.cursor_offset: tuple[float, float] = (0.0, 0.0)
 
         # Graph
         self._src: Path | None = graph_src
@@ -82,8 +87,12 @@ class Editor:
             (graph.Graph(), {}) if not graph_src else graph.read_graph(graph_src)
         )
 
+        self._blocks: dict[UUID, gui.BlockElement] = {}
+        self._connections: dict[UUID, gui.ConnectionElement] = {}
+
         # Rendering
-        self._camera = Camera2D(region)
+        self._base_camera = Camera2D(region)
+        self._overlay_camera = Camera2D(region)
         self._background = background.background_from_file(  # type: ignore -- reportUnknownMemberType
             style.game.editor.background, size=(int(region.size.x), int(region.size.y))  # type: ignore -- reportArgumentType
         )
@@ -95,6 +104,7 @@ class Editor:
 
         # Editor State
         self._mode = EditorMode.NONE
+        self._pan_camera: bool = False
 
         # Drag Block
         self._selected_block: gui.BlockElement | None = None
@@ -134,6 +144,7 @@ class Editor:
 
         if self._block_popup is not None:
             # TODO: destroy block popup
+            self._gui.remove_element(self._block_popup)
             self._select_position = (0.0, 0.0)
             self._block_popup = None
 
@@ -150,7 +161,7 @@ class Editor:
         self._offset = Vec2(cursor[0] - block.left, cursor[1] - block.bottom)
         self._selected_block = block
 
-    def set_mode_drag_connection(self) -> None:
+    def set_mode_drag_connection(self, noodle: gui.ConnectionElement) -> None:
         pass
 
     def set_mode_change_value(self) -> None:
@@ -159,22 +170,24 @@ class Editor:
     def set_mode_add_block(self) -> None:
         self._mode = EditorMode.ADD_BLOCK
 
-        self._select_position = pos = self.get_cursor_pos()
-        top = pos[1] > 0.5 * self.panel_height
-        right = pos[0] > 0.5 * self.panel_width
+        self._select_position = pos = self.get_overlay_cursor_pos()
+        layout_pos = self.get_cursor_pos()
+        top = layout_pos[1] > 0.5 * self._height
+        right = layout_pos[0] > 0.5 * self._width
 
         dx = style.format.padding if right else -style.format.padding
         dy = style.format.padding if top else -style.format.padding
 
         self._block_popup = util.SelectionPopup(
             tuple(
-                util.PopupAction(typ.name, self.create_new_block, typ)
-                for typ in graph.available
+                util.PopupAction(typ.name, self.create_new_block, typ, pos)
+                for typ in self._graph.available
             ),
             (pos[0] + dx, pos[1] + dy),
             top,
             right,
         )
+        self._gui.add_element(self._block_popup)
 
     def set_mode_add_node(self) -> None:
         pass
@@ -183,6 +196,8 @@ class Editor:
 
     def none_on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
         if not pressed:
+            if button == inputs.PRIMARY_CLICK:
+                self._pan_camera = False
             return
 
         # TODO: saving??
@@ -269,6 +284,8 @@ class Editor:
                 self.drag_block_on_input(button, modifiers, pressed)
             case EditorMode.ADD_NODE:
                 self.create_connection_on_input(button, modifiers, pressed)
+            case EditorMode.ADD_BLOCK:
+                self.add_block_on_input(button, modifiers, pressed)
             case EditorMode.CHANGE_CONFIG:
                 self.edit_config_on_input(button, modifiers, pressed)
             case _:
@@ -315,6 +332,8 @@ class Editor:
                 self.none_on_cursor_motion(x, y, dx, dy)
             case EditorMode.DRAG_BLOCK:
                 self.drag_block_on_cursor_motion(x, y, dx, dy)
+            case EditorMode.ADD_BLOCK:
+                self.add_block_on_cursor_motion(x, y, dx, dy)
             case EditorMode.ADD_NODE:
                 self.create_connection_on_cursor_motion(x, y, dx, dy)
             case _:
@@ -330,8 +349,11 @@ class Editor:
 
     # -- GAME EVENT METHODS --
 
-    def draw(self) -> None: ...
-    def on_update(self, delta_time: float) -> None: ...
+    def draw(self) -> None:
+        self._background.draw()
+        self._gui.draw()
+
+    def update(self, delta_time: float) -> None: ...
 
     # -- UTIL METHODS --
     def get_cursor_pos(self) -> tuple[float, float]:
@@ -398,7 +420,7 @@ class EditorFrame(Frame):
 
     def update_position(self, point: tuple[float, float]) -> None:
         Frame.update_position(self, point)
-        self.cliping_mask.position = (
+        self.cliping_mask.position = self._editor.cursor_offset = (
             point[0] + style.format.footer_size,
             point[1] + style.format.footer_size,
         )
@@ -424,7 +446,8 @@ class EditorFrame(Frame):
 
     def on_cursor_scroll(
         self, x: float, y: float, scroll_x: float, scroll_y: float
-    ) -> bool | None: ...
+    ) -> bool | None:
+        self._editor.on_cursor_scroll(x, y, scroll_x, scroll_y)
 
     def on_draw(self) -> None:
         with self.cliping_mask.target:

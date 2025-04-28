@@ -478,3 +478,6 @@ class TempValueElement(Element):
 
     def __init__(self, position: tuple[float, float], value: OperationValue):
         pass
+
+class GraphElement(Element):
+    pass
