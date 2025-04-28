@@ -39,7 +39,31 @@ drop_x = 2
 drop_y = 10
 
 [Game]
-background = 'image/space_station_broken_full.png'
+[Game.Background]
+color = [25, 15, 22, 255] # base colour behind img
+base = 'image/background/stars3.png'
+base_offset = [0.0, 0.0]
+[[Game.Background.Floating]]
+src = 'image/background/station3.png'
+offset = [0.0, 0.0] # px offset from corner
+foci = [0.0, 0.5] # fractional position of parallax focus
+depth = 120 # depth for paralax effect
+mode = 0 # No other mode other than slow circle rn
+scale = 2 # scale of motion mode
+sync = 12 # No seconds to 'start' from
+rate = 240 # secs to finish full circle
+jitter = 10 # extra px shifting along with 
+[[Game.Background.Floating]]
+src = 'image/background/debris1.png'
+offset = [0.0, 0.0] # px offset from corner
+foci = [0.0, 0.5] # fractional position of parallax focus
+depth = 60 # depth for paralax effect
+mode = 0 # No other mode other than slow circle rn
+scale = 6 # scale of motion 
+sync = 0 # No seconds to 'start' from
+rate = 240 # secs to finish full circle
+jitter = 10 # extra px shifting along with 
+
 
 [Game.Panels]
 settings_tag = 'image/icons1.png'
@@ -51,12 +75,12 @@ panel_speed = 0.4
 [Game.Editor]
 background = 'image/grid1.png'
 
-node_inactive = 'image/symbols1.png'
-node_active = 'image/symbols2.png'
-branch_inactive = 'image/symbols3.png'
-branch_active = 'image/symbols4.png'
-variable = 'image/symbols5.png'
-definition = 'image/symbols6.png'
-dropdown = 'image/symbols7.png'
-check_inactive = 'image/symbols8.png'
-check_active = 'image/symbols9.png'
+node_inactive = 'image/symbols/symbols1.png'
+node_active = 'image/symbols/symbols2.png'
+branch_inactive = 'image/symbols/symbols3.png'
+branch_active = 'image/symbols/symbols4.png'
+variable = 'image/symbols/symbols5.png'
+definition = 'image/symbols/symbols6.png'
+dropdown = 'image/symbols/symbols7.png'
+check_inactive = 'image/symbols/symbols8.png'
+check_active = 'image/symbols/symbols9.png'
