@@ -38,7 +38,20 @@ padding = 2
 drop_x = 2
 drop_y = 10
 
+[Audio]
+[[Audio.Ambient]]
+src=''
+[[Audio.Sting]]
+src=''
+
 [Game]
+[Game.Audio]
+frame_out = []
+frame_in = []
+connection = []
+input = []
+haptic = []
+
 [Game.Background]
 color = [25, 15, 22, 255] # base colour behind img
 base = 'image/background/stars3.png'
@@ -52,7 +65,6 @@ mode = 0 # No other mode other than slow circle rn
 scale = 2 # scale of motion mode
 sync = 12 # No seconds to 'start' from
 rate = 240 # secs to finish full circle
-jitter = 10 # extra px shifting along with 
 [[Game.Background.Floating]]
 src = 'image/background/debris1.png'
 offset = [0.0, 0.0] # px offset from corner
@@ -62,7 +74,6 @@ mode = 0 # No other mode other than slow circle rn
 scale = 6 # scale of motion 
 sync = 0 # No seconds to 'start' from
 rate = 240 # secs to finish full circle
-jitter = 10 # extra px shifting along with 
 
 
 [Game.Panels]

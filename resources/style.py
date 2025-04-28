@@ -51,7 +51,6 @@ class Floating:
     scale: float
     sync: float
     rate: float
-    jitter: float
 
     @classmethod
     def create(cls, data: dict[str, Any], source) -> Self:
@@ -64,7 +63,6 @@ class Floating:
             data["scale"],
             data["sync"],
             data["rate"],
-            data["jitter"],
         )
 
 
