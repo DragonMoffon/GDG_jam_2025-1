@@ -414,7 +414,7 @@ class TempValueElement(Element):
     def __init__(self, position: tuple[float, float], value: OperationValue):
         pass
 
-    def update_end(self, point: tuple[float, float]):
+    def update_end(self, point: tuple[float, float]) -> None:
         pass
 
 
@@ -473,11 +473,6 @@ class BlockElement(Element):
     def bottom(self) -> float:
         return self._bottom_left[1]
 
-
-class TempValueElement(Element):
-
-    def __init__(self, position: tuple[float, float], value: OperationValue):
-        pass
 
 class GraphElement(Element):
     pass
