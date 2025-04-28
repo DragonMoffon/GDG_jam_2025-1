@@ -3,7 +3,6 @@ from __future__ import annotations
 from sys import platform
 from enum import StrEnum, IntEnum
 from typing import Callable
-from math import pow
 
 from pyglet.input import Controller
 from arcade import get_window, Window, Vec2
@@ -41,16 +40,16 @@ class ControllerButtons(StrEnum):
 
 
 class ControllerAxes(StrEnum):
-    LEFT_STICK = 'leftstick'
-    RIGHT_STICK = 'rightstick'
-    LEFT_TRIGGER = 'lefttrigger'
-    RIGHT_TRIGGER = 'righttrigger'
-    DPAD = 'dpad'
+    LEFT_STICK = "leftstick"
+    RIGHT_STICK = "rightstick"
+    LEFT_TRIGGER = "lefttrigger"
+    RIGHT_TRIGGER = "righttrigger"
+    DPAD = "dpad"
 
-    LEFT_X = 'leftx'
-    LEFT_Y = 'lefty'
-    RIGHT_X = 'rightx'
-    RIGHT_Y = 'righty'
+    LEFT_X = "leftx"
+    LEFT_Y = "lefty"
+    RIGHT_X = "rightx"
+    RIGHT_Y = "righty"
 
 
 class KeyModifiers(IntEnum):
@@ -66,7 +65,7 @@ class KeyModifiers(IntEnum):
     MOD_COMMAND = 64
     MOD_OPTION = 128
     MOD_SCROLLLOCK = 256
-    
+
     # Platform-specific base hotkey modifier
     MOD_ACCEL = MOD_COMMAND if platform == "darwin" else MOD_CTRL
 
@@ -292,6 +291,9 @@ class Keys(IntEnum):
     ASCIITILDE = 126
 
 
+LATIN_CHARACTERS = {Keys(n) for n in range(97, 123)}
+DIGITS = {Keys(n) for n in range(48, 59)}
+
 Button = Keys | MouseButtons | ControllerButtons
 Axis = ControllerAxes | str
 
@@ -300,9 +302,14 @@ OnAxisChangeCallable = Callable[[Axis, float, float], None]
 OnCursorMotionCallable = Callable[[float, float, float, float], None]
 OnCursorScrollCallable = Callable[[float, float, float, float], None]
 
+
 class MultiInput:
 
-    def __init__(self, base: Button, alt: Button, ) -> None:
+    def __init__(
+        self,
+        base: Button,
+        alt: Button,
+    ) -> None:
         self.base: Button = base
         self.alt: Button = alt
 
@@ -314,13 +321,15 @@ class MultiInput:
             return self.alt
         return self.base
 
-    def __set__(self, obj: InputManager, value: Keys | MouseButtons | ControllerButtons):
+    def __set__(
+        self, obj: InputManager, value: Keys | MouseButtons | ControllerButtons
+    ):
         if obj.using_alt:
             self.alt = value
         else:
             self.base = value
 
- 
+
 class MultiMods:
 
     def __init__(self, base: int = 0xFF, alt: int = 0xFF) -> None:
@@ -343,7 +352,7 @@ class MultiMods:
 
     def __and__(self, other: int) -> int:
         return other & self.base
-    
+
     def __rand__(self, other: int) -> int:
         return self.__and__(other)
 
@@ -352,7 +361,7 @@ class InputManager:
 
     def __init__(self) -> None:
         # -- window --
-        self._window: Window = None # type: ignore
+        self._window: Window = None
 
         # -- Controller Values --
         self._current_controller: Controller | None = None
@@ -382,7 +391,7 @@ class InputManager:
     def __update__(self, delta_time: float):
         if self._current_controller is None or not self._using_controller:
             return
-        
+
         match self._cursor_axis:
             case ControllerAxes.RIGHT_STICK:
                 vec = self._right_stick_positions
@@ -392,25 +401,41 @@ class InputManager:
                 vec = self._dpad_positions
             case _:
                 vec = self._right_stick_positions
-        
-        vec = 0 if abs(vec[0]) < self._cursor_deadzone[0] else vec[0], 0 if abs(vec[1]) < self._cursor_deadzone[1] else vec[1]
-        vel = (vec[0]**2 + vec[1]**2)**0.5
+
+        vec = 0 if abs(vec[0]) < self._cursor_deadzone[0] else vec[0], (
+            0 if abs(vec[1]) < self._cursor_deadzone[1] else vec[1]
+        )
+        vel = (vec[0] ** 2 + vec[1] ** 2) ** 0.5
         if vel == 0.0:
             return
 
-        vec = vec[0] / vel, vec[1] / vel # normalise the vec to get the direction
-        vel = min(1.0, vel) # Clamp vel to 1.0 since not all joysticks are perfectly circular
-        speed = pow(self._cursor_speed, vel) * delta_time # Get the speed and account for dt. (cursor_speed * cursor_speed^(x-1) = cursor_speed^x)
+        # normalise the vec to get the direction
+        # Clamp vel to 1.0 since not all joysticks are perfectly circular
+        # Get the speed and account for dt. (cursor_speed * cursor_speed^(x-1) = cursor_speed^x)
+
+        vec = vec[0] / vel, vec[1] / vel
+        vel = min(1.0, vel)
+        speed = self._cursor_speed**vel * delta_time
 
         self._cursor_velocity = speed * vec[0], speed * vec[1]
-        self._cursor_position = self._cursor_position[0] + self._cursor_velocity[0], self._cursor_position[1] + self._cursor_velocity[1]
+        self._cursor_position = (
+            self._cursor_position[0] + self._cursor_velocity[0],
+            self._cursor_position[1] + self._cursor_velocity[1],
+        )
 
         self._cursor_motion = True
-        self._window.set_mouse_position(int(self._cursor_position[0]), int(self._cursor_position[1]))
-        self._window.dispatch_event('on_cursor_motion', self._cursor_position[0], self._cursor_position[1], self._cursor_velocity[0], self._cursor_velocity[1])
+        self._window.set_mouse_position(
+            int(self._cursor_position[0]), int(self._cursor_position[1])
+        )
+        self._window.dispatch_event(
+            "on_cursor_motion",
+            self._cursor_position[0],
+            self._cursor_position[1],
+            self._cursor_velocity[0],
+            self._cursor_velocity[1],
+        )
 
-
-    def setup_input_reponses(self):
+    def setup_input_reponses(self) -> None:
         self._window = get_window()
 
         self._window.push_handlers(
@@ -420,25 +445,25 @@ class InputManager:
             on_mouse_release=self.on_mouse_release,
             on_mouse_motion=self.on_mouse_motion,
             on_mouse_drag=self.on_mouse_drag,
-            on_mouse_scroll=self.on_mouse_scroll
+            on_mouse_scroll=self.on_mouse_scroll,
         )
 
-        self._window.register_event_type('on_input')
-        self._window.register_event_type('on_axis_change')
-        self._window.register_event_type('on_cursor_motion')
-        self._window.register_event_type('on_cursor_scroll')
-        
-    def pick_controller(self, controller: Controller | None = None):
+        self._window.register_event_type("on_input")
+        self._window.register_event_type("on_axis_change")
+        self._window.register_event_type("on_cursor_motion")
+        self._window.register_event_type("on_cursor_scroll")
+
+    def pick_controller(self, controller: Controller | None = None) -> None:
         if self._current_controller == controller:
             return
-        
+
         if self._current_controller is not None:
             self._current_controller.remove_handlers(
                 on_button_press=self.on_controller_press,
                 on_button_release=self.on_controller_release,
                 on_stick_motion=self.on_stick_motion,
                 on_dpad_motion=self.on_dpad_motion,
-                on_trigger_motion=self.on_trigger_motion
+                on_trigger_motion=self.on_trigger_motion,
             )
             self._current_controller.close()
 
@@ -446,7 +471,7 @@ class InputManager:
         self._right_stick_positions: tuple[float, float] = (0.0, 0.0)
         self._dpad_positions: tuple[float, float] = (0.0, 0.0)
         self._trigger_values: tuple[float, float] = (0.0, 0.0)
-        
+
         if controller is None:
             return
 
@@ -458,50 +483,54 @@ class InputManager:
             on_button_release=self.on_controller_release,
             on_stick_motion=self.on_stick_motion,
             on_dpad_motion=self.on_dpad_motion,
-            on_trigger_motion=self.on_trigger_motion
+            on_trigger_motion=self.on_trigger_motion,
         )
 
     # -- TRANSLATING INPUTS --
 
-    def on_key_press(self, symbol: int, modifiers: int):
+    def on_key_press(self, symbol: int, modifiers: int) -> None:
         if symbol not in Keys:
             return
 
         key = Keys(symbol)
         self._using_controller = False
         self._modifiers = modifiers
-        self._window.dispatch_event('on_input', key, modifiers, True)
+        self._window.dispatch_event("on_input", key, modifiers, True)
 
-    def on_key_release(self, symbol: int, modifiers: int):
+    def on_key_release(self, symbol: int, modifiers: int) -> None:
         if symbol not in Keys:
             return
 
         key = Keys(symbol)
         self._using_controller = False
         self._modifiers = modifiers
-        self._window.dispatch_event('on_input', key, modifiers, False)
+        self._window.dispatch_event("on_input", key, modifiers, False)
 
-    def on_mouse_press(self, x: int, y: int, button: int | MouseButtons, modifiers: int):
+    def on_mouse_press(
+        self, x: int, y: int, button: int | MouseButtons, modifiers: int
+    ) -> None:
         button = MouseButtons(button)
         self._using_controller = False
         self._cursor_position = (float(x), float(y))
         self._cursor_velocity = (0.0, 0.0)
-        
+
         self._modifiers = modifiers
 
-        self._window.dispatch_event('on_input', button, self._modifiers, True)
+        self._window.dispatch_event("on_input", button, self._modifiers, True)
 
-    def on_mouse_release(self, x: int, y: int, button: int | MouseButtons, modifiers: int):
+    def on_mouse_release(
+        self, x: int, y: int, button: int | MouseButtons, modifiers: int
+    ) -> None:
         button = MouseButtons(button)
         self._using_controller = False
         self._cursor_position = (float(x), float(y))
         self._cursor_velocity = (0.0, 0.0)
-        
+
         self._modifiers = modifiers
 
-        self._window.dispatch_event('on_input', button, self._modifiers, False)
+        self._window.dispatch_event("on_input", button, self._modifiers, False)
 
-    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         if self._cursor_motion:
             self._cursor_motion = False
             return
@@ -509,148 +538,280 @@ class InputManager:
         self._cursor_position = (float(x), float(y))
         self._cursor_velocity = (float(dx), float(dy))
 
-        self._window.dispatch_event('on_cursor_motion', float(x), float(y), float(dx), float(dy))
+        self._window.dispatch_event(
+            "on_cursor_motion", float(x), float(y), float(dx), float(dy)
+        )
 
-    def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, _buttons: int, modifiers: int):
+    def on_mouse_drag(
+        self, x: int, y: int, dx: int, dy: int, _buttons: int, modifiers: int
+    ) -> None:
         self._using_controller = False
         self._cursor_position = (float(x), float(y))
         self._cursor_velocity = (float(dx), float(dy))
 
         self._modifiers = modifiers
 
-        self._window.dispatch_event('on_cursor_motion', float(x), float(y), float(dx), float(dy))
+        self._window.dispatch_event(
+            "on_cursor_motion", float(x), float(y), float(dx), float(dy)
+        )
 
-    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int) -> None:
         self._using_controller = False
         self._cursor_position = (float(x), float(y))
         self._cursor_velocity = (0.0, 0.0)
 
-        self._window.dispatch_event('on_cursor_scroll', float(x), float(y), float(scroll_x), float(scroll_y))
+        self._window.dispatch_event(
+            "on_cursor_scroll", float(x), float(y), float(scroll_x), float(scroll_y)
+        )
 
-    def on_controller_press(self, _controller: Controller, button: str):
+    def on_controller_press(self, _controller: Controller, button: str) -> None:
         if button not in ControllerButtons:
             return
 
         button = ControllerButtons(button)
         self._using_controller = True
-        self._window.dispatch_event('on_input', button, self._modifiers, True)
+        self._window.dispatch_event("on_input", button, self._modifiers, True)
 
-    def on_controller_release(self, _controller: Controller, button: str):
+    def on_controller_release(self, _controller: Controller, button: str) -> None:
         if button not in ControllerButtons:
             return
 
         button = ControllerButtons(button)
         self._using_controller = True
-        self._window.dispatch_event('on_input', button, self._modifiers, False)
+        self._window.dispatch_event("on_input", button, self._modifiers, False)
 
-    def on_stick_motion(self, _controller: Controller, axis: str, value: Vec2):
+    def on_stick_motion(self, _controller: Controller, axis: str, value: Vec2) -> None:
         self._using_controller = True
 
         if axis == ControllerAxes.LEFT_STICK:
-            if value[0] >= -2 * self._cursor_deadzone[0] and self._left_stick_positions[0] < -2 * self._cursor_deadzone[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_LEFT, self._modifiers, False)
-            elif value[0] <= 2 * self._cursor_deadzone[0] and self._left_stick_positions[0] > 2 * self._cursor_deadzone[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_RIGHT, self._modifiers, False)
+            if (
+                value[0] >= -2 * self._cursor_deadzone[0]
+                and self._left_stick_positions[0] < -2 * self._cursor_deadzone[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_LEFT, self._modifiers, False
+                )
+            elif (
+                value[0] <= 2 * self._cursor_deadzone[0]
+                and self._left_stick_positions[0] > 2 * self._cursor_deadzone[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_RIGHT, self._modifiers, False
+                )
 
-            if value[0] > 2 * self._cursor_deadzone[0] and self._left_stick_positions[0] <= 2 * self._cursor_deadzone[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_RIGHT, self._modifiers, True)
-            elif value[0] < -2 * self._cursor_deadzone[0] and self._left_stick_positions[0] >= -2 * self._cursor_deadzone[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_LEFT, self._modifiers, True)
-            
-            if value[1] >= -2 * self._cursor_deadzone[1] and self._left_stick_positions[1] < -2 * self._cursor_deadzone[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_DOWN, self._modifiers, False)
-            elif value[1] <= 2 * self._cursor_deadzone[1] and self._left_stick_positions[1] > 2 * self._cursor_deadzone[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_UP, self._modifiers, False)
+            if (
+                value[0] > 2 * self._cursor_deadzone[0]
+                and self._left_stick_positions[0] <= 2 * self._cursor_deadzone[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_RIGHT, self._modifiers, True
+                )
+            elif (
+                value[0] < -2 * self._cursor_deadzone[0]
+                and self._left_stick_positions[0] >= -2 * self._cursor_deadzone[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_LEFT, self._modifiers, True
+                )
 
-            if value[1] > 2 * self._cursor_deadzone[1] and self._left_stick_positions[1] <= 2 * self._cursor_deadzone[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_UP, self._modifiers, True)
-            elif value[1] < -2 * self._cursor_deadzone[1] and self._left_stick_positions[1] >= -2 * self._cursor_deadzone[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_DOWN, self._modifiers, True)
+            if (
+                value[1] >= -2 * self._cursor_deadzone[1]
+                and self._left_stick_positions[1] < -2 * self._cursor_deadzone[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_DOWN, self._modifiers, False
+                )
+            elif (
+                value[1] <= 2 * self._cursor_deadzone[1]
+                and self._left_stick_positions[1] > 2 * self._cursor_deadzone[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_UP, self._modifiers, False
+                )
+
+            if (
+                value[1] > 2 * self._cursor_deadzone[1]
+                and self._left_stick_positions[1] <= 2 * self._cursor_deadzone[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_UP, self._modifiers, True
+                )
+            elif (
+                value[1] < -2 * self._cursor_deadzone[1]
+                and self._left_stick_positions[1] >= -2 * self._cursor_deadzone[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_DOWN, self._modifiers, True
+                )
 
             self._left_stick_positions = value
         elif axis == ControllerAxes.RIGHT_STICK:
-            if value[0] >= -2 * self._cursor_deadzone[0] and self._right_stick_positions[0] < -2 * self._cursor_deadzone[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_LEFT, self._modifiers, False)
-            elif value[0] <= 2 * self._cursor_deadzone[0] and self._right_stick_positions[0] > 2 * self._cursor_deadzone[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_RIGHT, self._modifiers, False)
+            if (
+                value[0] >= -2 * self._cursor_deadzone[0]
+                and self._right_stick_positions[0] < -2 * self._cursor_deadzone[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_LEFT, self._modifiers, False
+                )
+            elif (
+                value[0] <= 2 * self._cursor_deadzone[0]
+                and self._right_stick_positions[0] > 2 * self._cursor_deadzone[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_RIGHT, self._modifiers, False
+                )
 
-            if value[0] > 2 * self._cursor_deadzone[0] and self._right_stick_positions[0] <= 2 * self._cursor_deadzone[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_RIGHT, self._modifiers, True)
-            elif value[0] < -2 * self._cursor_deadzone[0] and self._right_stick_positions[0] >= -2 * self._cursor_deadzone[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_LEFT, self._modifiers, True)
-            
-            if value[1] >= -2 * self._cursor_deadzone[1] and self._right_stick_positions[1] < -2 * self._cursor_deadzone[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_DOWN, self._modifiers, False)
-            elif value[1] <= 2 * self._cursor_deadzone[1] and self._right_stick_positions[1] > 2 * self._cursor_deadzone[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_UP, self._modifiers, False)
+            if (
+                value[0] > 2 * self._cursor_deadzone[0]
+                and self._right_stick_positions[0] <= 2 * self._cursor_deadzone[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_RIGHT, self._modifiers, True
+                )
+            elif (
+                value[0] < -2 * self._cursor_deadzone[0]
+                and self._right_stick_positions[0] >= -2 * self._cursor_deadzone[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_LEFT, self._modifiers, True
+                )
 
-            if value[1] > 2 * self._cursor_deadzone[1] and self._right_stick_positions[1] <= 2 * self._cursor_deadzone[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_UP, self._modifiers, True)
-            elif value[1] < -2 * self._cursor_deadzone[1] and self._right_stick_positions[1] >= -2 * self._cursor_deadzone[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_DOWN, self._modifiers, True)
+            if (
+                value[1] >= -2 * self._cursor_deadzone[1]
+                and self._right_stick_positions[1] < -2 * self._cursor_deadzone[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_DOWN, self._modifiers, False
+                )
+            elif (
+                value[1] <= 2 * self._cursor_deadzone[1]
+                and self._right_stick_positions[1] > 2 * self._cursor_deadzone[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_UP, self._modifiers, False
+                )
+
+            if (
+                value[1] > 2 * self._cursor_deadzone[1]
+                and self._right_stick_positions[1] <= 2 * self._cursor_deadzone[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_UP, self._modifiers, True
+                )
+            elif (
+                value[1] < -2 * self._cursor_deadzone[1]
+                and self._right_stick_positions[1] >= -2 * self._cursor_deadzone[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_DOWN, self._modifiers, True
+                )
 
             self._right_stick_positions = value
 
-        self._window.dispatch_event('on_axis_change', ControllerAxes(axis), value.x, value.y)
+        self._window.dispatch_event(
+            "on_axis_change", ControllerAxes(axis), value.x, value.y
+        )
 
-    def on_dpad_motion(self, _controller: Controller, value: Vec2):
+    def on_dpad_motion(self, _controller: Controller, value: Vec2) -> None:
         self._using_controller = True
 
         # controller buttons
         if value[0] >= 0.0 and self._dpad_positions[0] < 0.0:
-            self._window.dispatch_event('on_input', ControllerButtons.DPAD_LEFT, self._modifiers, False)
+            self._window.dispatch_event(
+                "on_input", ControllerButtons.DPAD_LEFT, self._modifiers, False
+            )
         elif value[0] <= 0.0 and self._dpad_positions[0] > 0.0:
-            self._window.dispatch_event('on_input', ControllerButtons.DPAD_RIGHT, self._modifiers, False)
-        
+            self._window.dispatch_event(
+                "on_input", ControllerButtons.DPAD_RIGHT, self._modifiers, False
+            )
+
         if value[0] > 0.0 and self._dpad_positions[0] <= 0.0:
-            self._window.dispatch_event('on_input', ControllerButtons.DPAD_RIGHT, self._modifiers, True)
+            self._window.dispatch_event(
+                "on_input", ControllerButtons.DPAD_RIGHT, self._modifiers, True
+            )
         elif value[0] < 0.0 and self._dpad_positions[0] >= 0.0:
-            self._window.dispatch_event('on_input', ControllerButtons.DPAD_LEFT, self._modifiers, True)
+            self._window.dispatch_event(
+                "on_input", ControllerButtons.DPAD_LEFT, self._modifiers, True
+            )
 
         if value[1] >= 0.0 and self._dpad_positions[1] < 0.0:
-            self._window.dispatch_event('on_input', ControllerButtons.DPAD_DOWN, self._modifiers, False)
+            self._window.dispatch_event(
+                "on_input", ControllerButtons.DPAD_DOWN, self._modifiers, False
+            )
         elif value[1] <= 0.0 and self._dpad_positions[1] > 0.0:
-            self._window.dispatch_event('on_input', ControllerButtons.DPAD_UP, self._modifiers, False)
-        
+            self._window.dispatch_event(
+                "on_input", ControllerButtons.DPAD_UP, self._modifiers, False
+            )
+
         if value[1] > 0.0 and self._dpad_positions[1] <= 0.0:
-            self._window.dispatch_event('on_input', ControllerButtons.DPAD_UP, self._modifiers, True)
+            self._window.dispatch_event(
+                "on_input", ControllerButtons.DPAD_UP, self._modifiers, True
+            )
         elif value[1] < 0.0 and self._dpad_positions[1] >= 0.0:
-            self._window.dispatch_event('on_input', ControllerButtons.DPAD_DOWN, self._modifiers, True)
+            self._window.dispatch_event(
+                "on_input", ControllerButtons.DPAD_DOWN, self._modifiers, True
+            )
 
         self._dpad_positions = value
-        self._window.dispatch_event('on_axis_change', ControllerAxes.DPAD, value.x, value.y)
+        self._window.dispatch_event(
+            "on_axis_change", ControllerAxes.DPAD, value.x, value.y
+        )
 
-    def on_trigger_motion(self, _controller: Controller, axis: str, value: float):
+    def on_trigger_motion(
+        self, _controller: Controller, axis: str, value: float
+    ) -> None:
         if axis == ControllerAxes.LEFT_TRIGGER:
-            if value < self._trigger_levels[0] and self._trigger_values[0] >= self._trigger_levels[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_TRIGGER, self._modifiers, False)
+            if (
+                value < self._trigger_levels[0]
+                and self._trigger_values[0] >= self._trigger_levels[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_TRIGGER, self._modifiers, False
+                )
 
-            if value >= self._trigger_levels[0] and self._trigger_values[0] < self._trigger_levels[0]:
-                self._window.dispatch_event('on_input', ControllerButtons.LEFT_TRIGGER, self._modifiers, True)
+            if (
+                value >= self._trigger_levels[0]
+                and self._trigger_values[0] < self._trigger_levels[0]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.LEFT_TRIGGER, self._modifiers, True
+                )
 
             self._trigger_values = value, self._trigger_values[1]
         elif axis == ControllerAxes.RIGHT_TRIGGER:
-            if value < self._trigger_levels[1] and self._trigger_values[0] >= self._trigger_levels[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_TRIGGER, self._modifiers, False)
-            
-            if value >= self._trigger_levels[1] and self._trigger_values[1] < self._trigger_levels[1]:
-                self._window.dispatch_event('on_input', ControllerButtons.RIGHT_TRIGGER, self._modifiers, True)
+            if (
+                value < self._trigger_levels[1]
+                and self._trigger_values[0] >= self._trigger_levels[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_TRIGGER, self._modifiers, False
+                )
+
+            if (
+                value >= self._trigger_levels[1]
+                and self._trigger_values[1] < self._trigger_levels[1]
+            ):
+                self._window.dispatch_event(
+                    "on_input", ControllerButtons.RIGHT_TRIGGER, self._modifiers, True
+                )
 
             self._trigger_values = self._trigger_values[0], value
-        
+
         self._using_controller = True
-        self._window.dispatch_event('on_axis_change', ControllerAxes(axis), value, value)
+        self._window.dispatch_event(
+            "on_axis_change", ControllerAxes(axis), value, value
+        )
 
     # -- PROPERTIES --
 
     @property
-    def using_controller(self):
+    def using_controller(self) -> bool:
         return self._using_controller
-    
+
     @property
-    def using_alt(self):
+    def using_alt(self) -> bool:
         return self._using_controller
-    
+
     @property
     def cursor(self) -> tuple[float, float]:
         return self._cursor_position
@@ -664,5 +825,6 @@ class InputManager:
 
     SAVE_INPUT = MultiInput(Keys.S, ControllerButtons.GUIDE)
     SAVE_MOD = MultiMods(KeyModifiers.MOD_CTRL)
+
 
 inputs = InputManager()
