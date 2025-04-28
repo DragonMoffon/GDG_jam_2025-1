@@ -46,7 +46,7 @@ class Value(Generic[T_co]):
     @classmethod
     def __acast__(cls, other: Value[O_co]) -> Self:
         if other.type == cls._typ:
-            return other # type: ignore -- reportReturnType
+            return other  # type: ignore -- reportReturnType
         if other.type not in cls.__auto_castable__:
             raise TypeError(
                 f"Cannot cast {other.type} into {cls._typ} automatically, you must use an explicit cast"
@@ -105,7 +105,12 @@ class BoolValue(Value[bool]):
 
 
 OperationValue = IntValue | FloatValue | StrValue | BoolValue
-STR_CAST: dict[str, type[OperationValue]] = {"int": IntValue, "float": FloatValue, "bool": BoolValue, "str": StrValue}
+STR_CAST: dict[str, type[OperationValue]] = {
+    "int": IntValue,
+    "float": FloatValue,
+    "bool": BoolValue,
+    "str": StrValue,
+}
 
 
 class BlockOperation(Protocol):
@@ -155,6 +160,7 @@ class BlockType:
 
     def __repr__(self):
         return self.name
+
 
 class Block:
 
@@ -259,7 +265,12 @@ def __str(String: StrValue) -> dict[str, StrValue]:
 
 StrBlock = BlockType("String", __str, None, {"String": StrValue}, {"String": StrValue})
 
-BLOCK_CAST: dict[type, BlockType] = {int: IntBlock, float: FloatBlock, bool: BoolBlock, str: StrBlock}
+BLOCK_CAST: dict[type, BlockType] = {
+    int: IntBlock,
+    float: FloatBlock,
+    bool: BoolBlock,
+    str: StrBlock,
+}
 
 # -- OPERATIONS --
 
@@ -268,7 +279,7 @@ def __add(
     a: IntValue | FloatValue, b: IntValue | FloatValue
 ) -> dict[str, IntValue | FloatValue]:
     if a.type is int and b.type is int:
-        return {"result": IntValue(a.value + b.value)} # type: ignore -- reportArgumentType
+        return {"result": IntValue(a.value + b.value)}  # type: ignore -- reportArgumentType
     a_ = FloatValue.__acast__(a)
     b_ = FloatValue.__acast__(b)
 
@@ -287,7 +298,7 @@ def __sub(
     a: IntValue | FloatValue, b: IntValue | FloatValue
 ) -> dict[str, IntValue | FloatValue]:
     if a.type is int and b.type is int:
-        return {"result": IntValue(a.value - b.value)} # type: ignore -- reportArgumentType
+        return {"result": IntValue(a.value - b.value)}  # type: ignore -- reportArgumentType
     a_ = FloatValue.__acast__(a)
     b_ = FloatValue.__acast__(b)
 
@@ -306,7 +317,7 @@ def __mul(
     a: IntValue | FloatValue, b: IntValue | FloatValue
 ) -> dict[str, IntValue | FloatValue]:
     if a.type is int and b.type is int:
-        return {"result": IntValue(a.value * b.value)} # type: ignore -- reportArgumentType
+        return {"result": IntValue(a.value * b.value)}  # type: ignore -- reportArgumentType
     a_ = FloatValue.__acast__(a)
     b_ = FloatValue.__acast__(b)
 
@@ -325,7 +336,7 @@ def __div(
     a: IntValue | FloatValue, b: IntValue | FloatValue
 ) -> dict[str, IntValue | FloatValue]:
     if a.type is int and b.type is int:
-        return {"result": IntValue(a.value // b.value)} # type: ignore -- reportArgumentType
+        return {"result": IntValue(a.value // b.value)}  # type: ignore -- reportArgumentType
     a_ = FloatValue.__acast__(a)
     b_ = FloatValue.__acast__(b)
 
@@ -362,16 +373,28 @@ DivBlock = BlockType(
 
 class Graph:
 
-    def __init__(self, name: str = "graph", *, _: None = None) -> None:
+    def __init__(
+        self,
+        name: str = "graph",
+        available: tuple[BlockType, ...] | None = None,
+        *,
+        _: None = None,
+    ) -> None:
         self._name: str = name
 
         self._blocks: dict[UUID, Block] = {}
         self._connections: dict[UUID, Connection] = {}
 
+        self.available: tuple[BlockType, ...] = (
+            available
+            if available is not None
+            else tuple(BlockType.__definitions__.values())
+        )
+
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
-    
+
     @property
     def blocks(self) -> tuple[Block, ...]:
         return tuple(self._blocks.values())
@@ -488,7 +511,9 @@ class Graph:
                 computations[block.uid] = result
                 if result.exception is not None and block != target:
                     # early exit if we hit an exception (and so can't find target value)
-                    computations[target.uid] = BlockComputation({}, target.config.copy(), {}, result.exception)
+                    computations[target.uid] = BlockComputation(
+                        {}, target.config.copy(), {}, result.exception
+                    )
                     break
 
         return computations[target.uid]
@@ -577,27 +602,27 @@ def write_graph(
 
         subtable["uid"] = block.uid.hex
         subtable["type"] = block.type.name
-        config.update(block.config) # type: ignore -- unknownMemberType
+        config.update(block.config)  # type: ignore -- unknownMemberType
         subtable["config"] = config
         if block.uid in positions:
             subtable["position"] = positions[block.uid]
 
-        blocks.append(subtable) # type: ignore -- unknownMemberType
+        blocks.append(subtable)  # type: ignore -- unknownMemberType
 
         if block.type.exclusive:
             type_table = table()
             input_table = inline_table()
-            input_table.update( # type: ignore -- unknownMemberType
+            input_table.update(  # type: ignore -- unknownMemberType
                 {name: typ.type for name, typ in block.type.inputs.items()}
             )
             output_table = inline_table()
-            output_table.update( # type: ignore -- unknownMemberType
+            output_table.update(  # type: ignore -- unknownMemberType
                 {name: typ.type for name, typ in block.type.outputs.items()}
             )
             type_table["name"] = block.type.name
             type_table["input"] = input_table
             type_table["output"] = output_table
-            variables.append(type_table) # type: ignore -- unknownMemberType
+            variables.append(type_table)  # type: ignore -- unknownMemberType
 
     block_table["Variables"] = variables
     block_table["Data"] = blocks
@@ -610,7 +635,7 @@ def write_graph(
         subtable["output"] = connection.output
         subtable["target"] = connection.target.hex
         subtable["input"] = connection.input
-        connections.append(subtable) # type: ignore -- unknownMemberType
+        connections.append(subtable)  # type: ignore -- unknownMemberType
     connection_table["Data"] = connections
     toml["Connection"] = connection_table
 
