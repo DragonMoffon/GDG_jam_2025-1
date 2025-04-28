@@ -39,6 +39,7 @@ class Format:
 
 class FloatMotionMode(IntEnum):
     CIRCLE = 0
+    DIAGONAL = 1
 
 
 @dataclass

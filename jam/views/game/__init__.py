@@ -34,7 +34,7 @@ class ParallaxBackground:
                 data.foci[0] * layer.texture.texture.width,
                 data.foci[1] * layer.texture.texture.height,
             )
-            shift = (x - origin[0]) / (data.depth), (y - origin[1]) / (data.depth)
+            shift = (origin[0] - x) / (data.depth), (origin[1] - y) / (data.depth)
             layer.pos = shift
 
     def update(self) -> None:
@@ -47,6 +47,9 @@ class ParallaxBackground:
                     x = data.scale * cos(fraction * tau)
                     y = data.scale * sin(fraction * tau)
                     layer.texture.offset = (x, y)
+                case FloatMotionMode.DIAGONAL:
+                    x = data.scale * cos(fraction * tau)
+                    layer.texture.offset = (x, x)
 
     def draw(self) -> None:
         self._background.draw()

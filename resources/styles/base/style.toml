@@ -61,17 +61,17 @@ src = 'image/background/station3.png'
 offset = [0.0, 0.0] # px offset from corner
 foci = [0.0, 0.5] # fractional position of parallax focus
 depth = 120 # depth for paralax effect
-mode = 0 # No other mode other than slow circle rn # TODO: change motion mode
-scale = 32 # scale of motion mode
-sync = 0 # No seconds to 'start' from
+mode = 1 # How the elements should move
+scale = 38 # scale of motion mode
+sync = 4 # No seconds to 'start' from
 rate = 120 # secs to finish full circle
 [[Game.Background.Floating]]
 src = 'image/background/debris1.png'
 offset = [0.0, 0.0] # px offset from corner
 foci = [0.0, 0.5] # fractional position of parallax focus
 depth = 100 # depth for paralax effect
-mode = 0 # No other mode other than slow circle rn
-scale = 38 # scale of motion 
+mode = 1 # How the element should move [0: circle, 1: diagonal]
+scale = 40 # scale of motion 
 sync = 0 # No seconds to 'start' from
 rate = 120 # secs to finish full circle
 
