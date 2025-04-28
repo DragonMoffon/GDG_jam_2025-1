@@ -46,8 +46,8 @@ src=''
 
 [Game]
 [Game.Audio]
-frame_out = []
-frame_in = []
+frame_out = ['audio/slide_out.ogg']
+frame_in = ['audio/slide_in.ogg']
 connection = []
 input = []
 haptic = []
@@ -61,19 +61,19 @@ src = 'image/background/station3.png'
 offset = [0.0, 0.0] # px offset from corner
 foci = [0.0, 0.5] # fractional position of parallax focus
 depth = 120 # depth for paralax effect
-mode = 0 # No other mode other than slow circle rn
-scale = 2 # scale of motion mode
-sync = 12 # No seconds to 'start' from
-rate = 240 # secs to finish full circle
+mode = 0 # No other mode other than slow circle rn # TODO: change motion mode
+scale = 32 # scale of motion mode
+sync = 0 # No seconds to 'start' from
+rate = 120 # secs to finish full circle
 [[Game.Background.Floating]]
 src = 'image/background/debris1.png'
 offset = [0.0, 0.0] # px offset from corner
 foci = [0.0, 0.5] # fractional position of parallax focus
-depth = 60 # depth for paralax effect
+depth = 100 # depth for paralax effect
 mode = 0 # No other mode other than slow circle rn
-scale = 6 # scale of motion 
+scale = 38 # scale of motion 
 sync = 0 # No seconds to 'start' from
-rate = 240 # secs to finish full circle
+rate = 120 # secs to finish full circle
 
 
 [Game.Panels]
