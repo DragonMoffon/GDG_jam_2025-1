@@ -12,7 +12,14 @@ from jam.node.graph import (
     BlockComputation,
     OperationValue,
 )
-from .core import Element, get_shadow_shader
+
+from .core import (
+    Element,
+    get_shadow_shader,
+    BASE_PRIMARY,
+    BASE_SHADOW,
+    BASE_SPACING,
+)
 
 formating = style.format
 colors = style.colors
@@ -208,10 +215,19 @@ class ConnectionElement(Element):
         shadow_start = start[0] - formating.drop_x, start[1] - formating.drop_y
         shaodw_end = end[0] - formating.drop_x, end[1] - formating.drop_y
         line = Line(
-            *start, *end, formating.line_thickness, colors.highlight, batch=self._batch
+            *start,
+            *end,
+            formating.line_thickness,
+            colors.highlight,
+            batch=self._batch,
+            group=BASE_PRIMARY,
         )
         joint = Circle(
-            *end, formating.line_thickness / 2.0, colors.highlight, batch=self._batch
+            *end,
+            formating.line_thickness / 2.0,
+            colors.highlight,
+            batch=self._batch,
+            group=BASE_PRIMARY,
         )
         shadow_line = Line(
             *shadow_start,
@@ -220,6 +236,7 @@ class ConnectionElement(Element):
             colors.dark,
             batch=self._batch,
             program=get_shadow_shader(),
+            group=BASE_SHADOW,
         )
         shadow_joint = Circle(
             *shaodw_end,
@@ -227,6 +244,7 @@ class ConnectionElement(Element):
             colors.dark,
             batch=self._batch,
             program=get_shadow_shader(),
+            group=BASE_SHADOW,
         )
 
         return line, joint, shadow_line, shadow_joint
@@ -248,15 +266,20 @@ class TextPanel(Element):
             anchor_y="bottom",
             font_name=style.text.normal.name,
             font_size=style.text.normal.size,
+            color=colors.accent,
+            group=BASE_PRIMARY,
         )
+        self._text_width = self._text.content_width
+        self._text.text = ""
         self._panel: RoundedRectangle = RoundedRectangle(
             0.0,
             0.0,
             self._text.content_width + 2 * formating.padding,
-            self._text.content_height + 2 * formating.padding,
+            style.text.normal.size + 2 * formating.padding,
             formating.padding,
             4,
-            colors.accent,
+            colors.background,
+            group=BASE_PRIMARY,
         )
 
         self._charset: set[str] | None = charset
@@ -286,7 +309,14 @@ class BoolPanel(Element):
 
     def __init__(self, active: bool = False):
         self._active: bool = active
-        self._sprite = Sprite(style.game.editor.check_inactive, 0.0, 0.0, 0.0)
+        self._sprite = Sprite(
+            style.game.editor.check_inactive,
+            0.0,
+            0.0,
+            0.0,
+            group=BASE_PRIMARY,
+        )
+        # self._sprite.color = colors.highlight
         if active:
             self._sprite.image = style.game.editor.check_active
 
@@ -294,26 +324,40 @@ class BoolPanel(Element):
         self._sprite.batch = batch  # type: Ignore -- None
 
     def update_position(self, point: tuple[float, float]) -> None:
-        self._sprite.position = point
+        self._sprite.position = point[0], point[1], 0.0
 
     @property
     def active(self) -> bool:
         return self._active
 
     @active.setter
-    def active(self, active: bool):
+    def active(self, active: bool) -> None:
         self._active = active
         if active:
             self._sprite.image = style.game.editor.check_active
         else:
             self._sprite.image = style.game.editor.check_inactive
 
+    @property
+    def width(self) -> float:
+        return self._sprite.height
+
+    @property
+    def height(self) -> float:
+        return self._sprite.width
+
 
 class ConnectionNodeElement(Element):
 
     def __init__(self, name: str = "", is_input: bool = True):
         Element.__init__(self)
-        self._sprite = Sprite(style.game.editor.node_inactive, 0.0, 0.0, 0.0)
+        self._sprite = Sprite(
+            style.game.editor.node_inactive,
+            0.0,
+            0.0,
+            0.0,
+            group=BASE_PRIMARY,
+        )
         self._sprite.width = 2 * formating.point_radius
         self._sprite.height = 2 * formating.point_radius
 
@@ -328,8 +372,8 @@ class ConnectionNodeElement(Element):
                 font_name=style.text.normal.name,
                 font_size=style.text.normal.size,
                 color=colors.highlight,
-                anchor_x="left" if is_input else "right",
-                anchor_y="center",
+                anchor_y="bottom",
+                group=BASE_PRIMARY,
             )
 
         self._is_input: bool = is_input
@@ -338,15 +382,16 @@ class ConnectionNodeElement(Element):
         self._branch: bool = False
 
     def update_position(self, point: tuple[float, float]) -> None:
-        self._sprite.position = point[0], point[1], 0.0
+        s_x = point[0]
         if self._label is not None:
-            dx = (
-                self._sprite.width + formating.padding
-                if self._is_input
-                else -formating.padding
-            )
-            dy = self._sprite.height / 2.0 + formating.padding
-            self._label.position = point[0] + dx, point[1] + dy
+            l_x = point[0] + self._sprite.width + formating.padding
+            if not self._is_input:
+                s_x = point[0] + self._label.content_width + formating.padding
+                l_x = point[0]
+
+            l_y = point[1] + (self._sprite.height - self._label.content_height) / 2.0
+            self._label.position = l_x, l_y + 1, 0.0
+        self._sprite.position = s_x, point[1], 0.0
 
     def connect_renderer(self, batch: Batch | None) -> None:
         self._sprite.batch = batch  # type: ignore -- None
@@ -404,9 +449,7 @@ class ConnectionNodeElement(Element):
 
     @property
     def height(self) -> float:
-        if self._label is None:
-            return self._sprite.height
-        return max(self._sprite.height, self._label.content_height)
+        return self._sprite.height
 
 
 class TempValueElement(Element):
@@ -422,42 +465,173 @@ class BlockElement(Element):
 
     def __init__(self, block: Block):
         super().__init__(block.uid)
-        self._bottom_left = (0.0, 0.0)
         self._block = block
 
-        self._input_nodes: dict[str, ConnectionNodeElement] = {
-            ConnectionNodeElement(name) for name in block.type.inputs
-        }
+        self._input_nodes: dict[str, ConnectionNodeElement] = {}
+        self._output_nodes: dict[str, ConnectionNodeElement] = {}
+        self._config_panels: dict[str, ConnectionNodeElement] = {}
 
-        self._output_nodes: dict[str, ConnectionNodeElement] = {
-            ConnectionNodeElement(name) for name in block.type.outputs
-        }
+        body_width = formating.padding
+        layer_height = 0.0
+        self.input_width = 0.0
+        self.input_height = formating.padding
+        if block.type.inputs:
+            for name in block.type.inputs:
+                node = ConnectionNodeElement(name)
+                self.input_width = max(node.width, self.input_width)
+                self.input_height += node.height + formating.padding
+                layer_height = max(layer_height, node.height)
+                self._input_nodes[name] = node
+            body_width += self.input_width + formating.padding
 
-        self._text_panels: dict[str, TextPanel | BoolPanel] = {
-            (
-                (
-                    BoolPanel()
-                    if typ.type is bool
-                    else TextPanel(
-                        charset=(
-                            ALPHABET_SET
-                            if typ.type is str
-                            else (DIGIT_SET if typ.type is int else DECIMAL_SET)
-                        )
-                    )
-                )
-                for typ in block.type.config.values()
-            )
-        }
+        self.output_width = 0.0
+        self.output_height = formating.padding
+        if block.type.outputs:
+            for name in block.type.outputs:
+                node = ConnectionNodeElement(name, False)
+                self.output_width = max(node.width, self.output_width)
+                self.output_height += node.height + formating.padding
+                layer_height = max(layer_height, node.height)
+                self._output_nodes[name] = node
+            body_width += self.output_width + formating.padding
 
-        self._title: Label = None
-        self._body: RoundedRectangle = None
-        self._header: RoundedRectangle = None
-        self._shadow: RoundedRectangle = None
-        self._select: RoundedRectangle = None
+        self.config_width = 0.0
+        self.config_height = formating.padding
+        if block.type.config:
+            for name, typ in block.type.config.items():
+                if typ._typ is bool:
+                    panel = BoolPanel()
+                elif typ._typ is int:
+                    panel = TextPanel(charset=DIGIT_SET)
+                elif typ._typ is float:
+                    panel = TextPanel(charset=DECIMAL_SET)
+                else:
+                    panel = TextPanel(charset=ALPHABET_SET)
+                self.config_width = max(panel.width, self.config_width)
+                self.config_height += panel.height + formating.padding
+                layer_height = max(panel.height, layer_height)
+                self._config_panels[name] = panel
+            body_width += self.config_width + formating.padding
+
+        body_height = max(self.input_height, self.config_height, self.output_height)
+        self.layer_height = layer_height
+
+        self._title: Label = Label(
+            block.type.name,
+            0.0,
+            0.0,
+            0.0,
+            anchor_y="bottom",
+            font_name=style.text.normal.name,
+            font_size=style.text.normal.size,
+            color=colors.base,
+            group=BASE_PRIMARY,
+        )
+        title_width = self._title.content_width + 2 * formating.corner_radius
+
+        block_width = max(body_width, title_width)
+        block_height = formating.header_size + body_height + formating.footer_size
+        self._body: RoundedRectangle = RoundedRectangle(
+            0.0,
+            0.0,
+            block_width,
+            block_height,
+            formating.corner_radius,
+            12,
+            colors.base,
+            group=BASE_PRIMARY,
+        )
+        self._header: RoundedRectangle = RoundedRectangle(
+            0.0,
+            0.0,
+            block_width,
+            formating.header_size,
+            (0, formating.corner_radius, formating.corner_radius, 0),
+            12,
+            colors.accent,
+            group=BASE_PRIMARY,
+        )
+        self._shadow: RoundedRectangle = RoundedRectangle(
+            0.0,
+            0.0,
+            block_width,
+            block_height,
+            formating.corner_radius,
+            12,
+            colors.dark,
+            program=get_shadow_shader(),
+            group=BASE_SHADOW,
+        )
+        self._select: RoundedRectangle = RoundedRectangle(
+            0.0,
+            0.0,
+            block_width + 2 * formating.select_radius,
+            block_height + 2 * formating.select_radius,
+            formating.corner_radius + formating.select_radius,
+            12,
+            colors.highlight,
+            group=BASE_SPACING,
+        )
+        self._select.visible = False
 
         self._input_connections: dict[str, TempValueElement | ConnectionElement] = {}
         self._output_connections: dict[str, ConnectionElement] = {}
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._shadow.batch = batch
+        self._select.batch = batch
+        self._body.batch = batch
+        self._header.batch = batch
+
+        self._title.batch = batch
+
+        for node in self._input_nodes.values():
+            node.connect_renderer(batch)
+
+        for node in self._output_nodes.values():
+            node.connect_renderer(batch)
+
+        for panel in self._config_panels.values():
+            panel.connect_renderer(batch)
+
+    def update_position(self, point: tuple[float, float]) -> None:
+        self._body.position = point
+        self._select.position = (
+            point[0] - formating.select_radius,
+            point[1] - formating.select_radius,
+        )
+        self._header.position = (
+            point[0],
+            point[1] + self._body.height - formating.header_size,
+        )
+        self._shadow.position = point[0] - formating.drop_x, point[1] - formating.drop_y
+
+        self._title.position = (
+            point[0] + formating.corner_radius,
+            self._header.y + formating.padding,
+            0.0,
+        )
+        dx = formating.padding
+        for idx, node in enumerate(self._input_nodes.values()):
+            dy = (idx + 1) * (self.layer_height + formating.padding)
+            of = (self.layer_height - node.height) / 2.0
+            node.update_position((point[0] + dx, self._header.y - dy + of))
+
+        dx = self.width - formating.padding
+        for idx, node in enumerate(self._output_nodes.values()):
+            dy = (idx + 1) * (self.layer_height + formating.padding)
+            of = (self.layer_height - node.height) / 2.0
+            node.update_position((point[0] + dx - node.width, self._header.y - dy + of))
+
+        dx = 2 * formating.padding + self.input_width
+        for idx, panel in enumerate(self._config_panels.values()):
+            dy = (idx + 1) * (self.layer_height + formating.padding)
+            of = (self.layer_height - panel.height) / 2.0
+            panel.update_position((point[0] + dx, self._header.y - dy + of))
+
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        l, b = self._body.position
+        return 0 <= point[0] - l <= self.width and 0 < point[1] - b <= self.height
 
     def get_input(self, name: str) -> ConnectionNodeElement:
         pass
@@ -465,13 +639,27 @@ class BlockElement(Element):
     def get_output(self, name: str) -> ConnectionNodeElement:
         pass
 
+    def select(self) -> None:
+        self._select.visible = True
+
+    def deselect(self) -> None:
+        self._select.visible = False
+
     @property
     def left(self) -> float:
-        return self._bottom_left[0]
+        return self._body.x
 
     @property
     def bottom(self) -> float:
-        return self._bottom_left[1]
+        return self._body.y
+
+    @property
+    def width(self) -> float:
+        return self._body.width
+
+    @property
+    def height(self) -> float:
+        return self._body.height
 
 
 class GraphElement(Element):

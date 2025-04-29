@@ -123,7 +123,7 @@ class IONodeRenderer:
                 panel_y + formatting.padding,
             )
 
-    def connect_renderer(self, batch: Batch, group: bool = True):
+    def connect_renderer(self, batch: Batch, group: bool = True) -> None:
         if group:
             self.text.group = BASE_GROUP
 
@@ -278,7 +278,10 @@ class BlockRenderer:
         )
 
         self.width = max(
-            max_input_width + max_output_width + max_config_width + 2 * formatting.padding,
+            max_input_width
+            + max_output_width
+            + max_config_width
+            + 2 * formatting.padding,
             self._title.content_width + 2 * formatting.corner_radius,
         )
 

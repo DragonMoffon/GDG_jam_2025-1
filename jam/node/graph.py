@@ -145,7 +145,8 @@ class BlockType:
             raise TypeError(
                 f"A non-exclusive block of type {name} has already been defined"
             )
-        self.__definitions__[name] = self
+        if not exclusive:
+            self.__definitions__[name] = self
         self.exclusive = exclusive
 
         self.name: str = name

@@ -71,6 +71,27 @@ class GraphController:
     def connections(self) -> tuple[gui.ConnectionElement, ...]:
         return tuple(self._connection_elements.values())
 
+    def add_block(self, block: gui.BlockElement) -> None:
+        if block.uid in self._block_elements:
+            return
+        self._block_elements[block.uid] = block
+        self._graph.add_block(block._block)
+        self._gui.add_element(block)
+
+        # TODO: Temp values
+
+    def remove_block(self, block: gui.BlockElement) -> None:
+        if block.uid not in self._block_elements:
+            return
+
+        self._graph.remove_block(block._block)
+
+        # TODO: remove connections
+
+        self._gui.remove_element(block)
+
+        self._block_elements.pop(block.uid)
+
 
 class Editor:
 
@@ -105,6 +126,7 @@ class Editor:
         # Editor State
         self._mode = EditorMode.NONE
         self._pan_camera: bool = False
+        self._hovered_block: gui.BlockElement | None = None
 
         # Drag Block
         self._selected_block: gui.BlockElement | None = None
@@ -129,8 +151,13 @@ class Editor:
     def set_mode_none(self) -> None:
         self._mode = EditorMode.NONE
 
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+            self._hovered_block = None
+
         if self._selected_block is not None:
             # TODO: de-select selected block
+            self._selected_block.deselect()
             self._selected_block = None
             self._offset = Vec2()
 
@@ -157,9 +184,14 @@ class Editor:
     def set_mode_drag_block(self, block: gui.BlockElement) -> None:
         self._mode = EditorMode.DRAG_BLOCK
 
-        cursor = self.get_cursor_pos()
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+            self._hovered_block = None
+
+        cursor = self.get_base_cursor_pos()
         self._offset = Vec2(cursor[0] - block.left, cursor[1] - block.bottom)
         self._selected_block = block
+        self._selected_block.select()
 
     def set_mode_drag_connection(self, noodle: gui.ConnectionElement) -> None:
         pass
@@ -202,19 +234,19 @@ class Editor:
 
         # TODO: saving??
 
-        x, y = self.get_cursor_pos()
+        cursor = self.get_base_cursor_pos()
 
         # Find if we are hovering over a block
         clicked_block = None
         for block in self._controller.blocks:
-            if block.contains_point((x, y)):
+            if block.contains_point(cursor):
                 clicked_block = block
                 break
 
         # Find if we are hovering over a noodle/joint
         clicked_noodle = None
         for noodle in self._controller.connections:
-            if noodle.contains_point((x, y)):
+            if noodle.contains_point(cursor):
                 clicked_noodle = noodle
                 break
 
@@ -232,7 +264,7 @@ class Editor:
             self._pan_camera = True
         elif button == inputs.SECONDARY_CLICK:
             if clicked_block is not None:
-                # TODO: destroy block
+                self._controller.remove_block(clicked_block)
                 return
 
             if clicked_noodle is not None:
@@ -244,7 +276,10 @@ class Editor:
 
     def drag_block_on_input(
         self, button: Button, modifiers: int, pressed: bool
-    ) -> None: ...
+    ) -> None:
+        if button == inputs.PRIMARY_CLICK and not pressed:
+            self.set_mode_none()
+            return
 
     def create_connection_on_input(
         self, button: Button, modifiers: int, pressed: bool
@@ -308,9 +343,28 @@ class Editor:
             self._background.texture.offset = self._base_camera.position
             return
 
+        cursor = self.get_base_cursor_pos()
+        hovered_block = None
+        for block in self._controller.blocks:
+            if block.contains_point(cursor):
+                hovered_block = block
+                break
+
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+        if hovered_block is not None:
+            hovered_block.select()
+        self._hovered_block = hovered_block
+
     def drag_block_on_cursor_motion(
         self, x: float, y: float, dx: float, dy: float
-    ) -> None: ...
+    ) -> None:
+        if self._selected_block is None:
+            self.set_mode_none()
+            return
+
+        x, y = self.get_base_cursor_pos()
+        self._selected_block.update_position((x - self._offset[0], y - self._offset[1]))
 
     def add_block_on_cursor_motion(
         self, x: float, y: float, dx: float, dy: float
@@ -371,7 +425,10 @@ class Editor:
     def create_new_block(
         self, typ: graph.BlockType, position: tuple[float, float]
     ) -> None:
-        pass
+        block = graph.Block(typ)
+        element = gui.BlockElement(block)
+        element.update_position(position)
+        self._controller.add_block(element)
 
 
 class EditorFrame(Frame):
