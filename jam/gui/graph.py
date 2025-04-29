@@ -1,9 +1,11 @@
 from pyglet.graphics import Batch
 from pyglet.text import Label
-from pyglet.shapes import RoundedRectangle, Line, Circle
+from pyglet.shapes import RoundedRectangle, Circle, Line
 from pyglet.sprite import Sprite
 
 from resources import style
+
+# from jam.graphics.line import Line
 
 from jam.node.graph import (
     Value,
@@ -62,15 +64,19 @@ class ConnectionElement(Element):
         end_link = (end[0] - formating.corner_radius, end[1])
         self._links: list[tuple[float, float]] = [start_link, end_link]
 
-        s_line, s_joint, s_s_line, s_s_joint = self._create_link(start, start_link)
-        m_line, m_joint, m_s_line, m_s_joint = self._create_link(start_link, end_link)
-        e_line, e_joint, e_s_line, e_s_joint = self._create_link(end_link, end)
+        s_line, s_s_line = self._create_link(start, start_link)
+        m_line, m_s_line = self._create_link(start_link, end_link)
+        e_line, e_s_line = self._create_link(end_link, end)
 
         self._lines: list[Line] = [s_line, m_line, e_line]
-        self._joints: list[Circle] = [s_joint, m_joint, e_joint]
+        # self._joints: list[Circle] = [s_joint, m_joint, e_joint]
 
         self._shadow_lines: list[Line] = [s_s_line, m_s_line, e_s_line]
-        self._shadow_joints: list[Circle] = [s_s_joint, m_s_joint, e_s_joint]
+        # self._shadow_joints: list[Circle] = [s_s_joint, m_s_joint, e_s_joint]
+
+    @property
+    def connection(self) -> Connection:
+        return self._connection
 
     def get_closest_link(self, point: tuple[float, float]) -> tuple[int, float]:
         smallest = float("inf")
@@ -119,43 +125,51 @@ class ConnectionElement(Element):
             self._lines[idx].batch = batch
             self._shadow_lines[idx].batch = batch
 
-        for idx in range(len(self._links)):
-            self._joints[idx].batch = batch
-            self._shadow_joints[idx].batch = batch
+        # for idx in range(len(self._links)):
+        #     self._joints[idx].batch = batch
+        #     self._shadow_joints[idx].batch = batch
 
     def update_start(self, point: tuple[float, float]) -> None:
         self._start = point
 
         link = point[0] + formating.corner_radius, point[1]
+        link2 = self._links[1]
         self._links[0] = link
 
         self._lines[0].position = point
+        self._lines[1].position = link
         self._lines[0].x2, self._lines[0].y2 = link
-        self.joint[0].position = link
+        self._lines[1].x2, self._lines[1].y2 = link2
+        # self.joint[0].position = link
 
         shadow_point = (point[0] - formating.drop_x, point[1] - formating.drop_y)
         shadow_link = shadow_point[0] + formating.corner_radius, shadow_point[1]
+        shadow_link2 = link2[0] - formating.drop_x, link2[1] - formating.drop_y
 
         self._shadow_lines[0].position = shadow_point
+        self._shadow_lines[1].position = shadow_link
         self._shadow_lines[0].x2, self._shadow_lines[0].y2 = shadow_link
-        self._shadow_joints[0].position = shadow_link
+        self._shadow_lines[1].x2, self._shadow_lines[1].y2 = shadow_link2
+        # self._shadow_joints[0].position = shadow_link
 
     def update_end(self, point: tuple[float, float]) -> None:
         self._end = point
 
-        link = point[-1] - formating.corner_radius, point[1]
+        link = point[0] - formating.corner_radius, point[1]
         self._links[-1] = link
 
-        self._lines[-1].position = point
-        self._lines[-1].x2, self._lines[0].y2 = link
-        self.joint[-1].position = link
+        self._lines[-1].position = link
+        self._lines[-2].x2, self._lines[-2].y2 = link
+        self._lines[-1].x2, self._lines[-1].y2 = point
+        # self._joints[-1].position = link
 
         shadow_point = (point[0] - formating.drop_x, point[1] - formating.drop_y)
         shadow_link = shadow_point[0] - formating.corner_radius, shadow_point[1]
 
-        self._shadow_lines[-1].position = shadow_point
-        self._shadow_lines[-1].x2, self._shadow_lines[-1].y2 = shadow_link
-        self._shadow_joints[-1].position = shadow_link
+        self._shadow_lines[-1].position = shadow_link
+        self._shadow_lines[-2].x2, self._shadow_lines[-2].y2 = shadow_link
+        self._shadow_lines[-1].x2, self._shadow_lines[-1].y2 = shadow_point
+        # self._shadow_joints[-1].position = shadow_point
 
     def update_link(self, link: int, point: tuple[float, float]) -> None:
         if not 2 <= link + 1 < len(self._links):
@@ -165,8 +179,8 @@ class ConnectionElement(Element):
 
         self._links[link] = point
 
-        self._joints[link].position = point
-        self._shadow_joints[link] = shadow
+        # self._joints[link].position = point
+        # self._shadow_joints[link] = shadow
 
         self._lines[link].x2, self._lines[link].y2 = point
         self._shadow_lines[link].x2, self._shadow_lines[link].y2 = shadow
@@ -185,12 +199,12 @@ class ConnectionElement(Element):
         o_s_line = self._shadow_lines[link]
         o_s_line.position = point[0] - formating.drop_x, point[1] - formating.drop_y
 
-        n_line, n_joint, n_s_line, n_s_joint = self._create_link(old_start, point)
+        n_line, n_s_line = self._create_link(old_start, point)
 
         self._lines.insert(link, n_line)
-        self._joints.insert(link, n_joint)
+        # self._joints.insert(link, n_joint)
         self._shadow_lines.insert(link, n_s_line)
-        self._shadow_joints.insert(link, n_s_joint)
+        # self._shadow_joints.insert(link, n_s_joint)
         self._links.insert(link, point)
 
     def remove_link(self, link: int) -> None:
@@ -201,9 +215,9 @@ class ConnectionElement(Element):
         new_shadow = new_start[0] - formating.drop_x, new_start[1] - formating.drop_y
 
         self._lines.pop(link).batch = None
-        self._joints.pop(link).batch = None
+        # self._joints.pop(link).batch = None
         self._shadow_lines.pop(link).batch = None
-        self._shadow_joints.pop(link).batch = None
+        # self._shadow_joints.pop(link).batch = None
         self._links.pop(link)
 
         self._lines[link].position = new_start
@@ -213,41 +227,41 @@ class ConnectionElement(Element):
         self, start: tuple[float, float], end: tuple[float, float]
     ) -> tuple[Line, Circle, Line, Circle]:
         shadow_start = start[0] - formating.drop_x, start[1] - formating.drop_y
-        shaodw_end = end[0] - formating.drop_x, end[1] - formating.drop_y
+        shadow_end = end[0] - formating.drop_x, end[1] - formating.drop_y
         line = Line(
             *start,
             *end,
             formating.line_thickness,
-            colors.highlight,
+            color=colors.highlight,
             batch=self._batch,
             group=BASE_PRIMARY,
         )
-        joint = Circle(
-            *end,
-            formating.line_thickness / 2.0,
-            colors.highlight,
-            batch=self._batch,
-            group=BASE_PRIMARY,
-        )
+        # joint = Circle(
+        #     *end,
+        #     formating.line_thickness / 2.0,
+        #     color=colors.highlight,
+        #     batch=self._batch,
+        #     group=BASE_PRIMARY,
+        # )
         shadow_line = Line(
             *shadow_start,
-            *shaodw_end,
+            *shadow_end,
             formating.line_thickness,
-            colors.dark,
+            color=colors.dark,
             batch=self._batch,
             program=get_shadow_shader(),
             group=BASE_SHADOW,
         )
-        shadow_joint = Circle(
-            *shaodw_end,
-            formating.line_thickness / 2.0,
-            colors.dark,
-            batch=self._batch,
-            program=get_shadow_shader(),
-            group=BASE_SHADOW,
-        )
+        # shadow_joint = Circle(
+        #     *shadow_end,
+        #     formating.line_thickness / 2.0,
+        #     color=colors.dark,
+        #     batch=self._batch,
+        #     program=get_shadow_shader(),
+        #     group=BASE_SHADOW,
+        # )
 
-        return line, joint, shadow_line, shadow_joint
+        return line, shadow_line
 
 
 ALPHABET_SET = set(chr(n) for n in range(97, 123))
@@ -399,6 +413,17 @@ class ConnectionNodeElement(Element):
             self._label.batch = batch
 
     @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def center(self) -> tuple[float, float]:
+        return (
+            self._sprite.x + self._sprite.width / 2.0,
+            self._sprite.y + self._sprite.height / 2.0,
+        )
+
+    @property
     def active(self) -> bool:
         return self._active
 
@@ -420,8 +445,8 @@ class ConnectionNodeElement(Element):
     def branch(self) -> bool:
         return self._branch
 
-    @active.setter
-    def active(self, branch: bool) -> None:
+    @branch.setter
+    def branch(self, branch: bool) -> None:
         self._branch = branch
         if branch:
             if self._active:
@@ -439,7 +464,7 @@ class ConnectionNodeElement(Element):
         y = self._sprite.y + self._sprite.height / 2.0
         if self._is_input:
             return self._sprite.x, y
-        return self._sprite.x + self._sprite.width.y
+        return self._sprite.x + self._sprite.width, y
 
     @property
     def width(self) -> float:
@@ -454,11 +479,83 @@ class ConnectionNodeElement(Element):
 
 class TempValueElement(Element):
 
-    def __init__(self, position: tuple[float, float], value: OperationValue):
-        pass
+    def __init__(self, block: Block, connection: Connection):
+        self._block = block
+        self._connection = connection
+        self._type: type[OperationValue] = block.type.outputs["value"]
+        Element.__init__(self, block.uid)
+
+        if self._type._typ is bool:
+            self._panel = BoolPanel()
+            self._text_input = False
+        elif self._type._typ is int:
+            self._panel = TextPanel(charset=DIGIT_SET)
+            self._text_input = True
+        elif self._type._typ is float:
+            self._panel = TextPanel(charset=DECIMAL_SET)
+            self._text_input = True
+        else:
+            self._panel = TextPanel(charset=ALPHABET_SET)
+            self._text_input = True
+
+        self._line = Line(
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            formating.line_thickness,
+            colors.highlight,
+            group=BASE_PRIMARY,
+        )
+
+        self._panel_shadow = RoundedRectangle(
+            0.0,
+            0.0,
+            self._panel.width,
+            self._panel.height,
+            formating.corner_radius,
+            12,
+            colors.dark,
+            program=get_shadow_shader(),
+            group=BASE_SHADOW,
+        )
+        self._line_shadow = Line(
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            formating.line_thickness,
+            colors.dark,
+            program=get_shadow_shader(),
+            group=BASE_SHADOW,
+        )
 
     def update_end(self, point: tuple[float, float]) -> None:
-        pass
+        link = point[0] - formating.corner_radius, point[1]
+
+        shadow_point = point[0] - formating.drop_x, point[1] - formating.drop_y
+        shadow_link = link[0] - formating.drop_x, link[1] - formating.drop_y
+
+        self._line.position = link
+        self._line.x2, self._line.y2 = point
+
+        self._line_shadow.position = shadow_link
+        self._line_shadow.x2, self._line_shadow.y2 = shadow_point
+
+        panel_pos = link[0] - self._panel.width, link[1] - self._panel.height * 0.5
+        shadow_pos = panel_pos[0] - formating.drop_x, panel_pos[1] - formating.drop_y
+
+        self._panel.update_position(panel_pos)
+        self._panel_shadow.position = shadow_pos
+
+    def update_position(self, point: tuple[float, float]) -> None:
+        self.update_end(point)
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._panel.connect_renderer(batch)
+        self._panel_shadow.batch = batch
+        self._line.batch = batch
+        self._line_shadow.batch = batch
 
 
 class BlockElement(Element):
@@ -574,8 +671,16 @@ class BlockElement(Element):
         )
         self._select.visible = False
 
-        self._input_connections: dict[str, TempValueElement | ConnectionElement] = {}
-        self._output_connections: dict[str, ConnectionElement] = {}
+        self._input_connections: dict[
+            str, TempValueElement | ConnectionElement | None
+        ] = {name: None for name in block.type.inputs}
+        self._output_connections: dict[str, list[ConnectionElement]] = {
+            name: [] for name in block.type.outputs
+        }
+
+    @property
+    def block(self) -> Block:
+        return self._block
 
     def connect_renderer(self, batch: Batch | None) -> None:
         self._shadow.batch = batch
@@ -617,11 +722,17 @@ class BlockElement(Element):
             of = (self.layer_height - node.height) / 2.0
             node.update_position((point[0] + dx, self._header.y - dy + of))
 
+            if self._input_connections[node.name] is not None:
+                self._input_connections[node.name].update_end(node.link_pos)
+
         dx = self.width - formating.padding
         for idx, node in enumerate(self._output_nodes.values()):
             dy = (idx + 1) * (self.layer_height + formating.padding)
             of = (self.layer_height - node.height) / 2.0
             node.update_position((point[0] + dx - node.width, self._header.y - dy + of))
+
+            for connection in self._output_connections[node.name]:
+                connection.update_start(node.link_pos)
 
         dx = 2 * formating.padding + self.input_width
         for idx, panel in enumerate(self._config_panels.values()):
@@ -633,17 +744,82 @@ class BlockElement(Element):
         l, b = self._body.position
         return 0 <= point[0] - l <= self.width and 0 < point[1] - b <= self.height
 
+    def near_point(self, point: tuple[float, float], radius: float) -> bool:
+        l, b = self.left, self.bottom
+        w, h = self.width + radius, self.height + radius
+        return -radius <= point[0] - l <= w and -radius <= point[1] - b <= h
+
+    def get_nearest_input(self, point: tuple[float, float]) -> tuple[str, float]:
+        maximum = float("inf")
+        name = ""
+        for node in self._input_nodes.values():
+            pos = node.center
+            dist = (pos[0] - point[0]) ** 2 + (pos[1] - point[1]) ** 2
+            if dist < maximum:
+                name = node.name
+                maximum = dist
+
+        return name, maximum**0.5
+
+    def get_nearest_output(self, point: tuple[float, float]) -> tuple[str, float]:
+        maximum = float("inf")
+        name = ""
+        for node in self._output_nodes.values():
+            pos = node.center
+            dist = (pos[0] - point[0]) ** 2 + (pos[1] - point[1]) ** 2
+            if dist < maximum:
+                name = node.name
+                maximum = dist
+
+        return name, maximum**0.5
+
     def get_input(self, name: str) -> ConnectionNodeElement:
-        pass
+        if name not in self._input_nodes:
+            raise KeyError(f"{self._block.type} does not have input {name}")
+        return self._input_nodes[name]
 
     def get_output(self, name: str) -> ConnectionNodeElement:
-        pass
+        if name not in self._output_nodes:
+            raise KeyError(f"{self._block.type} does not have input {name}")
+        return self._output_nodes[name]
+
+    def highlight_input(self, name: str, only: bool = True) -> None:
+        if name not in self._input_nodes:
+            return
+
+        if only:
+            for node in self._input_nodes.values():
+                if self._block.inputs[node.name] is None:
+                    node.active = False
+
+        self._input_nodes[name].active = True
+
+    def highlight_output(self, name: str, only: bool = True) -> None:
+        if name not in self._output_nodes:
+            return
+
+        if only:
+            for node in self._output_nodes.values():
+                if not self._block.outputs[node.name]:
+                    node.active = False
+
+        self._output_nodes[name].active = True
+
+    def remove_highlighting(self) -> None:
+        for node in self._input_nodes.values():
+            if self._block.inputs[node.name] is None:
+                node.active = False
+
+        for node in self._output_nodes.values():
+            if not self._block.outputs[node.name]:
+                node.active = False
 
     def select(self) -> None:
         self._select.visible = True
 
     def deselect(self) -> None:
         self._select.visible = False
+        self.remove_highlighting()
 
     @property
     def left(self) -> float:
@@ -660,7 +836,3 @@ class BlockElement(Element):
     @property
     def height(self) -> float:
         return self._body.height
-
-
-class GraphElement(Element):
-    pass

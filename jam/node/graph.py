@@ -235,36 +235,35 @@ def __variable(**kwds: OperationValue) -> dict[str, OperationValue]:
 # We do need to define value blocks though
 
 
-def __int(Int: IntValue) -> dict[str, IntValue]:
-    return {"Int": IntValue.__acast__(Int)}
+def value_func(cast: type[OperationValue]) -> BlockOperation:
+    def __value(value: OperationValue) -> dict[str, OperationValue]:
+        return {"value": cast.__acast__(value)}
+
+    return __value
 
 
-IntBlock = BlockType("Int", __int, None, {"Int": IntValue}, {"Int": IntValue})
-
-
-def __float(Float: FloatValue) -> dict[str, FloatValue]:
-    return {"FLoat": FloatValue.__acast__(Float)}
+IntBlock = BlockType(
+    "Int", value_func(IntValue), None, {"value": IntValue}, {"value": IntValue}
+)
 
 
 FloatBlock = BlockType(
-    "Float", __float, None, {"value": FloatValue}, {"value": FloatValue}
+    "Float", value_func(FloatValue), None, {"value": FloatValue}, {"value": FloatValue}
 )
-
-
-def __bool(Boolean: BoolValue) -> dict[str, BoolValue]:
-    return {"Boolean": BoolValue.__acast__(Boolean)}
 
 
 BoolBlock = BlockType(
-    "Boolean", __bool, None, {"Boolean": BoolValue}, {"Boolean": BoolValue}
+    "Boolean",
+    value_func(BoolValue),
+    None,
+    {"value": BoolValue},
+    {"value": BoolValue},
 )
 
 
-def __str(String: StrValue) -> dict[str, StrValue]:
-    return {"String": StrValue.__acast__(String)}
-
-
-StrBlock = BlockType("String", __str, None, {"String": StrValue}, {"String": StrValue})
+StrBlock = BlockType(
+    "String", value_func(StrValue), None, {"value": StrValue}, {"value": StrValue}
+)
 
 BLOCK_CAST: dict[type, BlockType] = {
     int: IntBlock,
@@ -392,6 +391,16 @@ class Graph:
             else tuple(BlockType.__definitions__.values())
         )
 
+    def get_block(self, uid: UUID) -> Block:
+        if uid not in self._blocks:
+            raise KeyError(f"Graph contains no block with uid {uid}")
+        return self._blocks[uid]
+
+    def get_connection(self, uid: UUID) -> Connection:
+        if uid not in self._connections:
+            raise KeyError(f"Graph contains no connection with uid {uid}")
+        return self._connections[uid]
+
     @property
     def name(self) -> str:
         return self._name
@@ -444,6 +453,8 @@ class Graph:
 
         target.inputs[connection.input] = connection.uid
         source.outputs[connection.output].append(connection.uid)
+
+        self._connections[connection.uid] = connection
 
     def remove_connection(self, connection: Connection) -> None:
         if connection.uid not in self._connections:

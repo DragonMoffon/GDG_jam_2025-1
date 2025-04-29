@@ -23,7 +23,7 @@ class EditorMode(Enum):
     DRAG_CONNECTION = auto()
     CHANGE_CONFIG = auto()
     ADD_BLOCK = auto()
-    ADD_NODE = auto()
+    ADD_CONNECTION = auto()
 
 
 class GraphController:
@@ -71,26 +71,108 @@ class GraphController:
     def connections(self) -> tuple[gui.ConnectionElement, ...]:
         return tuple(self._connection_elements.values())
 
+    @property
+    def temporary(self) -> tuple[gui.TempValueElement, ...]:
+        return tuple(self._temp_elements.values())
+
+    def get_block(self, uid: UUID) -> gui.BlockElement:
+        if uid not in self._block_elements:
+            raise KeyError(f"No block with uid {uid}")
+        return self._block_elements[uid]
+
+    def get_connection(self, uid: UUID) -> gui.ConnectionElement:
+        if uid not in self._connection_elements.values():
+            raise KeyError(f"No connection with uid {uid}")
+
+        return self._connection_elements[uid]
+
     def add_block(self, block: gui.BlockElement) -> None:
-        if block.uid in self._block_elements:
-            return
-        self._block_elements[block.uid] = block
         self._graph.add_block(block._block)
         self._gui.add_element(block)
+        self._block_elements[block.uid] = block
 
-        # TODO: Temp values
+        for inp in block._input_connections:
+            self.create_temporary(block, inp)
 
     def remove_block(self, block: gui.BlockElement) -> None:
-        if block.uid not in self._block_elements:
-            return
+        for connection in block._input_connections.values():
+            if connection.uid in self._temp_elements:
+                self.remove_temporary(connection)
+            else:
+                self._unlink_connection(connection)
 
-        self._graph.remove_block(block._block)
-
-        # TODO: remove connections
+        for output in block._output_connections.values():
+            for connection in output:
+                self._unlink_connection(connection)
 
         self._gui.remove_element(block)
-
+        self._graph.remove_block(block.block)
         self._block_elements.pop(block.uid)
+
+    def add_connection(self, connection: gui.ConnectionElement) -> None:
+        self._link_connection(connection)
+        self._graph.add_connection(connection.connection)
+
+    def remove_connection(self, connection: gui.ConnectionElement) -> None:
+        self._unlink_connection(connection)
+        self._graph.remove_connection(connection.connection)
+
+        target = self.get_block(connection.connection.uid)
+        self.create_temporary(target, connection.connection.input)
+
+    def _link_connection(self, connection: gui.ConnectionElement) -> None:
+        target = self.get_block(connection.connection.target)
+        inp = target._input_connections[connection.connection.input]
+        if inp is not None:
+            if inp.uid in self._connection_elements:
+                self._unlink_connection(inp)
+            elif inp.uid in self._temp_elements:
+                self.remove_temporary(inp)
+        target._input_connections[connection.connection.input] = connection
+        source = self.get_block(connection.connection.source)
+        source._output_connections[connection.connection.output].append(connection)
+
+        target.get_input(connection.connection.input).active = True
+        source.get_output(connection.connection.output).active = True
+
+        self._connection_elements[connection.uid] = connection
+        self._gui.add_element(connection)
+
+    def _unlink_connection(self, connection: gui.ConnectionElement) -> None:
+        target = self.get_block(connection.connection.target)
+        source = self.get_block(connection.connection.source)
+
+        target._input_connections[connection.connection.input] = None
+        source._output_connections[connection.connection.output].remove(connection)
+
+        target.get_input(connection.connection.input).active = False
+        if not source._output_connections[connection.connection.output]:
+            source.get_output(connection.connection.output).active = False
+
+        self._connection_elements.pop(connection.uid)
+        self._gui.remove_element(connection)
+
+    def create_temporary(self, block: gui.BlockElement, inp: str) -> None:
+        connection = block._input_connections[inp]
+        if connection is not None:
+            return
+
+        block_typ = block.block.type
+        temp_type = graph.BLOCK_CAST[block_typ.inputs[inp]._typ]
+        temp_block = graph.Block(temp_type)
+        temp_connection = graph.Connection(temp_block.uid, "value", block.uid, inp)
+        element = gui.TempValueElement(temp_block, temp_connection)
+        element.update_end(block.get_input(inp).link_pos)
+
+        self._gui.add_element(element)
+        self._graph.add_block(temp_block)
+        self._graph.add_connection(temp_connection)
+
+        block._input_connections[inp] = element
+        self._temp_elements[temp_block.uid] = element
+
+    def remove_temporary(self, temp: gui.TempValueElement) -> None:
+        self._gui.remove_element(temp)
 
 
 class Editor:
@@ -133,11 +215,7 @@ class Editor:
         self._offset: Vec2 = Vec2()
 
         # Create Connection
-        self._start_pos: tuple[float, float] = (0.0, 0.0)
-        self._source_block: gui.BlockElement | None = None
-        self._target_block: gui.BlockElement | None = None
-        self._output: str = ""
-        self._input: str = ""
+        self._incomplete_connection: gui.ConnectionElement | None = None
 
         # Add Block
         self._select_position: tuple[float, float] = (0.0, 0.0)
@@ -153,24 +231,21 @@ class Editor:
 
         if self._hovered_block is not None:
             self._hovered_block.deselect()
+            self._hovered_block.remove_highlighting()
             self._hovered_block = None
 
         if self._selected_block is not None:
-            # TODO: de-select selected block
             self._selected_block.deselect()
+            self._selected_block.remove_highlighting()
             self._selected_block = None
             self._offset = Vec2()
 
-        if self._source_block is not None:
+        if self._incomplete_connection is not None:
             # TODO: de-select connection blocks
-            self._start_pos = (0.0, 0.0)
-            self._source_block = None
-            self._target_block = None
-            self._output = ""
-            self._input = ""
+            self._gui.remove_element(self._incomplete_connection)
+            self._incomplete_connection = None
 
         if self._block_popup is not None:
-            # TODO: destroy block popup
             self._gui.remove_element(self._block_popup)
             self._select_position = (0.0, 0.0)
             self._block_popup = None
@@ -221,8 +296,24 @@ class Editor:
         )
         self._gui.add_element(self._block_popup)
 
-    def set_mode_add_node(self) -> None:
-        pass
+    def set_mode_add_connection(self, source: gui.BlockElement, output: str) -> None:
+        self._mode = EditorMode.ADD_CONNECTION
+
+        connection = graph.Connection(source.uid, output, None, None)
+        start = source.get_output(output).link_pos
+        end = self.get_base_cursor_pos()
+        element = gui.ConnectionElement(connection, start, end)
+
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+            self._hovered_block = None
+
+        self._selected_block = source
+        self._selected_block.select()
+        self._selected_block.highlight_output(output)
+
+        self._incomplete_connection = element
+        self._gui.add_element(element)
 
     # -- INPUT METHODS --
 
@@ -239,7 +330,7 @@ class Editor:
         # Find if we are hovering over a block
         clicked_block = None
         for block in self._controller.blocks:
-            if block.contains_point(cursor):
+            if block.near_point(cursor, 16.0):
                 clicked_block = block
                 break
 
@@ -252,8 +343,13 @@ class Editor:
 
         if button == inputs.PRIMARY_CLICK:
             if clicked_block is not None:
-                # TODO: Check to see if connection clicked (self.set_mode_add_connection)
-                self.set_mode_drag_block(clicked_block)
+                # TODO: Add panel editing self.set_mode_edit_config(block, config)
+                output, dist = clicked_block.get_nearest_output(cursor)
+                if dist <= 16.0:
+                    self.set_mode_add_connection(clicked_block, output)
+                    return
+                elif clicked_block.contains_point(cursor):
+                    self.set_mode_drag_block(clicked_block)
                 return
 
             if clicked_noodle is not None:
@@ -281,9 +377,41 @@ class Editor:
             self.set_mode_none()
             return
 
-    def create_connection_on_input(
+    def add_connection_on_input(
         self, button: Button, modifiers: int, pressed: bool
-    ) -> None: ...
+    ) -> None:
+        cursor = self.get_base_cursor_pos()
+        if not pressed:
+            hovered_block = None
+            for block in self._controller.blocks:
+                if block == self._selected_block:
+                    continue
+                if block.near_point(cursor, 16.0):
+                    hovered_block = block
+                    break
+            if hovered_block is None:
+                self.set_mode_none()
+                return
+
+            if self._hovered_block is not None:
+                self._hovered_block.deselect()
+
+            name, dist = hovered_block.get_nearest_input(cursor)
+            if dist > 16:
+                self.set_mode_none()
+                return
+            connection = self._incomplete_connection._connection
+            connection.target = hovered_block.uid
+            connection.input = name
+
+            self._incomplete_connection.update_end(
+                hovered_block.get_input(name).link_pos
+            )
+
+            self._controller.add_connection(self._incomplete_connection)
+            self._incomplete_connection = None
+            self.set_mode_none()
+            return
 
     def add_block_on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
         if not pressed:
@@ -317,8 +445,8 @@ class Editor:
                 self.none_on_input(button, modifiers, pressed)
             case EditorMode.DRAG_BLOCK:
                 self.drag_block_on_input(button, modifiers, pressed)
-            case EditorMode.ADD_NODE:
-                self.create_connection_on_input(button, modifiers, pressed)
+            case EditorMode.ADD_CONNECTION:
+                self.add_connection_on_input(button, modifiers, pressed)
             case EditorMode.ADD_BLOCK:
                 self.add_block_on_input(button, modifiers, pressed)
             case EditorMode.CHANGE_CONFIG:
@@ -346,7 +474,7 @@ class Editor:
         cursor = self.get_base_cursor_pos()
         hovered_block = None
         for block in self._controller.blocks:
-            if block.contains_point(cursor):
+            if block.near_point(cursor, 16.0):
                 hovered_block = block
                 break
 
@@ -354,6 +482,9 @@ class Editor:
             self._hovered_block.deselect()
         if hovered_block is not None:
             hovered_block.select()
+            name, dist = hovered_block.get_nearest_output(cursor)
+            if dist <= 16.0:
+                hovered_block.highlight_output(name)
         self._hovered_block = hovered_block
 
     def drag_block_on_cursor_motion(
@@ -376,9 +507,32 @@ class Editor:
         action = self._block_popup.get_hovered_item(self.get_overlay_cursor_pos())
         self._block_popup.highlight_action(action)
 
-    def create_connection_on_cursor_motion(
+    def add_connection_on_cursor_motion(
         self, x: float, y: float, dx: float, dy: float
-    ) -> None: ...
+    ) -> None:
+        if self._incomplete_connection is None:
+            self.set_mode_none()
+
+        cursor = self.get_base_cursor_pos()
+
+        self._incomplete_connection.update_end(cursor)
+
+        hovered_block = None
+        for block in self._controller.blocks:
+            if block == self._selected_block:
+                continue
+            if block.near_point(cursor, 16.0):
+                hovered_block = block
+                break
+
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+        if hovered_block is not None:
+            hovered_block.select()
+            name, dist = hovered_block.get_nearest_input(cursor)
+            if dist <= 16.0:
+                hovered_block.highlight_input(name)
+        self._hovered_block = hovered_block
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         match self._mode:
@@ -388,8 +542,8 @@ class Editor:
                 self.drag_block_on_cursor_motion(x, y, dx, dy)
             case EditorMode.ADD_BLOCK:
                 self.add_block_on_cursor_motion(x, y, dx, dy)
-            case EditorMode.ADD_NODE:
-                self.create_connection_on_cursor_motion(x, y, dx, dy)
+            case EditorMode.ADD_CONNECTION:
+                self.add_connection_on_cursor_motion(x, y, dx, dy)
             case _:
                 pass
 
