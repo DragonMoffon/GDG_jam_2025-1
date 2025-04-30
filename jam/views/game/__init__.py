@@ -13,6 +13,7 @@ from jam.input import Button, Axis
 
 from .editor import EditorFrame
 from .settings import SettingsFrame
+from .comms import CommsFrame
 
 
 class ParallaxBackground:
@@ -74,13 +75,11 @@ class GameView(View):
         )
         self._info_frame.connect_renderer(self._batch)
 
-        self._comms_frame = Frame(
-            "COMMS",
-            self._editor_frame.tag_height
-            + self._info_frame.tag_height
-            + 3 * style.format.padding,
+        comm_offset = self._editor_frame.tag_height + self._info_frame.tag_height + 3 * style.format.padding
+        self._comms_frame = CommsFrame(
+            comm_offset,
             (self.width, 0.0),
-            (450, 720),
+            720,
         )
         self._comms_frame.connect_renderer(self._batch)
 
