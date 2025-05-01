@@ -510,13 +510,14 @@ class TempValueElement(Element):
     def __init__(self, block: Block, connection: Connection):
         self._block = block
         self._connection = connection
-        self._type: type[OperationValue] = block.type.outputs["value"]
+        self._type: type[OperationValue] = block.type.outputs[connection.output]
         Element.__init__(self, block.uid)
 
         if self._type._typ is bool:
             self._panel = BoolPanel()
         else:
             self._panel = TextPanel()
+            self._panel.text = str(block.config[connection.output].value)
 
         self._line = Line(
             0.0,
@@ -549,6 +550,14 @@ class TempValueElement(Element):
             program=get_shadow_shader(),
             group=BASE_SHADOW,
         )
+
+    @property
+    def block(self) -> Block:
+        return self._block
+
+    @property
+    def connection(self) -> Connection:
+        return self._connection
 
     def update_end(self, point: tuple[float, float]) -> None:
         link = point[0] - formating.corner_radius, point[1]
