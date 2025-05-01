@@ -103,6 +103,9 @@ class BoolValue(Value[bool]):
     def __init__(self, value: bool | None = None) -> None:
         super().__init__(value or False)
 
+    def invert(self) -> BoolValue:
+        return BoolValue(not self.value)
+
 
 OperationValue = IntValue | FloatValue | StrValue | BoolValue
 STR_CAST: dict[str, type[OperationValue]] = {
@@ -172,7 +175,7 @@ class Block:
         self.uid: UUID = uid or uuid4()
 
         self.config: dict[str, OperationValue] = {
-            name: value() for name, value in typ.inputs.items()
+            name: value() for name, value in typ.config.items()
         }
 
         for kwd, value in kwds.items():
@@ -219,6 +222,12 @@ class Connection:
         self.input = input_
 
         self.uid = uid or uuid4()
+
+    def __str__(self):
+        return f"{self.source}[{self.output}] -> [{self.input}]{self.target}"
+
+    def __repr__(self):
+        return self.__str__()
 
 
 # -- BLOCK TYPES --
@@ -614,7 +623,9 @@ def write_graph(
 
         subtable["uid"] = block.uid.hex
         subtable["type"] = block.type.name
-        config.update(block.config)  # type: ignore -- unknownMemberType
+        config.update(  # type: ignore -- unknownMemberType
+            {name: typ.value for name, typ in block.config.items()}
+        )
         subtable["config"] = config
         if block.uid in positions:
             subtable["position"] = positions[block.uid]
@@ -625,11 +636,17 @@ def write_graph(
             type_table = table()
             input_table = inline_table()
             input_table.update(  # type: ignore -- unknownMemberType
-                {name: typ.type for name, typ in block.type.inputs.items()}
+                {
+                    name: str(typ._typ.__name__)
+                    for name, typ in block.type.inputs.items()
+                }
             )
             output_table = inline_table()
             output_table.update(  # type: ignore -- unknownMemberType
-                {name: typ.type for name, typ in block.type.outputs.items()}
+                {
+                    name: str(typ._typ.__name__)
+                    for name, typ in block.type.outputs.items()
+                }
             )
             type_table["name"] = block.type.name
             type_table["input"] = input_table

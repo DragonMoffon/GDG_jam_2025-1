@@ -5,6 +5,7 @@ from pyglet.sprite import Sprite
 
 from resources import style
 
+
 # from jam.graphics.line import Line
 
 from jam.node.graph import (
@@ -264,14 +265,9 @@ class ConnectionElement(Element):
         return line, shadow_line
 
 
-ALPHABET_SET = set(chr(n) for n in range(97, 123))
-DIGIT_SET = set(chr(n) for n in range(48, 59))
-DECIMAL_SET = DIGIT_SET.union(["."])
-
-
 class TextPanel(Element):
 
-    def __init__(self, char_count: int = 6, charset: set[str] | None = None):
+    def __init__(self, char_count: int = 6):
         self._text: Label = Label(
             "#" * char_count,
             0.0,
@@ -284,7 +280,6 @@ class TextPanel(Element):
             group=BASE_PRIMARY,
         )
         self._text_width = self._text.content_width
-        self._text.text = ""
         self._panel: RoundedRectangle = RoundedRectangle(
             0.0,
             0.0,
@@ -296,7 +291,29 @@ class TextPanel(Element):
             group=BASE_PRIMARY,
         )
 
-        self._charset: set[str] | None = charset
+        self._full_text = self._text.text = ""
+        self._count = char_count
+        self._cursor = 0
+
+    @property
+    def text(self) -> str:
+        return self._full_text
+
+    @text.setter
+    def text(self, text: str) -> None:
+        self._full_text = text
+        sub = text[self._cursor : self._cursor + self._count]
+        self._text.text = sub
+
+    @property
+    def offset(self) -> int:
+        return self._cursor
+
+    @offset.setter
+    def offset(self, offset: int) -> None:
+        self._cursor = offset
+        sub = self._full_text[offset : offset + self._count]
+        self._text.text = sub
 
     @property
     def width(self) -> float:
@@ -313,6 +330,12 @@ class TextPanel(Element):
             point[1] + formating.padding,
             0.0,
         )
+
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        l, b = self._panel.position
+        w, h = self._panel._width, self._panel._height
+
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
 
     def connect_renderer(self, batch: Batch | None = None) -> None:
         self._panel.batch = batch
@@ -339,6 +362,11 @@ class BoolPanel(Element):
 
     def update_position(self, point: tuple[float, float]) -> None:
         self._sprite.position = point[0], point[1], 0.0
+
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        l, b, *_ = self._sprite.position
+        w, h = self._sprite.width, self._sprite.height
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
 
     @property
     def active(self) -> bool:
@@ -487,16 +515,8 @@ class TempValueElement(Element):
 
         if self._type._typ is bool:
             self._panel = BoolPanel()
-            self._text_input = False
-        elif self._type._typ is int:
-            self._panel = TextPanel(charset=DIGIT_SET)
-            self._text_input = True
-        elif self._type._typ is float:
-            self._panel = TextPanel(charset=DECIMAL_SET)
-            self._text_input = True
         else:
-            self._panel = TextPanel(charset=ALPHABET_SET)
-            self._text_input = True
+            self._panel = TextPanel()
 
         self._line = Line(
             0.0,
@@ -513,7 +533,7 @@ class TempValueElement(Element):
             0.0,
             self._panel.width,
             self._panel.height,
-            formating.corner_radius,
+            formating.padding,
             12,
             colors.dark,
             program=get_shadow_shader(),
@@ -548,8 +568,21 @@ class TempValueElement(Element):
         self._panel.update_position(panel_pos)
         self._panel_shadow.position = shadow_pos
 
+    def get_hovered_config(self, point: tuple[float, float]) -> str | None:
+        if not self.contains_point(point):
+            return None
+        return self._connection.output
+
+    def get_config(self, name: str) -> TextPanel | BoolPanel:
+        if name not in self.block.config:
+            raise KeyError(f"{name} not a config of block type {self.block.type}")
+        return self._panel
+
     def update_position(self, point: tuple[float, float]) -> None:
         self.update_end(point)
+
+    def contains_point(self, point: tuple[float, float]) -> None:
+        return self._panel.contains_point(point)
 
     def connect_renderer(self, batch: Batch | None) -> None:
         self._panel.connect_renderer(batch)
@@ -598,12 +631,9 @@ class BlockElement(Element):
             for name, typ in block.type.config.items():
                 if typ._typ is bool:
                     panel = BoolPanel()
-                elif typ._typ is int:
-                    panel = TextPanel(charset=DIGIT_SET)
-                elif typ._typ is float:
-                    panel = TextPanel(charset=DECIMAL_SET)
                 else:
-                    panel = TextPanel(charset=ALPHABET_SET)
+                    panel = TextPanel()
+                    panel.text = str(block.config[name].value)
                 self.config_width = max(panel.width, self.config_width)
                 self.config_height += panel.height + formating.padding
                 layer_height = max(panel.height, layer_height)
@@ -773,6 +803,15 @@ class BlockElement(Element):
 
         return name, maximum**0.5
 
+    def get_hovered_config(self, point: tuple[float, float]) -> str | None:
+        if not self.contains_point(point):
+            return None
+
+        for config, panel in self._config_panels.items():
+            if panel.contains_point(point):
+                return config
+        return None
+
     def get_input(self, name: str) -> ConnectionNodeElement:
         if name not in self._input_nodes:
             raise KeyError(f"{self._block.type} does not have input {name}")
@@ -780,8 +819,13 @@ class BlockElement(Element):
 
     def get_output(self, name: str) -> ConnectionNodeElement:
         if name not in self._output_nodes:
-            raise KeyError(f"{self._block.type} does not have input {name}")
+            raise KeyError(f"{self._block.type} does not have outpyt {name}")
         return self._output_nodes[name]
+
+    def get_config(self, name: str) -> TextPanel | BoolPanel:
+        if name not in self._config_panels:
+            raise KeyError(f"{self._block.type} does not have config {name}")
+        return self._config_panels[name]
 
     def highlight_input(self, name: str, only: bool = True) -> None:
         if name not in self._input_nodes:
@@ -792,7 +836,7 @@ class BlockElement(Element):
                 if self._block.inputs[node.name] is None:
                     node.active = False
 
-        self._input_nodes[name].active = True
+        self._input_nodes[name].active = not self._block.inputs[name]
 
     def highlight_output(self, name: str, only: bool = True) -> None:
         if name not in self._output_nodes:
@@ -803,16 +847,14 @@ class BlockElement(Element):
                 if not self._block.outputs[node.name]:
                     node.active = False
 
-        self._output_nodes[name].active = True
+        self._output_nodes[name].active = not self._block.outputs[name]
 
     def remove_highlighting(self) -> None:
         for node in self._input_nodes.values():
-            if self._block.inputs[node.name] is None:
-                node.active = False
+            node.active = self._block.inputs[node.name] is not None
 
         for node in self._output_nodes.values():
-            if not self._block.outputs[node.name]:
-                node.active = False
+            node.active = len(self._block.outputs[node.name]) > 0
 
     def select(self) -> None:
         self._select.visible = True

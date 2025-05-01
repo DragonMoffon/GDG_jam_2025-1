@@ -3,10 +3,18 @@ from typing import Callable, Any
 
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
+from pyglet.text import Label
 from arcade import Text
 
-from .core import Element, OVERLAY_SHADOW, OVERLAY_PRIMARY, get_shadow_shader
 from resources import style
+
+from .core import (
+    Element,
+    OVERLAY_SHADOW,
+    OVERLAY_PRIMARY,
+    OVERLAY_HIGHLIGHT,
+    get_shadow_shader,
+)
 
 
 class Popup(Element):
@@ -32,6 +40,7 @@ class Popup(Element):
             style.format.padding,
             14,
             style.colors.base,
+            group=OVERLAY_PRIMARY,
         )
         self._shadow = RoundedRectangle(
             bottom_left[0] - 2 * style.format.drop_x,
@@ -41,7 +50,8 @@ class Popup(Element):
             style.format.padding,
             14,
             style.colors.dark,
-            program=get_shadow_shader()
+            program=get_shadow_shader(),
+            group=OVERLAY_SHADOW,
         )
 
     def connect_renderer(self, batch: Batch | None):
@@ -119,6 +129,7 @@ class SelectionPopup(Popup):
                 style.text.normal.size,
                 anchor_y="bottom",
                 font_name=style.text.normal.name,
+                group=OVERLAY_HIGHLIGHT,
             )
             for name in self.actions
         }
@@ -135,6 +146,7 @@ class SelectionPopup(Popup):
                 style.format.padding,
                 14,
                 style.colors.background,
+                group=OVERLAY_HIGHLIGHT,
             )
             for name in self.actions
         }
@@ -169,10 +181,8 @@ class SelectionPopup(Popup):
 
         for action in self.actions:
             p = self._action_panels[action]
-            p.group = OVERLAY_PRIMARY
             p.batch = batch
             t = self._action_text[action]
-            t.group = OVERLAY_PRIMARY
             t.batch = batch
 
     def get_hovered_item(self, point: tuple[float, float]):
@@ -195,14 +205,10 @@ class SelectionPopup(Popup):
 
         if only or not highlight:
             self._action_panels[name].color = (
-                style.colors.base
-                if highlight
-                else style.colors.background
+                style.colors.base if highlight else style.colors.background
             )
             self._action_text[name].color = (
-                style.colors.highlight
-                if highlight
-                else style.colors.accent
+                style.colors.highlight if highlight else style.colors.accent
             )
             return
 
@@ -219,3 +225,212 @@ class SelectionPopup(Popup):
         for action in self.actions:
             self._action_panels[action].color = style.colors.background
             self._action_text[action].color = style.colors.accent
+
+
+class TextInput:
+
+    def __init__(
+        self, charset: set[str], chararray: tuple[str, ...], max_char: int = -1
+    ):
+        self._charset = charset
+        self._chararray = chararray
+        self._max_char = max_char
+        self._str = ""
+        self._idx = 0
+
+    @property
+    def set(self) -> set[str]:
+        return self._charset
+
+    @property
+    def array(self) -> tuple[str, ...]:
+        return self._chararray
+
+    @property
+    def max(self) -> int:
+        return self._max_char
+
+    @property
+    def cursor(self) -> int:
+        return self._idx
+
+    @property
+    def text(self) -> str:
+        return self._str
+
+    @property
+    def at_start(self) -> bool:
+        return self._idx == 0
+
+    @property
+    def at_end(self) -> bool:
+        return self._idx == len(self._str)
+
+    @property
+    def at_max(self) -> bool:
+        return self._max_char >= 0 and self._idx == self._max_char
+
+    @property
+    def is_max(self) -> bool:
+        return self._max_char >= 0 and len(self._str) == self._max_char
+
+    def incr_cursor(self, wrap: bool = True) -> int:
+        self._idx += 1
+        if self._idx > len(self._str):
+            self._idx = 0 if wrap else len(self._str)
+        return self._idx
+
+    def decr_cursor(self, wrap: bool = True) -> int:
+        self._idx -= 1
+        if self._idx < 0:
+            self._idx = len(self._str) if wrap else 0
+        return self._idx
+
+    def move_cursor(self, new: int) -> int:
+        self._idx = new % len(self._str)
+        return self._idx
+
+    def add_char(self, char: str) -> str:
+        if char not in self._charset:
+            return self._str
+
+        if self._max_char >= 0 and len(self._str) == self._max_char:
+            return self._str
+
+        self._str = f"{self._str[:self._idx]}{char}{self._str[self._idx:]}"
+        self.incr_cursor(wrap=False)
+        return self._str
+
+    def rem_char(self) -> str:
+        if self._idx <= 0:
+            self._idx = 0
+            return self._str
+
+        self.decr_cursor(wrap=False)
+        self._str = f"{self._str[:self._idx]}{self._str[self._idx + 1:]}"
+        return self._str
+
+    def incr_char(self) -> str:
+        if self.at_end:
+            return self._str
+        char = self._str[self._idx]
+        idx = (self._chararray.index(char) + 1) % len(self._chararray)
+        new = self._chararray[idx]
+        self._str = f"{self._str[:self._idx]}{new}{self._str[self._idx + 1:]}"
+        return self._str
+
+    def decr_char(self) -> str:
+        if self.at_end:
+            return self._str
+        char = self._str[self._idx]
+        idx = self._chararray.index(char) - 1
+        new = self._chararray[idx]
+        self._str = f"{self._str[:self._idx]}{new}{self._str[self._idx + 1:]}"
+        return self._str
+
+    def set_char(self, new: str) -> str:
+        if new not in self._charset or self.at_end:
+            return self._str
+        self._str = f"{self._str[:self._idx]}{new}{self._str[self._idx + 1:]}"
+        return self._str
+
+    def set_text(self, text: str, cursor: int = -1) -> str:
+        if self._max_char >= 0:
+            text = text[: self._max_char]
+        self._str = text
+        if cursor >= 0:
+            self._idx = min(len(self._str), cursor)
+        else:
+            self._idx = len(self._str)
+
+        return self._str
+
+    def clear_text(self) -> None:
+        self._str = ""
+        self._idx = 0
+
+
+class TextInputPopup(Popup):
+
+    def __init__(
+        self,
+        center: tuple[float, float],
+        charset: set[str],
+        chararray: tuple[str, ...],
+        max_char: int = -1,
+        cursor: bool = True,
+    ):
+        self._text_input = TextInput(charset, chararray, max_char)
+        count = min(12, max_char) if max_char > 0 else 12
+        self._text = Label(
+            "#" * count,
+            center[0],
+            center[1],
+            0.0,
+            font_name=style.text.header.name,
+            font_size=style.text.header.size,
+            color=style.colors.accent,
+            group=OVERLAY_HIGHLIGHT,
+            anchor_x="center",
+            anchor_y="center",
+        )
+        width = self._text.content_width + 2 * style.format.padding
+        height = self._text.content_height + 2 * style.format.padding
+        self._text.text = ""
+
+        Popup.__init__(
+            self,
+            width,
+            height,
+            (center[0] - width / 2.0, center[1] - height / 2.0),
+        )
+
+        self._cursor = cursor  # TODO
+
+    def update_position(self, point: tuple[float, float]) -> None:
+        Popup.update_position(self, point)
+        self._text.position = (
+            point[0] + self._body.width * 0.5,
+            point[1] + self._body.height * 0.5,
+            0.0,
+        )
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        Popup.connect_renderer(self, batch)
+        self._text.batch = batch
+
+    def input_char(self, char: str) -> None:
+        self._text.text = self._text_input.add_char(char)
+
+        if self._text_input.cursor >= 12:
+            width = self._text.content_width + 2 * style.format.padding
+            x = self._body.x - (width - self._body.width) * 0.5
+            self._body.width = self._shadow.width = width
+            self._body.x = x
+            self._shadow.x = x - 2 * style.format.drop_x
+
+    def remove_char(self) -> None:
+        self._text.text = self._text_input.rem_char()
+
+        if self._text_input.cursor >= 12:
+            width = self._text.content_width + 2 * style.format.padding
+            x = self._body.x - (width - self._body.width) * 0.5
+            self._body.width = self._shadow.width = width
+            self._body.x = x
+            self._shadow.x = x - 2 * style.format.drop_x
+
+    def incr_cursor(self) -> None:
+        self._text_input.incr_cursor()
+
+    def decr_cursor(self) -> None:
+        self._text_input.decr_cursor()
+
+    def incr_char(self) -> None:
+        self._text.text = self._text_input.incr_char()
+
+    def decr_char(self) -> None:
+        self._text.text = self._text_input.decr_char()
+
+    @property
+    def text(self) -> str:
+        return self._text_input.text

@@ -1,6 +1,7 @@
 from pathlib import Path
 from enum import Enum, auto
 from uuid import UUID
+from importlib.resources import path
 
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
@@ -8,13 +9,24 @@ from arcade import Rect, LBWH, Vec2, Vec3, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
+
+from resources import style
+import resources.graphs as graph_path
+
 from jam.node import graph
 from jam.gui import core, util, graph as gui
 from jam.gui.frame import Frame, ACTIVE_GROUP
 from jam.graphics.clip import ClippingMask
-from jam.input import inputs, Button, Axis
-
-from resources import style
+from jam.input import (
+    inputs,
+    Button,
+    Axis,
+    STR_KEY_SET,
+    STR_ARRAY,
+    STR_SET,
+    LETTER_KEY_SET,
+    TYPE_CHAR_SETS,
+)
 
 
 class EditorMode(Enum):
@@ -24,6 +36,7 @@ class EditorMode(Enum):
     CHANGE_CONFIG = auto()
     ADD_BLOCK = auto()
     ADD_CONNECTION = auto()
+    SAVE_GRAPH = auto()
 
 
 class GraphController:
@@ -32,10 +45,9 @@ class GraphController:
         self,
         block_graph: graph.Graph,
         editor_gui: core.Gui,
-        positions: dict[UUID, tuple[float, float]] | None = None,
+        positions: dict[UUID, tuple[float, float]],
     ):
-        if positions is None:
-            positions = {}
+        self._graph: graph.Graph = None
 
         self._graph = block_graph
         self._gui = editor_gui
@@ -52,16 +64,18 @@ class GraphController:
             pos = positions.get(block.uid, (0.0, 0.0))
             element = gui.BlockElement(block)
             element.update_position(pos)
-            self._block_elements[block.uid] = element
-            self._gui.add_element(element)
+            self.add_block(element)
 
         for connection in self._graph.connections:
+            if connection.source in self._temp_elements:
+                continue
             source = self._block_elements[connection.source]
             origin = source.get_output(connection.output)
             target = self._block_elements[connection.target]
             final = target.get_input(connection.input)
 
             element = gui.ConnectionElement(connection, origin.link_pos, final.link_pos)
+            self.add_connection(element)
 
     @property
     def blocks(self) -> tuple[gui.BlockElement, ...]:
@@ -91,12 +105,16 @@ class GraphController:
         self._gui.add_element(block)
         self._block_elements[block.uid] = block
 
-        for inp in block._input_connections:
+        for inp, connection in block.block.inputs.items():
+            if connection is not None:
+                continue
             self.create_temporary(block, inp)
 
     def remove_block(self, block: gui.BlockElement) -> None:
         for connection in block._input_connections.values():
-            if connection.uid in self._temp_elements:
+            if connection is None:
+                continue
+            elif connection.uid in self._temp_elements:
                 self.remove_temporary(connection)
             else:
                 self._unlink_connection(connection)
@@ -169,6 +187,7 @@ class GraphController:
         self._graph.add_connection(temp_connection)
 
         block._input_connections[inp] = element
+        block.get_input(inp).active = True
         self._temp_elements[temp_block.uid] = element
 
     def remove_temporary(self, temp: gui.TempValueElement) -> None:
@@ -187,7 +206,7 @@ class Editor:
         # Graph
         self._src: Path | None = graph_src
         self._graph, positions = (
-            (graph.Graph(), {}) if not graph_src else graph.read_graph(graph_src)
+            (graph.Graph(), {}) if graph_src is None else graph.read_graph(graph_src)
         )
 
         self._blocks: dict[UUID, gui.BlockElement] = {}
@@ -222,9 +241,14 @@ class Editor:
         self._block_popup: util.SelectionPopup | None = None
 
         # Edit Config Value
-        self._text = ""
-        self._panel: gui.TextPanel | None = None
-        self._text_scroll: int = 0
+        self._config: str = ""
+        self._prev_value: graph.OperationValue | None = None
+        self._config_block: graph.Block | None = None
+        self._config_panel: gui.TextPanel | None = None
+        self._config_input: util.TextInput | None = None
+
+        # Save Graph
+        self._save_popup: util.TextInputPopup | None = None
 
     def set_mode_none(self) -> None:
         self._mode = EditorMode.NONE
@@ -250,11 +274,40 @@ class Editor:
             self._select_position = (0.0, 0.0)
             self._block_popup = None
 
-        if self._panel is not None:
-            # TODO: finish editing panel
-            self._text = ""
-            self._panel = None
-            self._text_scroll = 0
+        if self._config_panel is not None:
+            if self._config_input.text == "":
+                self._config_panel.text = ""
+
+                config_type = self._config_block.type.config[self._config]
+                self._config_block.config[self._config] = config_type()
+            else:
+                try:
+                    config_type = self._config_block.type.config[self._config]
+                    # Mega cludge to avoid .0 at the end of ints
+                    if (
+                        self._prev_value.type is float
+                        and "." not in self._config_input.text
+                    ):
+                        value = config_type(int(self._config_input.text))
+                    else:
+                        value = config_type(
+                            self._prev_value.type(self._config_input.text)
+                        )
+                except ValueError:
+                    self._config_panel.text = str(self._prev_value.value)
+                else:
+                    self._config_panel.text = self._config_input.text
+                    self._config_block.config[self._config] = value
+
+            self._config = ""
+            self._prev_value = None
+            self._config_block = None
+            self._config_panel = None
+            self._config_input = None
+
+        if self._save_popup is not None:
+            self._gui.remove_element(self._save_popup)
+            self._save_popup = None
 
     def set_mode_drag_block(self, block: gui.BlockElement) -> None:
         self._mode = EditorMode.DRAG_BLOCK
@@ -271,8 +324,31 @@ class Editor:
     def set_mode_drag_connection(self, noodle: gui.ConnectionElement) -> None:
         pass
 
-    def set_mode_change_value(self) -> None:
-        pass
+    def set_mode_edit_config(
+        self,
+        block: gui.BlockElement | gui.TempValueElement,
+        config: str,
+    ) -> None:
+        self._mode = EditorMode.CHANGE_CONFIG
+
+        config_panel = block.get_config(config)
+        config_type = block.block.config[config].type
+        if config_type is bool:
+            block.block.config[config] = block.block.config[config].invert()
+            config_panel.active = block.block.config[config].value
+            self.set_mode_none()
+            return
+
+        self._prev_value = block.block.config[config]
+        self._config = config
+        self._config_block = block.block
+        self._config_panel = config_panel
+        charset, chararray = TYPE_CHAR_SETS[config_type]
+        self._config_input = util.TextInput(charset, chararray)
+        text = self._config_input.set_text(str(self._prev_value.value))
+        offset = self._config_input.cursor
+        self._config_panel.offset = max(0, offset - 6)
+        self._config_panel.text = text
 
     def set_mode_add_block(self) -> None:
         self._mode = EditorMode.ADD_BLOCK
@@ -315,6 +391,14 @@ class Editor:
         self._incomplete_connection = element
         self._gui.add_element(element)
 
+    def set_mode_save_graph(self) -> None:
+        self._mode = EditorMode.SAVE_GRAPH
+
+        self._save_popup = util.TextInputPopup(
+            self._overlay_camera.position, STR_SET, STR_ARRAY
+        )
+        self._gui.add_element(self._save_popup)
+
     # -- INPUT METHODS --
 
     def none_on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
@@ -322,9 +406,6 @@ class Editor:
             if button == inputs.PRIMARY_CLICK:
                 self._pan_camera = False
             return
-
-        # TODO: saving??
-
         cursor = self.get_base_cursor_pos()
 
         # Find if we are hovering over a block
@@ -343,7 +424,10 @@ class Editor:
 
         if button == inputs.PRIMARY_CLICK:
             if clicked_block is not None:
-                # TODO: Add panel editing self.set_mode_edit_config(block, config)
+                config = clicked_block.get_hovered_config(cursor)
+                if config is not None:
+                    self.set_mode_edit_config(clicked_block, config)
+                    return
                 output, dist = clicked_block.get_nearest_output(cursor)
                 if dist <= 16.0:
                     self.set_mode_add_connection(clicked_block, output)
@@ -356,6 +440,12 @@ class Editor:
                 self.set_mode_drag_connection(clicked_noodle)
                 return
 
+            for temp in self._controller.temporary:
+                config = temp.get_hovered_config(cursor)
+                if config is not None:
+                    self.set_mode_edit_config(temp, config)
+                    return
+
             # If no block and no noodle clicked then pan the camera
             self._pan_camera = True
         elif button == inputs.SECONDARY_CLICK:
@@ -364,11 +454,13 @@ class Editor:
                 return
 
             if clicked_noodle is not None:
-                # TODO: destroy noodle / noodle node
+                self._controller.remove_connection(clicked_noodle)
                 return
 
             # If no block and no noodle clicked then add new block
             self.set_mode_add_block()
+        elif button == inputs.SAVE_INPUT and modifiers & inputs.SAVE_MOD:
+            self.set_mode_save_graph()
 
     def drag_block_on_input(
         self, button: Button, modifiers: int, pressed: bool
@@ -437,9 +529,77 @@ class Editor:
 
     def edit_config_on_input(
         self, button: Button, modifiers: int, pressed: bool
-    ) -> None: ...
+    ) -> None:
+        if not pressed:
+            return
+
+        if button == inputs.CANCEL:
+            self._config_input.clear_text()
+            self.set_mode_none()
+        elif button == inputs.CONFIRM:
+            self.set_mode_none()
+        elif button in STR_KEY_SET:
+            if button in LETTER_KEY_SET and modifiers & inputs.SHIFT:
+                button = button - 32
+            text = self._config_input.add_char(chr(button))
+            offset = self._config_input.cursor
+            self._config_panel.offset = max(0, offset - 6)
+            self._config_panel.text = text
+        elif button == inputs.BACKSPACE:
+            text = self._config_input.rem_char()
+            offset = self._config_input.cursor
+            self._config_panel.offset = max(offset - 6, 0)
+            self._config_panel.text = text
+        elif button == inputs.NAV_UP:
+            text = self._config_input.incr_char()
+            self._config_panel.text = text
+        elif button == inputs.NAV_DOWN:
+            text = self._config_input.decr_char()
+            self._config_panel.text = text
+        elif button == inputs.NAV_RIGHT:
+            offset = self._config_input.incr_cursor()
+            self._config_panel.offset = max(0, offset - 6)
+        elif button == inputs.NAV_LEFT:
+            offset = self._config_input.decr_cursor()
+            self._config_panel.offset = max(0, offset - 6)
+
+    def save_graph_on_input(
+        self, button: Button, modifiers: int, pressed: bool
+    ) -> None:
+        if not pressed:
+            return
+
+        if button in STR_KEY_SET:
+            if button in LETTER_KEY_SET and modifiers & inputs.SHIFT:
+                button = button - 32
+            self._save_popup.input_char(chr(button))
+        elif button == inputs.CONFIRM:
+            self._graph._name = self._save_popup.text
+            with path(graph_path, f"{self._save_popup.text}.toml") as pth:
+                graph.write_graph(
+                    pth,
+                    self._graph,
+                    {
+                        block.uid: (block.left, block.bottom)
+                        for block in self._controller.blocks
+                    },
+                )
+            self.set_mode_none()
+        elif button == inputs.BACKSPACE:
+            self._save_popup.remove_char()
+        elif button == inputs.CANCEL:
+            self.set_mode_none()
+        elif button == inputs.NAV_UP:
+            self._save_popup.incr_char()
+        elif button == inputs.NAV_DOWN:
+            self._save_popup.decr_char()
+        elif button == inputs.NAV_RIGHT:
+            self._save_popup.incr_cursor()
+        elif button == inputs.NAV_LEFT:
+            self._save_popup.decr_cursor()
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
+
         match self._mode:
             case EditorMode.NONE:
                 self.none_on_input(button, modifiers, pressed)
@@ -451,6 +611,8 @@ class Editor:
                 self.add_block_on_input(button, modifiers, pressed)
             case EditorMode.CHANGE_CONFIG:
                 self.edit_config_on_input(button, modifiers, pressed)
+            case EditorMode.SAVE_GRAPH:
+                self.save_graph_on_input(button, modifiers, pressed)
             case _:
                 pass
 

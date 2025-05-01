@@ -7,6 +7,7 @@ from pyglet.graphics import Batch, Group
 from arcade import get_window
 from arcade.camera import Projector
 
+
 class ProjectorGroup(Group):
 
     def __init__(self, order: int = 0) -> None:
@@ -25,6 +26,7 @@ class ProjectorGroup(Group):
             return
         self._previous_projector.use()
         self._previous_projector = None
+
 
 BASE_GROUP = ProjectorGroup(0)
 OVERLAY_GROUP = ProjectorGroup(1)
@@ -103,8 +105,10 @@ fragment_source = """#version 150 core
 
 def get_shadow_shader():
     if pygl.current_context is None:
-        raise ValueError('gl context does not exsist yet')
-    return pygl.current_context.create_program((vertex_source, 'vertex'), (fragment_source, 'fragment'))
+        raise ValueError("gl context does not exsist yet")
+    return pygl.current_context.create_program(
+        (vertex_source, "vertex"), (fragment_source, "fragment")
+    )
 
 
 class Element:
@@ -136,11 +140,15 @@ class Element:
 
 class Gui:
 
-    def __init__(self, base_projector: Projector, overlay_projector: Projector | None = None):
+    def __init__(
+        self, base_projector: Projector, overlay_projector: Projector | None = None
+    ):
         self._ctx = get_window().ctx
         self._batch = Batch()
         self._base_camera = base_projector
-        self._overlay_camera = overlay_projector if overlay_projector is not None else base_projector
+        self._overlay_camera = (
+            overlay_projector if overlay_projector is not None else base_projector
+        )
         self._elements: dict[UUID, Element] = {}
 
     def enable(self):
