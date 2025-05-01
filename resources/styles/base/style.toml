@@ -38,8 +38,43 @@ padding = 2
 drop_x = 2
 drop_y = 10
 
+[Audio]
+[[Audio.Ambient]]
+src=''
+[[Audio.Sting]]
+src=''
+
 [Game]
-background = 'image/stars1.png'
+[Game.Audio]
+frame_out = ['audio/slide_out.ogg']
+frame_in = ['audio/slide_in.ogg']
+connection = []
+input = []
+haptic = []
+
+[Game.Background]
+color = [25, 15, 22, 255] # base colour behind img
+base = 'image/background/stars3.png'
+base_offset = [0.0, 0.0]
+[[Game.Background.Floating]]
+src = 'image/background/station3.png'
+offset = [0.0, 0.0] # px offset from corner
+foci = [0.0, 0.5] # fractional position of parallax focus
+depth = 120 # depth for paralax effect
+mode = 1 # How the elements should move
+scale = 38 # scale of motion mode
+sync = 4 # No seconds to 'start' from
+rate = 120 # secs to finish full circle
+[[Game.Background.Floating]]
+src = 'image/background/debris1.png'
+offset = [0.0, 0.0] # px offset from corner
+foci = [0.0, 0.5] # fractional position of parallax focus
+depth = 100 # depth for paralax effect
+mode = 1 # How the element should move [0: circle, 1: diagonal]
+scale = 40 # scale of motion 
+sync = 0 # No seconds to 'start' from
+rate = 120 # secs to finish full circle
+
 
 [Game.Panels]
 settings_tag = 'image/icons1.png'
@@ -51,12 +86,12 @@ panel_speed = 0.4
 [Game.Editor]
 background = 'image/grid1.png'
 
-node_inactive = 'image/symbols_small1.png'
-node_active = 'image/symbols_small2.png'
-branch_inactive = 'image/symbols_small3.png'
-branch_active = 'image/symbols_small4.png'
-variable = 'image/symbols5.png'
-definition = 'image/symbols6.png'
-dropdown = 'image/symbols7.png'
-check_inactive = 'image/symbols_small5.png'
-check_active = 'image/symbols_small6.png'
+node_inactive = 'image/symbols/symbols1.png'
+node_active = 'image/symbols/symbols2.png'
+branch_inactive = 'image/symbols/symbols3.png'
+branch_active = 'image/symbols/symbols4.png'
+variable = 'image/symbols/symbols5.png'
+definition = 'image/symbols/symbols6.png'
+dropdown = 'image/symbols/symbols7.png'
+check_inactive = 'image/symbols/symbols8.png'
+check_active = 'image/symbols/symbols9.png'

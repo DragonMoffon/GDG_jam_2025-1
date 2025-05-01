@@ -80,20 +80,20 @@ fragment_source = """#version 150 core
     out vec4 final_color;
 
     const mat4 bayer = 1.0/16.0 * mat4(
-        vec4(0, 8, 2, 10), 
+        vec4(0, 8, 2, 10),
         vec4(12, 4, 14, 6),
         vec4(3, 11, 1, 9),
         vec4(15, 7, 13, 5)
     );
 
     void main()
-    {   
+    {
         ivec2 loc = ivec2(mod(gl_FragCoord.x, 4), mod(gl_FragCoord.y, 4));
         float col = (0.9 * bayer[loc.x][loc.y] - 0.5);
         if (col <= 0.0){
             discard;
         }
-        
+
         final_color = vertex_color;
         // No GL_ALPHA_TEST in core, use shader to discard.
         if(final_color.a < 0.01){

@@ -3,7 +3,6 @@ from __future__ import annotations
 from sys import platform
 from enum import StrEnum, IntEnum
 from typing import Callable
-from math import pow
 
 from pyglet.input import Controller
 from arcade import get_window, Window, Vec2
@@ -468,7 +467,7 @@ class InputManager:
             self._cursor_velocity[1],
         )
 
-    def setup_input_reponses(self):
+    def setup_input_reponses(self) -> None:
         self._window = get_window()
 
         self._window.push_handlers(
@@ -486,7 +485,7 @@ class InputManager:
         self._window.register_event_type("on_cursor_motion")
         self._window.register_event_type("on_cursor_scroll")
 
-    def pick_controller(self, controller: Controller | None = None):
+    def pick_controller(self, controller: Controller | None = None) -> None:
         if self._current_controller == controller:
             return
 
@@ -521,7 +520,7 @@ class InputManager:
 
     # -- TRANSLATING INPUTS --
 
-    def on_key_press(self, symbol: int, modifiers: int):
+    def on_key_press(self, symbol: int, modifiers: int) -> None:
         if symbol not in Keys:
             return
 
@@ -530,7 +529,7 @@ class InputManager:
         self._modifiers = modifiers
         self._window.dispatch_event("on_input", key, modifiers, True)
 
-    def on_key_release(self, symbol: int, modifiers: int):
+    def on_key_release(self, symbol: int, modifiers: int) -> None:
         if symbol not in Keys:
             return
 
@@ -563,7 +562,7 @@ class InputManager:
 
         self._window.dispatch_event("on_input", button, self._modifiers, False)
 
-    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         if self._cursor_motion:
             self._cursor_motion = False
             return
@@ -588,7 +587,7 @@ class InputManager:
             "on_cursor_motion", float(x), float(y), float(dx), float(dy)
         )
 
-    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int) -> None:
         self._using_controller = False
         self._cursor_position = (float(x), float(y))
         self._cursor_velocity = (0.0, 0.0)
@@ -597,7 +596,7 @@ class InputManager:
             "on_cursor_scroll", float(x), float(y), float(scroll_x), float(scroll_y)
         )
 
-    def on_controller_press(self, _controller: Controller, button: str):
+    def on_controller_press(self, _controller: Controller, button: str) -> None:
         if button not in ControllerButtons:
             return
 
@@ -605,7 +604,7 @@ class InputManager:
         self._using_controller = True
         self._window.dispatch_event("on_input", button, self._modifiers, True)
 
-    def on_controller_release(self, _controller: Controller, button: str):
+    def on_controller_release(self, _controller: Controller, button: str) -> None:
         if button not in ControllerButtons:
             return
 
@@ -613,7 +612,7 @@ class InputManager:
         self._using_controller = True
         self._window.dispatch_event("on_input", button, self._modifiers, False)
 
-    def on_stick_motion(self, _controller: Controller, axis: str, value: Vec2):
+    def on_stick_motion(self, _controller: Controller, axis: str, value: Vec2) -> None:
         self._using_controller = True
 
         if axis == ControllerAxes.LEFT_STICK:
@@ -744,7 +743,7 @@ class InputManager:
             "on_axis_change", ControllerAxes(axis), value.x, value.y
         )
 
-    def on_dpad_motion(self, _controller: Controller, value: Vec2):
+    def on_dpad_motion(self, _controller: Controller, value: Vec2) -> None:
         self._using_controller = True
 
         # controller buttons
@@ -789,7 +788,9 @@ class InputManager:
             "on_axis_change", ControllerAxes.DPAD, value.x, value.y
         )
 
-    def on_trigger_motion(self, _controller: Controller, axis: str, value: float):
+    def on_trigger_motion(
+        self, _controller: Controller, axis: str, value: float
+    ) -> None:
         if axis == ControllerAxes.LEFT_TRIGGER:
             if (
                 value < self._trigger_levels[0]
@@ -801,7 +802,7 @@ class InputManager:
 
             if (
                 value >= self._trigger_levels[0]
-                and self._trigger_values[0] < self._trigger_levels[0]
+                and self._trigger_values[0] < self._trigger_levels[0] <= value
             ):
                 self._window.dispatch_event(
                     "on_input", ControllerButtons.LEFT_TRIGGER, self._modifiers, True

@@ -1,5 +1,7 @@
 from importlib.resources import path
+from enum import IntEnum
 from pathlib import Path
+from typing import Any, Self
 from dataclasses import dataclass
 import tomllib
 from arcade import load_font
@@ -35,6 +37,44 @@ class Format:
     drop_y: float
 
 
+class FloatMotionMode(IntEnum):
+    CIRCLE = 0
+    DIAGONAL = 1
+
+
+@dataclass
+class Floating:
+    src: Path
+    offset: tuple[float, float]
+    foci: tuple[float, float]
+    depth: float
+    mode: FloatMotionMode
+    scale: float
+    sync: float
+    rate: float
+
+    @classmethod
+    def create(cls, data: dict[str, Any], source) -> Self:
+        return cls(
+            source / data["src"],
+            data["offset"],
+            data["foci"],
+            data["depth"],
+            FloatMotionMode(data["mode"]),
+            data["scale"],
+            data["sync"],
+            data["rate"],
+        )
+
+
+@dataclass
+class Background:
+    colour: tuple[int, int, int, int]
+    base: Path
+    base_offset: tuple[float, float]
+    layers: tuple[Floating, ...]
+
+
 @dataclass
 class Panels:
     settings_tag: Path
@@ -61,7 +101,7 @@ class Editor:
 
 @dataclass
 class Game:
-    background: Path
+    background: Background
     panels: Panels
     editor: Editor
 
@@ -98,10 +138,19 @@ class Style:
 
         self.format = Format(**self._raw["Format"])
 
+        background_data = self._raw["Game"]["Background"]
         panel_data = self._raw["Game"]["Panels"]
         editor_data = self._raw["Game"]["Editor"]
         self.game = Game(
-            source / self._raw["Game"]["background"],
+            Background(
+                colour=tuple(background_data["color"]),
+                base=source / background_data["base"],
+                base_offset=background_data["base_offset"],
+                layers=tuple(
+                    Floating.create(data, source)
+                    for data in background_data["Floating"]
+                ),
+            ),
             Panels(
                 settings_tag=source / panel_data["settings_tag"],
                 editor_tag=source / panel_data["editor_tag"],
