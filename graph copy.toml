@@ -4,13 +4,11 @@ blocks = false
 connections = false
 
 [[Block.Variables]]
-uid = "5fec7ad1b05c49ef820b864fe49fd3f3"
 name = "Input"
 inputs = {}
 outputs = {a = "float", b = "float", c = "float"}
 
 [[Block.Variables]]
-uid = "e5dda7bdad3845f6b89a7fae3ff5c859"
 name = "Output"
 inputs = {result = "float"}
 outputs = {}
@@ -32,3 +30,39 @@ uid = "91e4995e821448faba0c4d99044f3583"
 type = "Multiply"
 config = {}
 position = [382.0, 436.0]
+
+[[Block.Data]]
+uid = "bafcf9e14acf415d8180a17da0e84c02"
+type = "Add"
+config = {}
+position = [500.0, 300.0]
+
+[[Connection.Data]]
+source = "5fec7ad1b05c49ef820b864fe49fd3f3"
+target = "91e4995e821448faba0c4d99044f3583"
+output = 'a'
+input = 'a'
+
+[[Connection.Data]]
+source = "5fec7ad1b05c49ef820b864fe49fd3f3"
+target =  "91e4995e821448faba0c4d99044f3583"
+output = 'b'
+input = 'b'
+
+[[Connection.Data]]
+source = "91e4995e821448faba0c4d99044f3583"
+target = "bafcf9e14acf415d8180a17da0e84c02"
+output = "result"
+input = "a"
+
+[[Connection.Data]]
+source = "5fec7ad1b05c49ef820b864fe49fd3f3"
+target = "bafcf9e14acf415d8180a17da0e84c02"
+output = "c"
+input = "b"
+
+[[Connection.Data]]
+source = "bafcf9e14acf415d8180a17da0e84c02"
+target = "e5dda7bdad3845f6b89a7fae3ff5c859"
+output = "result"
+input = "result"

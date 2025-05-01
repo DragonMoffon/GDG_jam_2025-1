@@ -6,7 +6,7 @@ from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 from arcade.clock import GLOBAL_CLOCK
 
-from .core import Element
+from .core import Element, get_shadow_shader
 from jam.input import inputs, Button, Axis
 from resources import style
 
@@ -54,8 +54,9 @@ class Frame(Element):
             self._tag_panel.width + style.format.drop_x, self._tag_panel.height,
             (style.format.corner_radius, style.format.corner_radius, 0, 0),
             (12, 12, 1, 1),
-            color=style.colors.shadow,
-            group=SHADOW_GROUP
+            color=style.colors.dark,
+            group=SHADOW_GROUP,
+            program=get_shadow_shader()
         )
         radius = style.format.corner_radius + style.format.footer_size
         if anchor_top:

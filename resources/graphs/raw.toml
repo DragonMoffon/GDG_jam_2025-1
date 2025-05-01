@@ -6,14 +6,13 @@ connections = false
 [Blocks]
 
 [[Blocks.Variables]]
-uid = ""
+name = ""
 inputs = {}
 outputs = {}
 
 
 [[Blocks.Data]]
 type = ""
-name = ""
 uid = ""
 config = {}
 position = []

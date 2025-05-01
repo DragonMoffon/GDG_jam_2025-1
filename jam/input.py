@@ -291,8 +291,39 @@ class Keys(IntEnum):
     ASCIITILDE = 126
 
 
-LATIN_CHARACTERS = {Keys(n) for n in range(97, 123)}
-DIGITS = {Keys(n) for n in range(48, 59)}
+LETTER_KEY_SET = {Keys(n) for n in range(97, 123)}
+DIGIT_KEY_SET = {Keys(n) for n in range(48, 58)}
+
+DIGIT_ARRAY = tuple(chr(n) for n in range(48, 58))
+DIGIT_SET = set(DIGIT_ARRAY)
+
+DECIMAL_KEY_SET = DIGIT_KEY_SET.union([Keys.PERIOD])
+DECIMAL_ARRAY = (*DIGIT_ARRAY, chr(Keys.PERIOD))
+DECIMAL_SET = set(DECIMAL_ARRAY)
+
+STR_KEY_SET = {
+    *LETTER_KEY_SET,
+    *DIGIT_KEY_SET,
+    Keys.UNDERSCORE,
+    Keys.MINUS,
+    Keys.PERIOD,
+}
+STR_ARRAY = (
+    *(chr(n) for n in range(65, 91)),
+    *(chr(n) for n in range(97, 123)),
+    *(chr(n) for n in range(48, 58)),
+    chr(Keys.UNDERSCORE),
+    chr(Keys.MINUS),
+    chr(Keys.PERIOD),
+)
+STR_SET = set(STR_ARRAY)
+
+
+TYPE_CHAR_SETS = {
+    int: (DIGIT_SET, DIGIT_ARRAY),
+    float: (DECIMAL_SET, DECIMAL_ARRAY),
+    str: (STR_SET, STR_ARRAY),
+}
 
 Button = Keys | MouseButtons | ControllerButtons
 Axis = ControllerAxes | str
@@ -361,7 +392,7 @@ class InputManager:
 
     def __init__(self) -> None:
         # -- window --
-        self._window: Window = None
+        self._window: Window = None  # type: ignore -- None is not type
 
         # -- Controller Values --
         self._current_controller: Controller | None = None
@@ -402,8 +433,9 @@ class InputManager:
             case _:
                 vec = self._right_stick_positions
 
-        vec = 0 if abs(vec[0]) < self._cursor_deadzone[0] else vec[0], (
-            0 if abs(vec[1]) < self._cursor_deadzone[1] else vec[1]
+        vec = (
+            0 if abs(vec[0]) < self._cursor_deadzone[0] else vec[0],
+            0 if abs(vec[1]) < self._cursor_deadzone[1] else vec[1],
         )
         vel = (vec[0] ** 2 + vec[1] ** 2) ** 0.5
         if vel == 0.0:
@@ -613,7 +645,6 @@ class InputManager:
                 self._window.dispatch_event(
                     "on_input", ControllerButtons.LEFT_LEFT, self._modifiers, True
                 )
-
             if (
                 value[1] >= -2 * self._cursor_deadzone[1]
                 and self._left_stick_positions[1] < -2 * self._cursor_deadzone[1]
@@ -771,7 +802,7 @@ class InputManager:
 
             if (
                 value >= self._trigger_levels[0]
-                and self._trigger_values[0] < self._trigger_levels[0]
+                and self._trigger_values[0] < self._trigger_levels[0] <= value
             ):
                 self._window.dispatch_event(
                     "on_input", ControllerButtons.LEFT_TRIGGER, self._modifiers, True
@@ -825,6 +856,18 @@ class InputManager:
 
     SAVE_INPUT = MultiInput(Keys.S, ControllerButtons.GUIDE)
     SAVE_MOD = MultiMods(KeyModifiers.MOD_CTRL)
+
+    CONFIRM = MultiInput(Keys.ENTER, ControllerButtons.BOTTOM_FACE)
+    CANCEL = MultiInput(Keys.ESCAPE, ControllerButtons.RIGHT_FACE)
+
+    BACKSPACE = MultiInput(Keys.BACKSPACE, ControllerButtons.RIGHT_STICK)
+    SHIFT = MultiMods(KeyModifiers.MOD_SHIFT)
+
+    # GUI NAVIGATION
+    NAV_UP = MultiInput(Keys.UP, ControllerButtons.DPAD_UP)
+    NAV_DOWN = MultiInput(Keys.DOWN, ControllerButtons.DPAD_DOWN)
+    NAV_LEFT = MultiInput(Keys.LEFT, ControllerButtons.DPAD_LEFT)
+    NAV_RIGHT = MultiInput(Keys.RIGHT, ControllerButtons.DPAD_RIGHT)
 
 
 inputs = InputManager()

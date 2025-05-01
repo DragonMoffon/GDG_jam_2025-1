@@ -1,20 +1,32 @@
 from pathlib import Path
 from enum import Enum, auto
+from uuid import UUID
+from importlib.resources import path
 
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
-from arcade import LBWH, Vec2, Vec3, draw_line, Camera2D
-from arcade.clock import GLOBAL_CLOCK
+from arcade import Rect, LBWH, Vec2, Vec3, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
-from jam.node import loading, render, node
-from jam.gui.frame import Frame, ACTIVE_GROUP
-from jam.gui import util, core
-from jam.graphics.clip import ClippingMask
-from jam.input import inputs, Button, Axis
 
 from resources import style
+import resources.graphs as graph_path
+
+from jam.node import graph
+from jam.gui import core, util, graph as gui
+from jam.gui.frame import Frame, ACTIVE_GROUP
+from jam.graphics.clip import ClippingMask
+from jam.input import (
+    inputs,
+    Button,
+    Axis,
+    STR_KEY_SET,
+    STR_ARRAY,
+    STR_SET,
+    LETTER_KEY_SET,
+    TYPE_CHAR_SETS,
+)
 
 
 class EditorMode(Enum):
@@ -23,7 +35,716 @@ class EditorMode(Enum):
     DRAG_CONNECTION = auto()
     CHANGE_CONFIG = auto()
     ADD_BLOCK = auto()
-    ADD_NODE = auto()
+    ADD_CONNECTION = auto()
+    SAVE_GRAPH = auto()
+
+
+class GraphController:
+
+    def __init__(
+        self,
+        block_graph: graph.Graph,
+        editor_gui: core.Gui,
+        positions: dict[UUID, tuple[float, float]],
+    ):
+        self._graph: graph.Graph = None
+
+        self._graph = block_graph
+        self._gui = editor_gui
+
+        self._block_elements: dict[UUID, gui.BlockElement] = {}
+        self._connection_elements: dict[UUID, gui.ConnectionElement] = {}
+
+        self._temp_elements: dict[UUID, gui.TempValueElement] = {}
+
+        self._init_graph(positions)
+
+    def _init_graph(self, positions: dict[UUID, tuple[float, float]]) -> None:
+        for block in self._graph.blocks:
+            pos = positions.get(block.uid, (0.0, 0.0))
+            element = gui.BlockElement(block)
+            element.update_position(pos)
+            self.add_block(element)
+
+        for connection in self._graph.connections:
+            if connection.source in self._temp_elements:
+                continue
+            source = self._block_elements[connection.source]
+            origin = source.get_output(connection.output)
+            target = self._block_elements[connection.target]
+            final = target.get_input(connection.input)
+
+            element = gui.ConnectionElement(connection, origin.link_pos, final.link_pos)
+            self.add_connection(element)
+
+    @property
+    def blocks(self) -> tuple[gui.BlockElement, ...]:
+        return tuple(self._block_elements.values())
+
+    @property
+    def connections(self) -> tuple[gui.ConnectionElement, ...]:
+        return tuple(self._connection_elements.values())
+
+    @property
+    def temporary(self) -> tuple[gui.TempValueElement, ...]:
+        return tuple(self._temp_elements.values())
+
+    def get_block(self, uid: UUID) -> gui.BlockElement:
+        if uid not in self._block_elements:
+            raise KeyError(f"No block with uid {uid}")
+        return self._block_elements[uid]
+
+    def get_connection(self, uid: UUID) -> gui.ConnectionElement:
+        if uid not in self._connection_elements.values():
+            raise KeyError(f"No connection with uid {uid}")
+
+        return self._connection_elements[uid]
+
+    def add_block(self, block: gui.BlockElement) -> None:
+        self._graph.add_block(block._block)
+        self._gui.add_element(block)
+        self._block_elements[block.uid] = block
+
+        for inp, connection in block.block.inputs.items():
+            if connection is not None:
+                continue
+            self.create_temporary(block, inp)
+
+    def remove_block(self, block: gui.BlockElement) -> None:
+        for connection in block._input_connections.values():
+            if connection is None:
+                continue
+            elif connection.uid in self._temp_elements:
+                self.remove_temporary(connection)
+            else:
+                self._unlink_connection(connection)
+
+        for output in block._output_connections.values():
+            for connection in output:
+                self._unlink_connection(connection)
+
+        self._gui.remove_element(block)
+        self._graph.remove_block(block.block)
+        self._block_elements.pop(block.uid)
+
+    def add_connection(self, connection: gui.ConnectionElement) -> None:
+        self._link_connection(connection)
+        self._graph.add_connection(connection.connection)
+
+    def remove_connection(self, connection: gui.ConnectionElement) -> None:
+        self._unlink_connection(connection)
+        self._graph.remove_connection(connection.connection)
+
+        target = self.get_block(connection.connection.uid)
+        self.create_temporary(target, connection.connection.input)
+
+    def _link_connection(self, connection: gui.ConnectionElement) -> None:
+        target = self.get_block(connection.connection.target)
+        inp = target._input_connections[connection.connection.input]
+        if inp is not None:
+            if inp.uid in self._connection_elements:
+                self._unlink_connection(inp)
+            elif inp.uid in self._temp_elements:
+                self.remove_temporary(inp)
+        target._input_connections[connection.connection.input] = connection
+        source = self.get_block(connection.connection.source)
+        source._output_connections[connection.connection.output].append(connection)
+
+        target.get_input(connection.connection.input).active = True
+        source.get_output(connection.connection.output).active = True
+
+        self._connection_elements[connection.uid] = connection
+        self._gui.add_element(connection)
+
+    def _unlink_connection(self, connection: gui.ConnectionElement) -> None:
+        target = self.get_block(connection.connection.target)
+        source = self.get_block(connection.connection.source)
+
+        target._input_connections[connection.connection.input] = None
+        source._output_connections[connection.connection.output].remove(connection)
+
+        target.get_input(connection.connection.input).active = False
+        if not source._output_connections[connection.connection.output]:
+            source.get_output(connection.connection.output).active = False
+
+        self._connection_elements.pop(connection.uid)
+        self._gui.remove_element(connection)
+
+    def create_temporary(self, block: gui.BlockElement, inp: str) -> None:
+        connection = block._input_connections[inp]
+        if connection is not None:
+            return
+
+        block_typ = block.block.type
+        temp_type = graph.BLOCK_CAST[block_typ.inputs[inp]._typ]
+        temp_block = graph.Block(temp_type)
+        temp_connection = graph.Connection(temp_block.uid, "value", block.uid, inp)
+        element = gui.TempValueElement(temp_block, temp_connection)
+        element.update_end(block.get_input(inp).link_pos)
+
+        self._gui.add_element(element)
+        self._graph.add_block(temp_block)
+        self._graph.add_connection(temp_connection)
+
+        block._input_connections[inp] = element
+        block.get_input(inp).active = True
+        self._temp_elements[temp_block.uid] = element
+
+    def remove_temporary(self, temp: gui.TempValueElement) -> None:
+        self._gui.remove_element(temp)
+
+
+class Editor:
+
+    def __init__(self, region: Rect, graph_src: Path | None = None) -> None:
+        self._region: Rect = region
+        self._width = self._region.width
+        self._height = self._region.height
+
+        self.cursor_offset: tuple[float, float] = (0.0, 0.0)
+
+        # Graph
+        self._src: Path | None = graph_src
+        self._graph, positions = (
+            (graph.Graph(), {}) if graph_src is None else graph.read_graph(graph_src)
+        )
+
+        self._blocks: dict[UUID, gui.BlockElement] = {}
+        self._connections: dict[UUID, gui.ConnectionElement] = {}
+
+        # Rendering
+        self._base_camera = Camera2D(region)
+        self._overlay_camera = Camera2D(region)
+        self._background = background.background_from_file(  # type: ignore -- reportUnknownMemberType
+            style.game.editor.background, size=(int(region.size.x), int(region.size.y))  # type: ignore -- reportArgumentType
+        )
+        self._gui = core.Gui(self._base_camera, self._overlay_camera)
+
+        self._controller: GraphController = GraphController(
+            self._graph, self._gui, positions
+        )
+
+        # Editor State
+        self._mode = EditorMode.NONE
+        self._pan_camera: bool = False
+        self._hovered_block: gui.BlockElement | None = None
+
+        # Drag Block
+        self._selected_block: gui.BlockElement | None = None
+        self._offset: Vec2 = Vec2()
+
+        # Create Connection
+        self._incomplete_connection: gui.ConnectionElement | None = None
+
+        # Add Block
+        self._select_position: tuple[float, float] = (0.0, 0.0)
+        self._block_popup: util.SelectionPopup | None = None
+
+        # Edit Config Value
+        self._config: str = ""
+        self._prev_value: graph.OperationValue | None = None
+        self._config_block: graph.Block | None = None
+        self._config_panel: gui.TextPanel | None = None
+        self._config_input: util.TextInput | None = None
+
+        # Save Graph
+        self._save_popup: util.TextInputPopup | None = None
+
+    def set_mode_none(self) -> None:
+        self._mode = EditorMode.NONE
+
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+            self._hovered_block.remove_highlighting()
+            self._hovered_block = None
+
+        if self._selected_block is not None:
+            self._selected_block.deselect()
+            self._selected_block.remove_highlighting()
+            self._selected_block = None
+            self._offset = Vec2()
+
+        if self._incomplete_connection is not None:
+            # TODO: de-select connection blocks
+            self._gui.remove_element(self._incomplete_connection)
+            self._incomplete_connection = None
+
+        if self._block_popup is not None:
+            self._gui.remove_element(self._block_popup)
+            self._select_position = (0.0, 0.0)
+            self._block_popup = None
+
+        if self._config_panel is not None:
+            if self._config_input.text == "":
+                self._config_panel.text = ""
+
+                config_type = self._config_block.type.config[self._config]
+                self._config_block.config[self._config] = config_type()
+            else:
+                try:
+                    config_type = self._config_block.type.config[self._config]
+                    # Mega cludge to avoid .0 at the end of ints
+                    if (
+                        self._prev_value.type is float
+                        and "." not in self._config_input.text
+                    ):
+                        value = config_type(int(self._config_input.text))
+                    else:
+                        value = config_type(
+                            self._prev_value.type(self._config_input.text)
+                        )
+                except ValueError:
+                    self._config_panel.text = str(self._prev_value.value)
+                else:
+                    self._config_panel.text = self._config_input.text
+                    self._config_block.config[self._config] = value
+
+            self._config = ""
+            self._prev_value = None
+            self._config_block = None
+            self._config_panel = None
+            self._config_input = None
+
+        if self._save_popup is not None:
+            self._gui.remove_element(self._save_popup)
+            self._save_popup = None
+
+    def set_mode_drag_block(self, block: gui.BlockElement) -> None:
+        self._mode = EditorMode.DRAG_BLOCK
+
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+            self._hovered_block = None
+
+        cursor = self.get_base_cursor_pos()
+        self._offset = Vec2(cursor[0] - block.left, cursor[1] - block.bottom)
+        self._selected_block = block
+        self._selected_block.select()
+
+    def set_mode_drag_connection(self, noodle: gui.ConnectionElement) -> None:
+        pass
+
+    def set_mode_edit_config(
+        self,
+        block: gui.BlockElement | gui.TempValueElement,
+        config: str,
+    ) -> None:
+        self._mode = EditorMode.CHANGE_CONFIG
+
+        config_panel = block.get_config(config)
+        config_type = block.block.config[config].type
+        if config_type is bool:
+            block.block.config[config] = block.block.config[config].invert()
+            config_panel.active = block.block.config[config].value
+            self.set_mode_none()
+            return
+
+        self._prev_value = block.block.config[config]
+        self._config = config
+        self._config_block = block.block
+        self._config_panel = config_panel
+        charset, chararray = TYPE_CHAR_SETS[config_type]
+        self._config_input = util.TextInput(charset, chararray)
+        text = self._config_input.set_text(str(self._prev_value.value))
+        offset = self._config_input.cursor
+        self._config_panel.offset = max(0, offset - 6)
+        self._config_panel.text = text
+
+    def set_mode_add_block(self) -> None:
+        self._mode = EditorMode.ADD_BLOCK
+
+        self._select_position = pos = self.get_overlay_cursor_pos()
+        layout_pos = self.get_cursor_pos()
+        top = layout_pos[1] > 0.5 * self._height
+        right = layout_pos[0] > 0.5 * self._width
+
+        dx = style.format.padding if right else -style.format.padding
+        dy = style.format.padding if top else -style.format.padding
+
+        self._block_popup = util.SelectionPopup(
+            tuple(
+                util.PopupAction(typ.name, self.create_new_block, typ, pos)
+                for typ in self._graph.available
+            ),
+            (pos[0] + dx, pos[1] + dy),
+            top,
+            right,
+        )
+        self._gui.add_element(self._block_popup)
+
+    def set_mode_add_connection(self, source: gui.BlockElement, output: str) -> None:
+        self._mode = EditorMode.ADD_CONNECTION
+
+        connection = graph.Connection(source.uid, output, None, None)
+        start = source.get_output(output).link_pos
+        end = self.get_base_cursor_pos()
+        element = gui.ConnectionElement(connection, start, end)
+
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+            self._hovered_block = None
+
+        self._selected_block = source
+        self._selected_block.select()
+        self._selected_block.highlight_output(output)
+
+        self._incomplete_connection = element
+        self._gui.add_element(element)
+
+    def set_mode_save_graph(self) -> None:
+        self._mode = EditorMode.SAVE_GRAPH
+
+        self._save_popup = util.TextInputPopup(
+            self._overlay_camera.position, STR_SET, STR_ARRAY
+        )
+        self._gui.add_element(self._save_popup)
+
+    # -- INPUT METHODS --
+
+    def none_on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
+        if not pressed:
+            if button == inputs.PRIMARY_CLICK:
+                self._pan_camera = False
+            return
+        cursor = self.get_base_cursor_pos()
+
+        # Find if we are hovering over a block
+        clicked_block = None
+        for block in self._controller.blocks:
+            if block.near_point(cursor, 16.0):
+                clicked_block = block
+                break
+
+        # Find if we are hovering over a noodle/joint
+        clicked_noodle = None
+        for noodle in self._controller.connections:
+            if noodle.contains_point(cursor):
+                clicked_noodle = noodle
+                break
+
+        if button == inputs.PRIMARY_CLICK:
+            if clicked_block is not None:
+                config = clicked_block.get_hovered_config(cursor)
+                if config is not None:
+                    self.set_mode_edit_config(clicked_block, config)
+                    return
+                output, dist = clicked_block.get_nearest_output(cursor)
+                if dist <= 16.0:
+                    self.set_mode_add_connection(clicked_block, output)
+                    return
+                elif clicked_block.contains_point(cursor):
+                    self.set_mode_drag_block(clicked_block)
+                return
+
+            if clicked_noodle is not None:
+                self.set_mode_drag_connection(clicked_noodle)
+                return
+
+            for temp in self._controller.temporary:
+                config = temp.get_hovered_config(cursor)
+                if config is not None:
+                    self.set_mode_edit_config(temp, config)
+                    return
+
+            # If no block and no noodle clicked then pan the camera
+            self._pan_camera = True
+        elif button == inputs.SECONDARY_CLICK:
+            if clicked_block is not None:
+                self._controller.remove_block(clicked_block)
+                return
+
+            if clicked_noodle is not None:
+                self._controller.remove_connection(clicked_noodle)
+                return
+
+            # If no block and no noodle clicked then add new block
+            self.set_mode_add_block()
+        elif button == inputs.SAVE_INPUT and modifiers & inputs.SAVE_MOD:
+            self.set_mode_save_graph()
+
+    def drag_block_on_input(
+        self, button: Button, modifiers: int, pressed: bool
+    ) -> None:
+        if button == inputs.PRIMARY_CLICK and not pressed:
+            self.set_mode_none()
+            return
+
+    def add_connection_on_input(
+        self, button: Button, modifiers: int, pressed: bool
+    ) -> None:
+        cursor = self.get_base_cursor_pos()
+        if not pressed:
+            hovered_block = None
+            for block in self._controller.blocks:
+                if block == self._selected_block:
+                    continue
+                if block.near_point(cursor, 16.0):
+                    hovered_block = block
+                    break
+            if hovered_block is None:
+                self.set_mode_none()
+                return
+
+            if self._hovered_block is not None:
+                self._hovered_block.deselect()
+
+            name, dist = hovered_block.get_nearest_input(cursor)
+            if dist > 16:
+                self.set_mode_none()
+                return
+            connection = self._incomplete_connection._connection
+            connection.target = hovered_block.uid
+            connection.input = name
+
+            self._incomplete_connection.update_end(
+                hovered_block.get_input(name).link_pos
+            )
+
+            self._controller.add_connection(self._incomplete_connection)
+            self._incomplete_connection = None
+            self.set_mode_none()
+            return
+
+    def add_block_on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
+        if not pressed:
+            return
+
+        if button == inputs.PRIMARY_CLICK:
+            cursor = self.get_overlay_cursor_pos()
+            if self._block_popup is None or not self._block_popup.contains_point(
+                cursor
+            ):
+                self.set_mode_none()
+                self.on_input(button, modifiers, pressed)
+                return
+
+            action = self._block_popup.get_hovered_item(cursor)
+            if action is not None:
+                self._block_popup.actions[action]()
+
+            self.set_mode_none()
+
+        elif button == inputs.SECONDARY_CLICK:
+            self.set_mode_none()
+
+    def edit_config_on_input(
+        self, button: Button, modifiers: int, pressed: bool
+    ) -> None:
+        if not pressed:
+            return
+
+        if button == inputs.CANCEL:
+            self._config_input.clear_text()
+            self.set_mode_none()
+        elif button == inputs.CONFIRM:
+            self.set_mode_none()
+        elif button in STR_KEY_SET:
+            if button in LETTER_KEY_SET and modifiers & inputs.SHIFT:
+                button = button - 32
+            text = self._config_input.add_char(chr(button))
+            offset = self._config_input.cursor
+            self._config_panel.offset = max(0, offset - 6)
+            self._config_panel.text = text
+        elif button == inputs.BACKSPACE:
+            text = self._config_input.rem_char()
+            offset = self._config_input.cursor
+            self._config_panel.offset = max(offset - 6, 0)
+            self._config_panel.text = text
+        elif button == inputs.NAV_UP:
+            text = self._config_input.incr_char()
+            self._config_panel.text = text
+        elif button == inputs.NAV_DOWN:
+            text = self._config_input.decr_char()
+            self._config_panel.text = text
+        elif button == inputs.NAV_RIGHT:
+            offset = self._config_input.incr_cursor()
+            self._config_panel.offset = max(0, offset - 6)
+        elif button == inputs.NAV_LEFT:
+            offset = self._config_input.decr_cursor()
+            self._config_panel.offset = max(0, offset - 6)
+
+    def save_graph_on_input(
+        self, button: Button, modifiers: int, pressed: bool
+    ) -> None:
+        if not pressed:
+            return
+
+        if button in STR_KEY_SET:
+            if button in LETTER_KEY_SET and modifiers & inputs.SHIFT:
+                button = button - 32
+            self._save_popup.input_char(chr(button))
+        elif button == inputs.CONFIRM:
+            self._graph._name = self._save_popup.text
+            with path(graph_path, f"{self._save_popup.text}.toml") as pth:
+                graph.write_graph(
+                    pth,
+                    self._graph,
+                    {
+                        block.uid: (block.left, block.bottom)
+                        for block in self._controller.blocks
+                    },
+                )
+            self.set_mode_none()
+        elif button == inputs.BACKSPACE:
+            self._save_popup.remove_char()
+        elif button == inputs.CANCEL:
+            self.set_mode_none()
+        elif button == inputs.NAV_UP:
+            self._save_popup.incr_char()
+        elif button == inputs.NAV_DOWN:
+            self._save_popup.decr_char()
+        elif button == inputs.NAV_RIGHT:
+            self._save_popup.incr_cursor()
+        elif button == inputs.NAV_LEFT:
+            self._save_popup.decr_cursor()
+
+    def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
+
+        match self._mode:
+            case EditorMode.NONE:
+                self.none_on_input(button, modifiers, pressed)
+            case EditorMode.DRAG_BLOCK:
+                self.drag_block_on_input(button, modifiers, pressed)
+            case EditorMode.ADD_CONNECTION:
+                self.add_connection_on_input(button, modifiers, pressed)
+            case EditorMode.ADD_BLOCK:
+                self.add_block_on_input(button, modifiers, pressed)
+            case EditorMode.CHANGE_CONFIG:
+                self.edit_config_on_input(button, modifiers, pressed)
+            case EditorMode.SAVE_GRAPH:
+                self.save_graph_on_input(button, modifiers, pressed)
+            case _:
+                pass
+
+    # -- AXIS METHODS --
+
+    def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> None:
+        pass
+
+    # -- CURSOR METHODS --
+
+    def none_on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
+        if self._pan_camera:
+            pos = self._base_camera.position
+            self._base_camera.position = self._overlay_camera.position = (
+                pos[0] - dx / self._base_camera.zoom,
+                pos[1] - dy / self._base_camera.zoom,
+            )
+            self._background.texture.offset = self._base_camera.position
+            return
+
+        cursor = self.get_base_cursor_pos()
+        hovered_block = None
+        for block in self._controller.blocks:
+            if block.near_point(cursor, 16.0):
+                hovered_block = block
+                break
+
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+        if hovered_block is not None:
+            hovered_block.select()
+            name, dist = hovered_block.get_nearest_output(cursor)
+            if dist <= 16.0:
+                hovered_block.highlight_output(name)
+        self._hovered_block = hovered_block
+
+    def drag_block_on_cursor_motion(
+        self, x: float, y: float, dx: float, dy: float
+    ) -> None:
+        if self._selected_block is None:
+            self.set_mode_none()
+            return
+
+        x, y = self.get_base_cursor_pos()
+        self._selected_block.update_position((x - self._offset[0], y - self._offset[1]))
+
+    def add_block_on_cursor_motion(
+        self, x: float, y: float, dx: float, dy: float
+    ) -> None:
+        if self._block_popup is None:
+            self.set_mode_none()
+            return
+
+        action = self._block_popup.get_hovered_item(self.get_overlay_cursor_pos())
+        self._block_popup.highlight_action(action)
+
+    def add_connection_on_cursor_motion(
+        self, x: float, y: float, dx: float, dy: float
+    ) -> None:
+        if self._incomplete_connection is None:
+            self.set_mode_none()
+
+        cursor = self.get_base_cursor_pos()
+
+        self._incomplete_connection.update_end(cursor)
+
+        hovered_block = None
+        for block in self._controller.blocks:
+            if block == self._selected_block:
+                continue
+            if block.near_point(cursor, 16.0):
+                hovered_block = block
+                break
+
+        if self._hovered_block is not None:
+            self._hovered_block.deselect()
+        if hovered_block is not None:
+            hovered_block.select()
+            name, dist = hovered_block.get_nearest_input(cursor)
+            if dist <= 16.0:
+                hovered_block.highlight_input(name)
+        self._hovered_block = hovered_block
+
+    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
+        match self._mode:
+            case EditorMode.NONE:
+                self.none_on_cursor_motion(x, y, dx, dy)
+            case EditorMode.DRAG_BLOCK:
+                self.drag_block_on_cursor_motion(x, y, dx, dy)
+            case EditorMode.ADD_BLOCK:
+                self.add_block_on_cursor_motion(x, y, dx, dy)
+            case EditorMode.ADD_CONNECTION:
+                self.add_connection_on_cursor_motion(x, y, dx, dy)
+            case _:
+                pass
+
+    def on_cursor_scroll(
+        self, x: float, y: float, scroll_x: float, scroll_y: float
+    ) -> bool | None:
+        if scroll_y:
+            self._base_camera.zoom = max(
+                0.5, min(1.0, self._base_camera.zoom + scroll_y / 10)
+            )
+
+    # -- GAME EVENT METHODS --
+
+    def draw(self) -> None:
+        self._background.draw()
+        self._gui.draw()
+
+    def update(self, delta_time: float) -> None: ...
+
+    # -- UTIL METHODS --
+    def get_cursor_pos(self) -> tuple[float, float]:
+        pos = inputs.cursor
+        return pos[0] - self.cursor_offset[0], pos[1] - self.cursor_offset[1]
+
+    def get_base_cursor_pos(self) -> tuple[float, float]:
+        pos: Vec3 = self._base_camera.unproject(self.get_cursor_pos())
+        return pos.x, pos.y
+
+    def get_overlay_cursor_pos(self) -> tuple[float, float]:
+        pos: Vec3 = self._overlay_camera.unproject(self.get_cursor_pos())
+        return pos.x, pos.y
+
+    def create_new_block(
+        self, typ: graph.BlockType, position: tuple[float, float]
+    ) -> None:
+        block = graph.Block(typ)
+        element = gui.BlockElement(block)
+        element.update_position(position)
+        self._controller.add_block(element)
 
 
 class EditorFrame(Frame):
@@ -37,6 +758,8 @@ class EditorFrame(Frame):
         show_shadow: bool = True,
     ):
         size = 1000, height
+
+        # TODO: add tabs
 
         clip_size = int(size[0] - style.format.footer_size), int(
             size[1] - 2 * style.format.footer_size
@@ -58,54 +781,11 @@ class EditorFrame(Frame):
                     color=(255, 255, 255, 255),
                 ).draw()
 
-        self.background = background.background_from_file(
-            style.game.editor.background, size=clip_size
-        )
-
-        self._graph, positions = loading.read_graph(Path("graph.toml"))
-        # self._graph = node.Graph("DebugGraph")
-        self._renderer = render.GraphRenderer(clip_rect, self._graph)
-        self._camera = Camera2D(clip_rect)
-        self._gui = core.Gui(self._camera)
-
-        self._output_block: node.Block | None = None
-        for block in self._graph._blocks.values():
-            if block.name == "Output":
-                self._output_block = block
-            self._renderer.add_block(block, Vec2(*positions.get(block.uid, (0.0, 0.0))))
-
-        for connection in self._graph._connections.values():
-            self._renderer.add_connection(connection)
-
-        with self.cliping_mask.target:
-            with self._clip_projector.activate():
-                self.background.draw()
+        self._editor = Editor(clip_rect, Path("graph copy.toml"))
 
         Frame.__init__(
             self, "EDITOR", tag_offset, position, size, show_body, show_shadow
         )
-
-        # Editor State
-        self._mode = EditorMode.NONE
-        self._cursor_pos = None
-        self._popup: util.Popup | None = None
-        self._move_camera: bool = False
-
-        # Drag Block
-        self._selected_block: render.BlockRenderer = None
-        self._offset: Vec2 = Vec2()
-
-        # Create Connection
-        self._start_pos: tuple[float, float] = None
-        self._source_block: render.BlockRenderer = None
-        self._output: str = ""
-        self._target_block: render.BlockRenderer = None
-        self._input: str = ""
-
-        # Edit Config Value
-        self.text = ""
-        self.panel: render.IONodeRenderer = None
-        self.text_scroll: int = 0
 
     def connect_renderer(self, batch: Batch | None) -> None:
         Frame.connect_renderer(self, batch)
@@ -113,7 +793,7 @@ class EditorFrame(Frame):
 
     def update_position(self, point: tuple[float, float]) -> None:
         Frame.update_position(self, point)
-        self.cliping_mask.position = (
+        self.cliping_mask.position = self._editor.cursor_offset = (
             point[0] + style.format.footer_size,
             point[1] + style.format.footer_size,
         )
@@ -123,321 +803,33 @@ class EditorFrame(Frame):
         return self._show_body
 
     @show_body.setter
-    def show_body(self, show: bool) -> bool:
+    def show_body(self, show: bool) -> None:
         self._show_body = show
         self._panel.visible = show
         self.cliping_mask.visible = show
 
     def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:
-        match self._mode:
-            case EditorMode.NONE:
-                self.input_none_mode(input, modifiers, pressed)
-            case EditorMode.ADD_BLOCK:
-                self.input_add_block_mode(input, modifiers, pressed)
-            case EditorMode.DRAG_BLOCK:
-                self.input_drag_block_mode(input, modifiers, pressed)
-            case EditorMode.DRAG_CONNECTION:
-                self.input_drag_connection_mode(input, modifiers, pressed)
-            case _:
-                ...
+        self._editor.on_input(input, modifiers, pressed)
 
-    def input_none_mode(self, input: Button, modifiers: int, pressed: bool):
-        if not pressed:
-            if input == inputs.PRIMARY_CLICK:
-                self._move_camera = False
-            return
-        
-        if input == inputs.SAVE_INPUT and modifiers & inputs.SAVE_MOD == inputs.SAVE_MOD:
-            self._move_camera = False
-            loading.write_graph(
-                Path(f"graph_{id(self._graph)}_{GLOBAL_CLOCK.time}.toml"),
-                self._graph,
-                self._renderer,
-            )
-            return
-
-        x, y = self.get_cursor_pos()
-
-        if self._popup is not None:
-            self._gui.remove_element(self._popup)
-            self._popup = None
-
-        # Find if we are hovering over a block
-        clicked_block = None
-        for block in self._renderer._blocks.values():
-            if block.contains_point((x, y)):
-                clicked_block = block
-                break
-
-        if input == inputs.PRIMARY_CLICK:
-            # If we are then check to see if:
-            # a) we clicking a panel
-            # b) we are dragging a node
-            # otherwise drag the block
-            if clicked_block is not None:
-                if io_node := clicked_block.find_output_node((x, y)):
-                    if self._selected_block is not None:
-                        self._selected_block.deselect()
-                    self._selected_block = None
-
-                    self._source_block = clicked_block
-                    clicked_block.select()
-
-                    self._output = io_node.name
-                    self._source_block.set_node_active(self._output, True, True)
-                    self._start_pos = io_node.node.position
-                    self._mode = EditorMode.DRAG_CONNECTION
-                    return
-                self._selected_block = clicked_block
-                self._offset = Vec2(
-                    clicked_block.bottom_left.x - x, clicked_block.bottom_left.y - y
-                )
-                self._mode = EditorMode.DRAG_BLOCK
-                return
-
-            # If we aren't over a block then lets check nodes
-            for block in self._renderer._blocks.values():
-                if io_node := block.find_output_node((x, y)):
-                    self._source_block = block
-                    self._output = io_node.name
-                    self._source_block.set_node_active(self._output, True, True)
-                    self._start_pos = io_node.node.position
-                    self._mode = EditorMode.DRAG_CONNECTION
-                    return
-            
-            # If we aren't over a block or near a node drag the camera
-            self._move_camera = True
-
-        elif input == inputs.SECONDARY_CLICK:
-            if clicked_block is not None:
-                self._renderer.remove_block(clicked_block._block)
-                self._graph.remove_block(clicked_block._block)
-
-            # If we aren't over a block or near a node create a popup
-            self._popup = self.create_block_popup(self.get_cursor_pos_raw())
-            self._gui.add_element(self._popup)
-
-            self._mode = EditorMode.ADD_BLOCK
-
-    def input_add_block_mode(self, input: Button, modifiers: int, pressed: bool):
-        if not pressed:
-            return
-
-        if input == inputs.PRIMARY_CLICK:
-            x, y = self.get_cursor_pos()
-            if self._popup is None:
-                self._mode = EditorMode.NONE
-                self.on_input(input, modifiers, pressed)
-
-            if not self._popup.contains_point((x, y)):
-                self._gui.remove_element(self._popup)
-                self._popup = None
-                self._mode = EditorMode.NONE
-                return
-
-            action = self._popup.get_hovered_item((x, y))
-
-            if action is not None:
-                self._popup.actions[action]()
-
-            self._gui.remove_element(self._popup)
-            self._popup = None
-            self._mode = EditorMode.NONE
-        elif input == inputs.SECONDARY_CLICK:
-            self._gui.remove_element(self._popup)
-            self._popup = None
-            self._mode = EditorMode.NONE
-
-    def input_drag_block_mode(self, input: Button, modifiers: int, pressed: bool):
-        if pressed:
-            return
-
-        if input == inputs.PRIMARY_CLICK:
-            self._selected_block = None
-            self._mode = EditorMode.NONE
-
-    def input_drag_connection_mode(self, input: Button, modifiers: int, pressed: bool):
-        if pressed:
-            return
-
-        if input == inputs.PRIMARY_CLICK:
-            x, y = self.get_cursor_pos()
-            self._source_block.deselect()
-            for block in self._renderer._blocks.values():
-                if block == self._source_block:
-                    continue
-                if io_node := block.find_input_node((x, y)):
-                    self._target_block = block
-                    self._input = io_node.name
-                    break
-            else:
-                self._mode = EditorMode.NONE
-                block = self._source_block._block
-                if not self._graph._outputs[block.uid][self._output]:
-                    self._source_block.set_node_active(self._output, False, True)
-                self._source_block: render.BlockRenderer = None
-                self._output: str = ""
-                self._target_block: render.BlockRenderer = None
-                self._input: str = ""
-                return
-
-            connection = node.Connection(
-                self._source_block._block,
-                self._output,
-                self._target_block._block,
-                self._input,
-            )
-            old = self._graph.add_connection(connection)
-
-            if old != None:
-                self._renderer.remove_connection(old)
-
-            self._renderer.add_connection(connection)
-
-            self._graph.compute(self._target_block._block)
-            self._renderer.update_values()
-
-            self._mode = EditorMode.NONE
-            self._source_block: render.BlockRenderer = None
-            self._output: str = ""
-            self._target_block: render.BlockRenderer = None
-            self._input: str = ""
-
-    def on_axis_change(self, axis: Axis, value_1: float, value_2: float): ...
+    def on_axis_change(self, axis: Axis, value_1: float, value_2: float):
+        self._editor.on_axis_change(axis, value_1, value_2)
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:
-        x, y = self.get_cursor_pos()
-        match self._mode:
-            case EditorMode.NONE:
-                if self._move_camera:
-                    pos = self._camera.position
-                    self._camera.position = pos[0] - dx / self._camera.zoom, pos[1] - dy / self._camera.zoom
-                    return
-
-                for block in self._renderer._blocks.values():
-                    if block.contains_point((x, y)):
-                        if self._selected_block is not None:
-                            self._selected_block.deselect()
-                        self._selected_block = block
-                        block.select()
-
-                        io_node = block.find_input_node((x, y))
-                        is_input = True
-                        if io_node is None:
-                            is_input = False
-                            io_node = block.find_output_node((x, y))
-
-                        if io_node is None:
-                            break
-
-                        if self._popup is not None:
-                            self._gui.remove_element(self._popup)
-
-                        if is_input:
-                            value = block._block._arguments[io_node.name]
-                        else:
-                            value = block._block._results[io_node.name]
-
-                        self._popup = util.InfoPopup(str(value), (x, y))
-                        self._gui.add_element(self._popup)
-
-                        break
-                else:
-                    if self._selected_block is not None:
-                        self._selected_block.deselect()
-                    self._selected_block = None
-            case EditorMode.ADD_BLOCK:
-                if self._popup is None:
-                    self._mode = EditorMode.NONE
-                    return
-
-                action = self._popup.get_hovered_item((x, y))
-                self._popup.highlight_action(action)
-            case EditorMode.DRAG_BLOCK:
-                self._renderer.move_block(
-                    self._selected_block._block, Vec2(x, y) + self._offset
-                )
-            case EditorMode.DRAG_CONNECTION:
-                for block in self._renderer._blocks.values():
-                    if block.contains_point((x, y)):
-                        if self._selected_block is not None:
-                            self._selected_block.deselect()
-                        self._selected_block = block
-                        block.select()
-                        break
-                else:
-                    if self._selected_block is not None:
-                        self._selected_block.deselect()
-                    self._selected_block = None
-            case _:
-                ...
+        self._editor.on_cursor_motion(x, y, dx, dy)
 
     def on_cursor_scroll(
         self, x: float, y: float, scroll_x: float, scroll_y: float
     ) -> bool | None:
-        if scroll_y != 0:
-            self._camera.zoom = max(0.1, min(1.0, self._camera.zoom + scroll_y / 10))
+        self._editor.on_cursor_scroll(x, y, scroll_x, scroll_y)
 
-    def on_draw(self):
+    def on_draw(self) -> None:
         with self.cliping_mask.target:
-            self.background.draw()
-            with self._camera.activate():
-                self._renderer.draw()
-
-                match self._mode:
-                    case EditorMode.DRAG_CONNECTION:
-                        x, y = self.get_cursor_pos()
-                        draw_line(
-                            self._start_pos[0],
-                            self._start_pos[1],
-                            x,
-                            y,
-                            style.colors.highlight,
-                            style.format.line_thickness,
-                        )
-                    case _:
-                        pass
-
-                if self._popup is not None and self._mode == EditorMode.NONE:
-                    if not self._popup.contains_point(self.get_cursor_pos()):
-                        self._gui.remove_element(self._popup)
-                        self._popup = None
             with self._clip_projector.activate():
-                self._gui.draw()
+                self._editor.draw()
 
-    def on_update(self, delta_time: float):
-        if self._output_block is not None:
-            self._graph.compute(self._output_block)
+    def on_hide(self) -> None:
+        self._editor.set_mode_none()
+        self._editor._gui.disable()
 
-    def create_block_popup(self, pos: tuple[float, float]):
-        def create_block(block_type: type):
-            block = block_type()
-
-            self._graph.add_block(block)
-            self._renderer.add_block(block, Vec2(*self.get_cursor_pos()))
-
-        top = pos[1] > 0.5 * self.panel_height
-        right = pos[0] > 0.5 * self.panel_width
-
-        dx = style.format.padding if right else -style.format.padding
-        dy = style.format.padding if top else -style.format.padding
-
-        return util.SelectionPopup(
-            tuple(
-                util.PopupAction(typ.__name__, create_block, typ)
-                for typ in node.Block.__subclasses__()
-            ),
-            (pos[0] + dx, pos[1] + dy),
-            top,
-            right,
-        )
-
-    def get_cursor_pos_raw(self) -> tuple[float, float]:
-        return (
-            inputs.cursor[0] - self._panel.x - style.format.footer_size,
-            inputs.cursor[1] - self._panel.y - style.format.footer_size,
-        )
-    
-    def get_cursor_pos(self) -> tuple[float, float]:
-        pos: Vec3 = self._camera.unproject(self.get_cursor_pos_raw())
-        return pos.x, pos.y
+    def on_select(self) -> None:
+        self._editor._gui.enable()

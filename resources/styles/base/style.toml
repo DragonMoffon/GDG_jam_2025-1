@@ -28,7 +28,7 @@ path = "font/monof55.ttf"
 size = 20
 
 [Format]
-point_radius = 3
+point_radius = 5
 corner_radius = 12
 select_radius = 4
 header_size = 24
