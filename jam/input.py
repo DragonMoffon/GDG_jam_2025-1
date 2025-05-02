@@ -298,23 +298,23 @@ DIGIT_ARRAY = tuple(chr(n) for n in range(48, 58))
 DIGIT_SET = set(DIGIT_ARRAY)
 
 DECIMAL_KEY_SET = DIGIT_KEY_SET.union([Keys.PERIOD])
-DECIMAL_ARRAY = (*DIGIT_ARRAY, chr(Keys.PERIOD))
+DECIMAL_ARRAY = (chr(Keys.PERIOD), *DIGIT_ARRAY)
 DECIMAL_SET = set(DECIMAL_ARRAY)
 
 STR_KEY_SET = {
-    *LETTER_KEY_SET,
-    *DIGIT_KEY_SET,
     Keys.UNDERSCORE,
     Keys.MINUS,
     Keys.PERIOD,
+    *LETTER_KEY_SET,
+    *DIGIT_KEY_SET,
 }
 STR_ARRAY = (
-    *(chr(n) for n in range(65, 91)),
-    *(chr(n) for n in range(97, 123)),
-    *(chr(n) for n in range(48, 58)),
     chr(Keys.UNDERSCORE),
     chr(Keys.MINUS),
     chr(Keys.PERIOD),
+    *(chr(n) for n in range(65, 91)),
+    *(chr(n) for n in range(97, 123)),
+    *(chr(n) for n in range(48, 58)),
 )
 STR_SET = set(STR_ARRAY)
 

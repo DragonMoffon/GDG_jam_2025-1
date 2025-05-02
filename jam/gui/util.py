@@ -5,8 +5,11 @@ from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 from arcade import Text
+from arcade.clock import GLOBAL_CLOCK
 
 from resources import style
+
+from jam.graphics.format_label import FLabel
 
 from .core import (
     Element,
@@ -259,6 +262,10 @@ class TextInput:
         return self._str
 
     @property
+    def size(self) -> int:
+        return len(self._str)
+
+    @property
     def at_start(self) -> bool:
         return self._idx == 0
 
@@ -312,6 +319,8 @@ class TextInput:
 
     def incr_char(self) -> str:
         if self.at_end:
+            if not self.is_max:
+                self._str = self._str + self._chararray[0]
             return self._str
         char = self._str[self._idx]
         idx = (self._chararray.index(char) + 1) % len(self._chararray)
@@ -321,6 +330,8 @@ class TextInput:
 
     def decr_char(self) -> str:
         if self.at_end:
+            if not self.is_max:
+                self._str = self._str + self._chararray[-1]
             return self._str
         char = self._str[self._idx]
         idx = self._chararray.index(char) - 1
@@ -358,11 +369,11 @@ class TextInputPopup(Popup):
         charset: set[str],
         chararray: tuple[str, ...],
         max_char: int = -1,
-        cursor: bool = True,
+        blink: bool = True,
     ):
         self._text_input = TextInput(charset, chararray, max_char)
         count = min(12, max_char) if max_char > 0 else 12
-        self._text = Label(
+        self._text = FLabel(
             "#" * count,
             center[0],
             center[1],
@@ -376,7 +387,7 @@ class TextInputPopup(Popup):
         )
         width = self._text.content_width + 2 * style.format.padding
         height = self._text.content_height + 2 * style.format.padding
-        self._text.text = ""
+        self._text.text = " "
 
         Popup.__init__(
             self,
@@ -385,7 +396,19 @@ class TextInputPopup(Popup):
             (center[0] - width / 2.0, center[1] - height / 2.0),
         )
 
-        self._cursor = cursor  # TODO
+        self._blink = blink
+        self._highlight = True
+        self._blink_time = GLOBAL_CLOCK.time + style.game.editor.blink_speed
+
+    def update(self) -> None:
+        if not self._blink:
+            return
+        if GLOBAL_CLOCK.time >= self._blink_time:
+            dt = style.game.editor.blink_speed + self._blink_time - GLOBAL_CLOCK.time
+            self._blink_time = GLOBAL_CLOCK.time + (dt % style.game.editor.blink_speed)
+            self._highlight = not self._highlight
+            self.clear_highlight()
+            self.highlight_cursor()
 
     def update_position(self, point: tuple[float, float]) -> None:
         Popup.update_position(self, point)
@@ -400,9 +423,15 @@ class TextInputPopup(Popup):
         self._text.batch = batch
 
     def input_char(self, char: str) -> None:
+        if self._text_input.at_end:
+            self._text.text = self._text.text.strip()
         self._text.text = self._text_input.add_char(char)
+        if self._text_input.at_end:
+            self._text.text += " "
+        self.clear_highlight()
+        self.highlight_cursor()
 
-        if self._text_input.cursor >= 12:
+        if len(self._text.text) >= 12:
             width = self._text.content_width + 2 * style.format.padding
             x = self._body.x - (width - self._body.width) * 0.5
             self._body.width = self._shadow.width = width
@@ -410,9 +439,15 @@ class TextInputPopup(Popup):
             self._shadow.x = x - 2 * style.format.drop_x
 
     def remove_char(self) -> None:
+        if self._text_input.at_end:
+            self._text.text = self._text.text.strip()
         self._text.text = self._text_input.rem_char()
+        if self._text_input.at_end:
+            self._text.text += " "
+        self.clear_highlight()
+        self.highlight_cursor()
 
-        if self._text_input.cursor >= 12:
+        if len(self._text.text) >= 12:
             width = self._text.content_width + 2 * style.format.padding
             x = self._body.x - (width - self._body.width) * 0.5
             self._body.width = self._shadow.width = width
@@ -420,17 +455,64 @@ class TextInputPopup(Popup):
             self._shadow.x = x - 2 * style.format.drop_x
 
     def incr_cursor(self) -> None:
+        if self._text_input.at_end:
+            self._text.text = self._text.text.strip()
         self._text_input.incr_cursor()
+        if self._text_input.at_end:
+            self._text.text += " "
+        self.clear_highlight()
+        self.highlight_cursor()
 
     def decr_cursor(self) -> None:
+        if self._text_input.at_end:
+            self._text.text = self._text.text.strip()
         self._text_input.decr_cursor()
+        if self._text_input.at_end:
+            self._text.text += " "
+        self.clear_highlight()
+        self.highlight_cursor()
 
     def incr_char(self) -> None:
+        if self._text_input.at_end:
+            self._text.text = self._text.text.strip()
         self._text.text = self._text_input.incr_char()
+        if self._text_input.at_end:
+            self._text.text += " "
+        self.clear_highlight()
+        self.highlight_cursor()
 
     def decr_char(self) -> None:
+        if self._text_input.at_end:
+            self._text.text = self._text.text.strip()
         self._text.text = self._text_input.decr_char()
+        if self._text_input.at_end:
+            self._text.text += " "
+        self.clear_highlight()
+        self.highlight_cursor()
+
+    def highlight_cursor(self) -> None:
+        if not self._highlight:
+            return
+        self._text.document.set_style(
+            self.cursor,
+            self.cursor + 1,
+            {
+                "color": style.colors.base,
+                'background_color': style.colors.accent
+            }
+        )
+
+    def clear_highlight(self) -> None:
+        self._text.document.set_style(
+            0,
+            len(self._text.text),
+            {"color": style.colors.accent, 'background_color': None}
+        )
 
     @property
     def text(self) -> str:
         return self._text_input.text
+
+    @property
+    def cursor(self) -> int:
+        return self._text_input.cursor

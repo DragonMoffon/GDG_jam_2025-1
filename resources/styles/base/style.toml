@@ -84,6 +84,7 @@ info_tag = 'image/icons4.png'
 panel_speed = 0.4
 
 [Game.Editor]
+blink_speed = 0.25
 background = 'image/grid1.png'
 
 node_inactive = 'image/symbols/symbols1.png'

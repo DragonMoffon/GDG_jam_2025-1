@@ -723,7 +723,15 @@ class Editor:
         self._background.draw()
         self._gui.draw()
 
-    def update(self, delta_time: float) -> None: ...
+    def save_graph_on_update(self, delta_time) -> None:
+        self._save_popup.update()
+
+    def update(self, delta_time: float) -> None:
+        match self._mode:
+            case EditorMode.SAVE_GRAPH:
+                self.save_graph_on_update(delta_time)
+            case _:
+                pass
 
     # -- UTIL METHODS --
     def get_cursor_pos(self) -> tuple[float, float]:
@@ -826,6 +834,9 @@ class EditorFrame(Frame):
         with self.cliping_mask.target:
             with self._clip_projector.activate():
                 self._editor.draw()
+
+    def on_update(self, delta_time: float):
+        self._editor.update(delta_time)
 
     def on_hide(self) -> None:
         self._editor.set_mode_none()

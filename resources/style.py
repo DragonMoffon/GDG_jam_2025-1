@@ -86,6 +86,7 @@ class Panels:
 
 @dataclass
 class Editor:
+    blink_speed: float
     background: Path
 
     node_inactive: ImageData
@@ -159,6 +160,7 @@ class Style:
                 panel_speed=panel_data["panel_speed"],
             ),
             Editor(
+                editor_data['blink_speed'],
                 source / editor_data["background"],
                 load_texture(source / editor_data["node_inactive"]),
                 load_texture(source / editor_data["node_active"]),
