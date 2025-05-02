@@ -513,6 +513,14 @@ class TextInputPopup(Popup):
     def text(self) -> str:
         return self._text_input.text
 
+    @text.setter
+    def text(self, text: str) -> None:
+        self._text.text = self._text_input.set_text(text)
+        if self._text_input.at_end:
+            self._text.text += " "
+        self.clear_highlight()
+        self.highlight_cursor()
+
     @property
     def cursor(self) -> int:
         return self._text_input.cursor

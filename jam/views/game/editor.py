@@ -245,7 +245,7 @@ class Editor:
         self._prev_value: graph.OperationValue | None = None
         self._config_block: graph.Block | None = None
         self._config_panel: gui.TextPanel | None = None
-        self._config_input: util.TextInput | None = None
+        self._config_popup: util.TextInputPopup | None = None
 
         # Save Graph
         self._save_popup: util.TextInputPopup | None = None
@@ -275,35 +275,40 @@ class Editor:
             self._block_popup = None
 
         if self._config_panel is not None:
-            if self._config_input.text == "":
-                self._config_panel.text = ""
-
+            if self._config_popup.text == "":
                 config_type = self._config_block.type.config[self._config]
-                self._config_block.config[self._config] = config_type()
+                value = config_type()
+                self._config_block.config[self._config] = value
+
+                self._config_panel.text = str(value.value)
+                self._config_panel.offset = 0
             else:
                 try:
                     config_type = self._config_block.type.config[self._config]
                     # Mega cludge to avoid .0 at the end of ints
                     if (
                         self._prev_value.type is float
-                        and "." not in self._config_input.text
+                        and "." not in self._config_popup.text
                     ):
-                        value = config_type(int(self._config_input.text))
+                        value = config_type(int(self._config_popup.text))
                     else:
                         value = config_type(
-                            self._prev_value.type(self._config_input.text)
+                            self._prev_value.type(self._config_popup.text)
                         )
                 except ValueError:
                     self._config_panel.text = str(self._prev_value.value)
+                    self._config_panel.offset = 0
                 else:
-                    self._config_panel.text = self._config_input.text
+                    self._config_panel.text = self._config_popup.text
+                    self._config_panel.offset = 0
                     self._config_block.config[self._config] = value
 
             self._config = ""
             self._prev_value = None
             self._config_block = None
             self._config_panel = None
-            self._config_input = None
+            self._gui.remove_element(self._config_popup)
+            self._config_popup = None
 
         if self._save_popup is not None:
             self._gui.remove_element(self._save_popup)
@@ -340,15 +345,20 @@ class Editor:
             return
 
         self._prev_value = block.block.config[config]
-        self._config = config
         self._config_block = block.block
         self._config_panel = config_panel
+
+        x = config_panel.left + config_panel.width / 2.0
+        y = config_panel.bottom + config_panel.height / 2.0
+
         charset, chararray = TYPE_CHAR_SETS[config_type]
-        self._config_input = util.TextInput(charset, chararray)
-        text = self._config_input.set_text(str(self._prev_value.value))
-        offset = self._config_input.cursor
-        self._config_panel.offset = max(0, offset - 6)
-        self._config_panel.text = text
+        self._config_popup = util.TextInputPopup(
+            (x, y), charset, chararray
+        )
+        self._config_popup.text = str(self._prev_value.value)
+        self._gui.add_element(self._config_popup)
+
+        self._config = config
 
     def set_mode_add_block(self) -> None:
         self._mode = EditorMode.ADD_BLOCK
@@ -534,34 +544,24 @@ class Editor:
             return
 
         if button == inputs.CANCEL:
-            self._config_input.clear_text()
+            self._config_popup.text = str(self._prev_value.value)
             self.set_mode_none()
         elif button == inputs.CONFIRM:
             self.set_mode_none()
         elif button in STR_KEY_SET:
             if button in LETTER_KEY_SET and modifiers & inputs.SHIFT:
                 button = button - 32
-            text = self._config_input.add_char(chr(button))
-            offset = self._config_input.cursor
-            self._config_panel.offset = max(0, offset - 6)
-            self._config_panel.text = text
+            self._config_popup.input_char(chr(button))
         elif button == inputs.BACKSPACE:
-            text = self._config_input.rem_char()
-            offset = self._config_input.cursor
-            self._config_panel.offset = max(offset - 6, 0)
-            self._config_panel.text = text
+            self._config_popup.remove_char()
         elif button == inputs.NAV_UP:
-            text = self._config_input.incr_char()
-            self._config_panel.text = text
+            self._config_popup.incr_char()
         elif button == inputs.NAV_DOWN:
-            text = self._config_input.decr_char()
-            self._config_panel.text = text
+            self._config_popup.decr_char()
         elif button == inputs.NAV_RIGHT:
-            offset = self._config_input.incr_cursor()
-            self._config_panel.offset = max(0, offset - 6)
+            self._config_popup.incr_cursor()
         elif button == inputs.NAV_LEFT:
-            offset = self._config_input.decr_cursor()
-            self._config_panel.offset = max(0, offset - 6)
+            self._config_popup.decr_cursor()
 
     def save_graph_on_input(
         self, button: Button, modifiers: int, pressed: bool
@@ -723,11 +723,16 @@ class Editor:
         self._background.draw()
         self._gui.draw()
 
-    def save_graph_on_update(self, delta_time) -> None:
+    def edit_config_on_update(self, delta_time: float) -> None:
+        self._config_popup.update()
+
+    def save_graph_on_update(self, delta_time: float) -> None:
         self._save_popup.update()
 
     def update(self, delta_time: float) -> None:
         match self._mode:
+            case EditorMode.CHANGE_CONFIG:
+                self.edit_config_on_update(delta_time)
             case EditorMode.SAVE_GRAPH:
                 self.save_graph_on_update(delta_time)
             case _:

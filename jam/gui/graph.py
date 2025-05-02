@@ -323,6 +323,14 @@ class TextPanel(Element):
     def height(self) -> float:
         return self._panel.height
 
+    @property
+    def left(self) -> float:
+        return self._panel.x
+
+    @property
+    def bottom(self) -> float:
+        return self._panel.y
+
     def update_position(self, point: tuple[float, float]) -> None:
         self._panel.position = point
         self._text.position = (
