@@ -80,13 +80,14 @@ class ConnectionElement(Element):
         return self._connection
 
     def get_closest_link(self, point: tuple[float, float]) -> tuple[int, float]:
+        # TODO: make it not exlude start and end links?
         smallest = float("inf")
         link_idx = 0
-        for idx, link in enumerate(self._links):
+        for idx, link in enumerate(self._links[1:-1]):
             dist = (link[0] - point[0]) ** 2 + (link[1] - point[1]) ** 2
             if dist <= smallest:
                 smallest = dist
-                link_idx = idx
+                link_idx = idx + 1
         return link_idx, smallest**0.5
 
     def get_closest_line(self, point: tuple[float, float]) -> tuple[int, float]:
@@ -190,15 +191,18 @@ class ConnectionElement(Element):
         self._lshadow_ines[link + 1].position = shadow
 
     def insert_link(self, link: int, point: tuple[float, float]) -> None:
-        if not 2 <= link + 1 < len(self._links):
+        if not 0 < link < len(self._links):
             return  # ignore the start and end links
         old_start = self._links[link - 1]
+        old_end = self._links[link]
 
         o_line = self._lines[link]
         o_line.position = point
+        o_line.x2, o_line.y2 = old_end
 
         o_s_line = self._shadow_lines[link]
         o_s_line.position = point[0] - formating.drop_x, point[1] - formating.drop_y
+        o_s_line.x2, o_s_line.y2 = old_end[0] - formating.drop_x, old_end[1] - formating.drop_y
 
         n_line, n_s_line = self._create_link(old_start, point)
 

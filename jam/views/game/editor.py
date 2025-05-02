@@ -135,7 +135,7 @@ class GraphController:
         self._unlink_connection(connection)
         self._graph.remove_connection(connection.connection)
 
-        target = self.get_block(connection.connection.uid)
+        target = self.get_block(connection.connection.target)
         self.create_temporary(target, connection.connection.input)
 
     def _link_connection(self, connection: gui.ConnectionElement) -> None:
@@ -265,7 +265,6 @@ class Editor:
             self._offset = Vec2()
 
         if self._incomplete_connection is not None:
-            # TODO: de-select connection blocks
             self._gui.remove_element(self._incomplete_connection)
             self._incomplete_connection = None
 
@@ -326,7 +325,7 @@ class Editor:
         self._selected_block = block
         self._selected_block.select()
 
-    def set_mode_drag_connection(self, noodle: gui.ConnectionElement) -> None:
+    def set_mode_drag_connection(self, noodle: gui.ConnectionElement, link: int) -> None:
         pass
 
     def set_mode_edit_config(
@@ -447,7 +446,12 @@ class Editor:
                 return
 
             if clicked_noodle is not None:
-                self.set_mode_drag_connection(clicked_noodle)
+                link, dist = clicked_noodle.get_closest_link(cursor)
+                if dist <= 16.0:
+                    self.set_mode_drag_connection(clicked_noodle, link)
+                    return
+                line, dist = clicked_noodle.get_closest_line(cursor)
+                clicked_noodle.insert_link(line, cursor)
                 return
 
             for temp in self._controller.temporary:
