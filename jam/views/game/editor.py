@@ -233,6 +233,10 @@ class Editor:
         self._selected_block: gui.BlockElement | None = None
         self._offset: Vec2 = Vec2()
 
+        # Drag Noodle
+        self._selected_noodle: gui.ConnectionElement | None = None
+        self._link: int = 0
+
         # Create Connection
         self._incomplete_connection: gui.ConnectionElement | None = None
 
@@ -263,6 +267,10 @@ class Editor:
             self._selected_block.remove_highlighting()
             self._selected_block = None
             self._offset = Vec2()
+
+        if self._selected_noodle is not None:
+            self._selected_noodle = None
+            self._link = 0
 
         if self._incomplete_connection is not None:
             self._gui.remove_element(self._incomplete_connection)
@@ -326,7 +334,9 @@ class Editor:
         self._selected_block.select()
 
     def set_mode_drag_connection(self, noodle: gui.ConnectionElement, link: int) -> None:
-        pass
+        self._mode = EditorMode.DRAG_CONNECTION
+        self._selected_noodle = noodle
+        self._link = link
 
     def set_mode_edit_config(
         self,
@@ -452,6 +462,7 @@ class Editor:
                     return
                 line, dist = clicked_noodle.get_closest_line(cursor)
                 clicked_noodle.insert_link(line, cursor)
+                self.set_mode_drag_connection(clicked_noodle, line)
                 return
 
             for temp in self._controller.temporary:
@@ -468,6 +479,10 @@ class Editor:
                 return
 
             if clicked_noodle is not None:
+                link, dist = clicked_noodle.get_closest_link(cursor)
+                if dist <= 16.0:
+                    clicked_noodle.remove_link(link)
+                    return
                 self._controller.remove_connection(clicked_noodle)
                 return
 
@@ -478,6 +493,13 @@ class Editor:
 
     def drag_block_on_input(
         self, button: Button, modifiers: int, pressed: bool
+    ) -> None:
+        if button == inputs.PRIMARY_CLICK and not pressed:
+            self.set_mode_none()
+            return
+        
+    def drag_connection_on_input(
+        self, button: Button, modifiers: int, pressed: bool            
     ) -> None:
         if button == inputs.PRIMARY_CLICK and not pressed:
             self.set_mode_none()
@@ -609,6 +631,8 @@ class Editor:
                 self.none_on_input(button, modifiers, pressed)
             case EditorMode.DRAG_BLOCK:
                 self.drag_block_on_input(button, modifiers, pressed)
+            case EditorMode.DRAG_CONNECTION:
+                self.drag_connection_on_input(button, modifiers, pressed)
             case EditorMode.ADD_CONNECTION:
                 self.add_connection_on_input(button, modifiers, pressed)
             case EditorMode.ADD_BLOCK:
@@ -663,6 +687,11 @@ class Editor:
         x, y = self.get_base_cursor_pos()
         self._selected_block.update_position((x - self._offset[0], y - self._offset[1]))
 
+    def drag_connection_on_cursor_motion(
+        self, x: float, y: float, dx: float, dy: float
+    ) -> None:
+        self._selected_noodle.update_link(self._link, self.get_base_cursor_pos())
+
     def add_block_on_cursor_motion(
         self, x: float, y: float, dx: float, dy: float
     ) -> None:
@@ -706,6 +735,8 @@ class Editor:
                 self.none_on_cursor_motion(x, y, dx, dy)
             case EditorMode.DRAG_BLOCK:
                 self.drag_block_on_cursor_motion(x, y, dx, dy)
+            case EditorMode.DRAG_CONNECTION:
+                self.drag_connection_on_cursor_motion(x, y, dx, dy)
             case EditorMode.ADD_BLOCK:
                 self.add_block_on_cursor_motion(x, y, dx, dy)
             case EditorMode.ADD_CONNECTION:

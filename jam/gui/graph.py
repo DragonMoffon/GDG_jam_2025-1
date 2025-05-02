@@ -174,21 +174,29 @@ class ConnectionElement(Element):
         # self._shadow_joints[-1].position = shadow_point
 
     def update_link(self, link: int, point: tuple[float, float]) -> None:
-        if not 2 <= link + 1 < len(self._links):
+        if not 0 < link < len(self._links):
             return  # ignore the start and end links
 
-        shadow = point[0] - formating.drop_x, point[1] - formating.drop_y
-
         self._links[link] = point
+        n_link = self._links[link + 1]
 
         # self._joints[link].position = point
         # self._shadow_joints[link] = shadow
+        
+        pl = self._lines[link]
+        nl = self._lines[link + 1]
 
-        self._lines[link].x2, self._lines[link].y2 = point
-        self._shadow_lines[link].x2, self._shadow_lines[link].y2 = shadow
+        ps = self._shadow_lines[link]
+        ns = self._shadow_lines[link + 1]
 
-        self._lines[link + 1].position = point
-        self._lshadow_ines[link + 1].position = shadow
+        pl.x2, pl.y2 = point
+        ps.x2, ps.y2 = point[0] - formating.drop_x, point[1] - formating.drop_y
+
+        nl.position = point
+        nl.x2, nl.y2 = n_link
+
+        ns.position = point[0] - formating.drop_x, point[1] - formating.drop_y
+        ns.x2, ns.y2 = n_link[0] - formating.drop_x, n_link[1] - formating.drop_y
 
     def insert_link(self, link: int, point: tuple[float, float]) -> None:
         if not 0 < link < len(self._links):
@@ -225,12 +233,20 @@ class ConnectionElement(Element):
         # self._shadow_joints.pop(link).batch = None
         self._links.pop(link)
 
-        self._lines[link].position = new_start
-        self._shadow_lines[link].position = new_shadow
+        old_end = self._links[link]
+        old_shadow = old_end[0] - formating.drop_x, old_end[1] - formating.drop_y
+
+        line = self._lines[link]
+        shadow = self._shadow_lines[link]
+
+        line.position = new_start
+        line.x2, line.y2 = old_end
+        shadow.position = new_shadow
+        shadow.x2, shadow.y2 = old_shadow
 
     def _create_link(
         self, start: tuple[float, float], end: tuple[float, float]
-    ) -> tuple[Line, Circle, Line, Circle]:
+    ) -> tuple[Line, Line]:
         shadow_start = start[0] - formating.drop_x, start[1] - formating.drop_y
         shadow_end = end[0] - formating.drop_x, end[1] - formating.drop_y
         line = Line(
