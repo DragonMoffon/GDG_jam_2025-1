@@ -206,7 +206,7 @@ class Editor:
         # Graph
         self._src: Path | None = graph_src
         self._graph, positions = (
-            (graph.Graph(), {}) if graph_src is None else graph.read_graph(graph_src)
+            (graph.Graph(sandbox=True), {}) if graph_src is None else graph.read_graph(graph_src, sandbox=True)
         )
 
         self._blocks: dict[UUID, gui.BlockElement] = {}

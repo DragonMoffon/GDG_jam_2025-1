@@ -363,10 +363,28 @@ DivBlock = BlockType(
 
 # cast
 # mod
+
+def __mod(value: FloatValue | IntValue, mod: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
+    if value.type is int and mod.type is int:
+        return {"result": IntValue(value.value % mod.value)}
+    a_ = FloatValue.__acast__(value)
+    b_ = FloatValue.__acast__(mod)
+
+    return {"result": FloatValue(a_.value % b_.value)}
+
+ModBlock = BlockType(
+    "Modulo",
+    __mod,
+    {"value": FloatValue, "mod": FloatValue},
+    {"result": FloatValue}
+)
+
 # abs
 # sign
 # max
 # min
+
+# -- String Manipulation --
 
 # -- Logic and Looping --
 
@@ -386,6 +404,7 @@ class Graph:
         self,
         name: str = "graph",
         available: tuple[BlockType, ...] | None = None,
+        sandbox: bool = False,
         *,
         _: None = None,
     ) -> None:
@@ -540,7 +559,7 @@ class Graph:
         return computations[target.uid]
 
 
-def read_graph(path: Path) -> tuple[Graph, dict[UUID, tuple[float, float]]]:
+def read_graph(path: Path, sandbox: bool = False) -> tuple[Graph, dict[UUID, tuple[float, float]]]:
     with open(path, "rb") as fp:
         raw_data = load(fp)
 
@@ -561,7 +580,7 @@ def read_graph(path: Path) -> tuple[Graph, dict[UUID, tuple[float, float]]]:
             name, __variable, inputs, outputs, config, exclusive=True
         )
 
-    graph = Graph(name=config_table.get("name", ""))
+    graph = Graph(name=config_table.get("name", ""), sandbox=sandbox)
     positions: dict[UUID, tuple[float, float]] = {}
 
     for block_data in block_table.get("Data", ()):
