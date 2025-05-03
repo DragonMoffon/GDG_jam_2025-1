@@ -1,0 +1,30 @@
+[Config]
+name = "f_to_k"
+title = "Convert Temperature"
+description = """
+The temperature nodes in the station got reset to factory settings,
+and their output needs to be converted back to celsius and kelvin.
+
+fahrenheit is 5/9th the size of celsius,
+and 32 fahrenheit is 0 celsius.
+0 celsius is 273.15 kelvin.
+"""
+available = [ 
+    "Int", "Float", "Add", "Sub", "Multiply", "Divide"
+]
+
+prerequisite_count = 0
+preequisite_levels = []
+
+[Inputs]
+fahrenheit = 'float'
+[Outputs]
+celsius = 'float'
+kelvin = 'float'
+
+[[Tests]]
+inputs = {"fahrenheit"=32.0}
+outputs = {"celsius"=0.0, "kelvin"=273.15}
+[[Tests]]
+inputs = {"fahrenheit"=0.0}
+outputs = {"celsius"=-17.7778, "kelvin"=255.3722}

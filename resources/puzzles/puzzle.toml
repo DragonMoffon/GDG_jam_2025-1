@@ -1,0 +1,18 @@
+[Config]
+name = ""
+title = ""
+description = ""
+available = []
+
+prerequisite_count = 1000
+preequisite_levels = ["shaboingy"]
+
+
+[Inputs]
+name = 'float' # float, int, str, bool
+[Outputs]
+name = 'float' # float, int, str, bool
+
+[[Tests]]
+inputs = {}
+outputs = {}
