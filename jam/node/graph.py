@@ -164,6 +164,7 @@ class BlockType:
         inputs: dict[str, type[OperationValue]] | None = None,
         outputs: dict[str, type[OperationValue]] | None = None,
         config: dict[str, type[OperationValue]] | None = None,
+        defaults: dict[str, OperationValue] | None = None,
         *,
         exclusive: bool = False,
     ) -> None:
@@ -181,6 +182,7 @@ class BlockType:
         self.inputs: dict[str, type[OperationValue]] = inputs or {}
         self.outputs: dict[str, type[OperationValue]] = outputs or {}
         self.config: dict[str, type[OperationValue]] = config or {}
+        self.defaults: dict[str, OperationValue] = defaults or {}
 
     def __str__(self):
         return self.name
@@ -413,6 +415,22 @@ ModBlock = BlockType(
 # min
 # incr
 # decr
+
+def __incr(value: IntValue | FloatValue) -> dict[str, IntValue | FloatValue]:
+    if value.type is float:
+        return {'result': FloatValue(value.value + 1)}
+    a_ = IntValue.__acast__(value)
+    return {'result': IntValue(a_.value + 1)}
+
+IncrBlock = BlockType('Increment', __incr, {'value': IntValue}, {'result': IntValue})
+
+def __decr(value: IntValue | FloatValue) -> dict[str, IntValue | FloatValue]:
+    if value.type is float:
+        return {'result': FloatValue(value.value - 1)}
+    a_ = IntValue.__acast__(value)
+    return {'result': IntValue(a_.value - 1)}
+
+IncrBlock = BlockType('Decrement', __decr, {'value': IntValue}, {'result': IntValue})
 
 # -- String Manipulation --
 
