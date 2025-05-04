@@ -286,6 +286,13 @@ class Editor:
             return
         cursor = self.get_base_cursor_pos()
 
+        # Find if we are hovering over a temp block
+        clicked_temp = None
+        for temp in self._controller.temporary:
+                if temp.contains_point(cursor):
+                    clicked_temp = temp
+                    break
+
         # Find if we are hovering over a block
         clicked_block = None
         for block in self._controller.blocks:
@@ -300,7 +307,14 @@ class Editor:
                 clicked_noodle = noodle
                 break
 
+
         if button == inputs.PRIMARY_CLICK:
+            if clicked_temp is not None:
+                config = clicked_temp.get_hovered_config(cursor)
+                if config is not None:
+                    self.set_mode_edit_config(clicked_temp, config)
+                    return
+
             if clicked_block is not None:
                 config = clicked_block.get_hovered_config(cursor)
                 if config is not None:
@@ -323,12 +337,6 @@ class Editor:
                 clicked_noodle.insert_link(line, cursor)
                 self.set_mode_drag_connection(clicked_noodle, line)
                 return
-
-            for temp in self._controller.temporary:
-                config = temp.get_hovered_config(cursor)
-                if config is not None:
-                    self.set_mode_edit_config(temp, config)
-                    return
 
             # If no block and no noodle clicked then pan the camera
             self._pan_camera = True
@@ -691,8 +699,10 @@ class EditorFrame(Frame):
                     color=(255, 255, 255, 255),
                 ).draw()
 
-        with path(puzzle_path, 'connect_mainbus.pzl') as pth:
-            self._editor = Editor(clip_rect, pth) # Editor(clip_rect, graph_src=Path("graph copy.toml"))
+        # with path(puzzle_path, 'connect_mainbus.pzl') as pth:
+        #     self._editor = Editor(clip_rect, pth) # Editor(clip_rect, graph_src=Path("graph copy.toml"))
+
+        self._editor = Editor(clip_rect)
 
         Frame.__init__(
             self, "EDITOR", tag_offset, position, size, show_body, show_shadow

@@ -120,7 +120,7 @@ class BlockOperation(Protocol):
     def __call__(
         self,
         **kwds: OperationValue,
-    ) -> Mapping[str, OperationValue]: ...
+    ) -> Mapping[str, OperationValue] | Mapping[str, FloatValue] | Mapping[str, IntValue] | Mapping[str, BoolValue] | Mapping[str, StrValue]: ...
 
 class TestCase:
 
@@ -423,25 +423,38 @@ def __eq(a: OperationValue, b: OperationValue) -> dict[str, BoolValue]:
 
 EqBlock = BlockType('Equal', __eq, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
 
-def __neq(): ...
+def __neq(a: OperationValue, b: OperationValue) -> dict[str, BoolValue]:
+    return {'result': BoolValue(a.value != b.value)}
 
-NeqBlock = BlockType('Different', __neq, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+NeqBlock = BlockType('Not Equal', __neq, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
 
-def __lt(): ...
+def __lt(a: FloatValue, b: FloatValue) -> dict[str, BoolValue]:
+    a_ = FloatValue.__acast__(a)
+    b_ = FloatValue.__acast__(b)
+    return {"result": BoolValue(a_.value < b_.value)}
 
-LtBlock = BlockType('Less', __lt, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+LtBlock = BlockType('Less', __lt, {'a': FloatValue, 'b': FloatValue}, {'result': BoolValue})
 
-def __gt(): ...
+def __gt(a: FloatValue, b: FloatValue) -> dict[str, BoolValue]:
+    a_ = FloatValue.__acast__(a)
+    b_ = FloatValue.__acast__(b)
+    return {"result": BoolValue(a_.value > b_.value)}
 
-GtBlock = BlockType('Greater', __gt, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+GtBlock = BlockType('Greater', __gt, {'a': FloatValue, 'b': FloatValue}, {'result': BoolValue})
 
-def __leq(): ...
+def __leq(a: FloatValue, b: FloatValue) -> dict[str, BoolValue]:
+    a_ = FloatValue.__acast__(a)
+    b_ = FloatValue.__acast__(b)
+    return {"result": BoolValue(a_.value <= b_.value)}
 
-LeqBlock = BlockType("Less Or Equal", __leq, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+LeqBlock = BlockType("Less Or Equal", __leq, {'a': FloatValue, 'b': FloatValue}, {'result': BoolValue})
 
-def __geq(): ...
+def __geq(a: FloatValue, b: FloatValue) -> dict[str, BoolValue]:
+    a_ = FloatValue.__acast__(a)
+    b_ = FloatValue.__acast__(b)
+    return {"result": BoolValue(a_.value >= b_.value)}
 
-GeqBlock = BlockType("Greater Or Equal", __geq, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+GeqBlock = BlockType("Greater Or Equal", __geq, {'a': FloatValue, 'b': FloatValue}, {'result': BoolValue})
 
 def __not(value: OperationValue) -> dict[str, BoolValue]:
     a_ = BoolValue.__acast__(value)

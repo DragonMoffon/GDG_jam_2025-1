@@ -10,10 +10,12 @@ from resources.style import FloatMotionMode
 from jam.view import View
 from jam.gui.frame import Frame, FrameController
 from jam.input import Button, Axis
+from jam.context import context
 
 from .editor import EditorFrame
 from .settings import SettingsFrame
 from .comms import CommsFrame
+from .info import InfoFrame
 
 
 class ParallaxBackground:
@@ -35,7 +37,7 @@ class ParallaxBackground:
                 data.foci[0] * layer.texture.texture.width,
                 data.foci[1] * layer.texture.texture.height,
             )
-            shift = (origin[0] - x) / (data.depth), (origin[1] - y) / (data.depth)
+            shift = int((origin[0] - x) / (data.depth)), int((origin[1] - y) / (data.depth))
             layer.pos = shift
 
     def update(self) -> None:
@@ -67,11 +69,10 @@ class GameView(View):
         self._editor_frame = EditorFrame(0.0, (self.width, 0.0), 720)
         self._editor_frame.connect_renderer(self._batch)
 
-        self._info_frame = Frame(
-            "INFO",
+        self._info_frame = InfoFrame(
             self._editor_frame.tag_height + 2 * style.format.padding,
             (self.width, 0.0),
-            (450, 720),
+            720,
         )
         self._info_frame.connect_renderer(self._batch)
 
@@ -95,6 +96,14 @@ class GameView(View):
             ),
             (self.width, 0.0),
         )
+    def on_show_view(self) -> None:
+        context.set_frames(self._editor_frame, self._info_frame, self._comms_frame, self._setting_frame)
+    
+    def on_hide_view(self) -> None:
+        context.clear_frames()
+
+    def select_frame(self, frame: Frame):
+        self._frame_controller.select_frame(frame)
 
     def on_draw(self) -> None:
         self.clear()

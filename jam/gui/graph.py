@@ -67,6 +67,8 @@ class ConnectionElement(Element):
         end_link = (end[0] - formating.corner_radius, end[1])
         self._links: list[tuple[float, float]] = [start_link, *links, end_link]
 
+        print(self._links)
+
         self._lines: list[Line] = []
         self._shadow_lines: list[Line] = []
 
@@ -75,6 +77,7 @@ class ConnectionElement(Element):
             line, shadow = self._create_link(prev, link)
             self._lines.append(line)
             self._shadow_lines.append(shadow)
+            prev = link
         line, shadow = self._create_link(prev, end)
         self._lines.append(line)
         self._shadow_lines.append(shadow)

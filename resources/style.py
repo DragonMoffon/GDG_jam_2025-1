@@ -89,6 +89,8 @@ class Editor:
     blink_speed: float
     background: Path
 
+    puzzle_alert: ImageData
+
     node_inactive: ImageData
     node_active: ImageData
     branch_inactive: ImageData
@@ -162,6 +164,7 @@ class Style:
             Editor(
                 editor_data['blink_speed'],
                 source / editor_data["background"],
+                load_texture(source / editor_data["puzzle_alert"]),
                 load_texture(source / editor_data["node_inactive"]),
                 load_texture(source / editor_data["node_active"]),
                 load_texture(source / editor_data["branch_inactive"]),
