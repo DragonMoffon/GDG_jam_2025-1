@@ -39,6 +39,7 @@ class EditorMode(Enum):
     ADD_CONNECTION = auto()
     SAVE_GRAPH = auto()
 
+
 class Editor:
 
     def __init__(self, region: Rect, puzzle: Puzzle | None = None, graph_src: Path | None = None) -> None:
@@ -81,6 +82,7 @@ class Editor:
         self._mode = EditorMode.NONE
         self._pan_camera: bool = False
         self._hovered_block: gui.BlockElement | None = None
+        self._results: gui.ResultsPanel | None = None
 
         # Drag Block
         self._selected_block: gui.BlockElement | None = None
@@ -177,6 +179,25 @@ class Editor:
         if self._save_popup is not None:
             self._gui.remove_element(self._save_popup)
             self._save_popup = None
+
+        if self._results is not None:
+            self._gui.remove_element(self._results)
+            self._results = None
+
+        if self._graph.output_uid is None:
+            return
+
+        output = self._controller.get_block(self._graph.output_uid)
+        rslt = self._graph.compute(output.block)
+        if not rslt.outputs:
+            return
+
+        self._results = gui.ResultsPanel(rslt)
+        self._results.update_position((
+            output.left + output.width + style.format.corner_radius,
+            output.bottom + style.format.footer_size
+        ))
+        self._gui.add_element(self._results)
 
     def set_mode_drag_block(self, block: gui.BlockElement) -> None:
         self._mode = EditorMode.DRAG_BLOCK
@@ -560,6 +581,12 @@ class Editor:
 
         x, y = self.get_base_cursor_pos()
         self._selected_block.update_position((x - self._offset[0], y - self._offset[1]))
+        if self._selected_block.uid == self._graph.output_uid and self._results is not None:
+            output = self._selected_block
+            self._results.update_position((
+                output.left + output.width + style.format.corner_radius,
+                output.bottom + style.format.footer_size
+            ))
 
     def drag_connection_on_cursor_motion(
         self, x: float, y: float, dx: float, dy: float

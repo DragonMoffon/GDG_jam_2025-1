@@ -3,7 +3,7 @@ from pathlib import Path
 from tomllib import load as load_toml
 
 from jam.node.graph import Graph, Block, Connection, BlockType, TestCase, BLOCK_CAST, STR_CAST, _variable
-from jam.node import blocks
+from jam.node import blocks as block_impl
 from jam.puzzle import Puzzle
 from jam.gui.graph import BlockElement, ConnectionElement, TempValueElement
 from jam.gui.core import Gui
@@ -53,7 +53,7 @@ class GraphController:
             raise KeyError(f"No block with uid {uid}")
         return self._block_elements[uid]
 
-    def get_connection(self, uid: UUID) ->ConnectionElement:
+    def get_connection(self, uid: UUID) -> ConnectionElement:
         if uid not in self._connection_elements.values():
             raise KeyError(f"No connection with uid {uid}")
 
@@ -154,6 +154,7 @@ class GraphController:
     def remove_temporary(self, temp: TempValueElement) -> None:
         self._gui.remove_element(temp)
         self._graph.remove_block(temp.block)
+        self._temp_elements.pop(temp.uid)
 
 
 def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:

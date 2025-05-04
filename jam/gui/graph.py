@@ -1,6 +1,6 @@
-from pyglet.graphics import Batch
+from pyglet.graphics import Batch, Group
 from pyglet.text import Label
-from pyglet.shapes import RoundedRectangle, Circle, Line
+from pyglet.shapes import RoundedRectangle, Line
 from pyglet.sprite import Sprite
 
 from resources import style
@@ -9,11 +9,11 @@ from resources import style
 # from jam.graphics.line import Line
 
 from jam.node.graph import (
-    Value,
     Block,
     Connection,
     BlockComputation,
     OperationValue,
+    TestCase
 )
 
 from .core import (
@@ -22,6 +22,8 @@ from .core import (
     BASE_PRIMARY,
     BASE_SHADOW,
     BASE_SPACING,
+    OVERLAY_PRIMARY,
+    OVERLAY_SHADOW
 )
 
 formating = style.format
@@ -295,7 +297,7 @@ class ConnectionElement(Element):
 
 class TextPanel(Element):
 
-    def __init__(self, char_count: int = 6):
+    def __init__(self, char_count: int = 6, group: Group = BASE_PRIMARY):
         self._text: Label = Label(
             "#" * char_count,
             0.0,
@@ -304,7 +306,7 @@ class TextPanel(Element):
             font_name=style.text.normal.name,
             font_size=style.text.normal.size,
             color=colors.accent,
-            group=BASE_PRIMARY,
+            group=group,
         )
         self._text_width = self._text.content_width
         self._panel: RoundedRectangle = RoundedRectangle(
@@ -315,7 +317,7 @@ class TextPanel(Element):
             formating.padding,
             4,
             colors.background,
-            group=BASE_PRIMARY,
+            group=group,
         )
 
         self._full_text = self._text.text = ""
@@ -379,14 +381,14 @@ class TextPanel(Element):
 
 class BoolPanel(Element):
 
-    def __init__(self, active: bool = False):
+    def __init__(self, active: bool = False, group: Group = BASE_PRIMARY):
         self._active: bool = active
         self._sprite = Sprite(
             style.game.editor.check_inactive,
             0.0,
             0.0,
             0.0,
-            group=BASE_PRIMARY,
+            group=group,
         )
         # self._sprite.color = colors.highlight
         if active:
@@ -780,10 +782,13 @@ class BlockElement(Element):
             self._header.y + formating.padding,
             0.0,
         )
+
+        line_height = (style.text.normal.size + 3 * formating.padding)
+
         dx = formating.padding
         for idx, node in enumerate(self._input_nodes.values()):
-            dy = (idx + 1) * (style.text.normal.size + 3*formating.padding)
-            of = (style.text.normal.size + 2*formating.padding - node.height) / 2.0
+            dy = (idx + 1) * line_height
+            of = (style.text.normal.size + 2 * formating.padding - node.height) / 2.0
             node.update_position((point[0] + dx, self._header.y - dy + of))
 
             if self._input_connections[node.name] is not None:
@@ -791,8 +796,8 @@ class BlockElement(Element):
 
         dx = self.width - formating.padding
         for idx, node in enumerate(self._output_nodes.values()):
-            dy = (idx + 1) * (style.text.normal.size + 3*formating.padding)
-            of = (style.text.normal.size + 2*formating.padding - node.height) / 2.0
+            dy = (idx + 1) * line_height
+            of = (style.text.normal.size + 2 * formating.padding - node.height) / 2.0
             node.update_position((point[0] + dx - node.width, self._header.y - dy + of))
 
             for connection in self._output_connections[node.name]:
@@ -800,8 +805,8 @@ class BlockElement(Element):
 
         dx = 2 * formating.padding + self.input_width
         for idx, panel in enumerate(self._config_panels.values()):
-            dy = (idx + 1) * (style.text.normal.size + 3*formating.padding)
-            of = (style.text.normal.size + 2*formating.padding - panel.height) / 2.0
+            dy = (idx + 1) * line_height
+            of = (style.text.normal.size + 2 * formating.padding - panel.height) / 2.0
             panel.update_position((point[0] + dx, self._header.y - dy + of))
 
     def contains_point(self, point: tuple[float, float]) -> bool:
@@ -912,3 +917,174 @@ class BlockElement(Element):
     @property
     def height(self) -> float:
         return self._body.height
+
+
+class ValueGroup(Element):
+
+    def __init__(self, values: dict[str, OperationValue], input_order: bool = True, success_marker: bool = False):
+        Element.__init__(self)
+        self._values = values
+        self._input_order = input_order
+
+        line_height = style.text.normal.size + 2 * formating.padding
+        h, w = 0.0, 0.0
+        self._names: list[Label] = []
+        self._panels: list[BoolPanel | TextPanel] = []
+        self._text_width: float = 0.0
+        self._panel_width: float = 0.0
+        for name, value in values.items():
+            label = Label(name, 0.0, 0.0, 0.0, font_name=style.text.normal.name, font_size=style.text.normal.size, color=colors.highlight, group=OVERLAY_PRIMARY)
+            self._names.append(label)
+            if value.type is bool:
+                panel = BoolPanel(group=OVERLAY_PRIMARY)
+                panel.active = value.value
+            else:
+                panel = TextPanel(group=OVERLAY_PRIMARY)
+                panel.text = str(value.value)
+            self._panels.append(panel)
+            self._text_width = max(self._text_width, label.content_width)
+            self._panel_width = max(self._panel_width, panel.width)
+        w = self._text_width + self._panel_width + formating.padding
+        h = len(values) * line_height + (len(values) - 1) * formating.padding
+
+        self._success: BoolPanel | None = BoolPanel() if success_marker else None
+        if success_marker:
+            w += formating.padding + self._success.width
+
+        self._body = RoundedRectangle(
+            0.0,
+            0.0,
+            w + 3 * formating.padding,
+            h + 2 * formating.padding,
+            formating.padding,
+            color=colors.base,
+            group=OVERLAY_PRIMARY
+        )
+
+    @property
+    def width(self) -> float:
+        return self._body.width
+
+    @property
+    def height(self) -> float:
+        return self._body.height
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._body.batch = batch
+        for panel in self._panels:
+            panel.connect_renderer(batch)
+        for name in self._names:
+            name.batch = batch
+        if self._success is not None:
+            self._success.batch = batch
+
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        l, b = self._body.position
+        w, h = self._body.width, self._body.height
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+
+    def update_position(self, point: tuple[float, float]) -> None:
+        self._body.position = point
+
+        if self._success is not None:
+            sx = point[0] + self._body.width - self._success.width - formating.padding
+            sy = point[1] + 0.5 * (self._body.height - self._success.height)
+            self._success.update_position((sx, sy))
+
+        if self._input_order:
+            tx = point[0] + self._panel_width + 2 * formating.padding
+            px = point[0] + formating.padding
+        else:
+            tx = point[0] + formating.padding
+            px = point[0] + self._text_width + 2 * formating.padding
+
+        line_height = style.text.normal.size + 3 * formating.padding
+        y = point[1] + self._body.height
+        for idx in range(len(self._values)):
+            dy = y - (idx + 1) * line_height
+            self._names[idx].position = tx, dy, 0.0
+            self._panels[idx].update_position((px, dy))
+
+
+class TestRunner(Element):
+
+    def __init__(self, tests: list[TestCase]):
+        Element.__init__(self)
+        self._tests: list[TestCase] = tests
+
+        self._pairs: list[tuple[ValueGroup, ValueGroup | None]] = []
+        wi = wo = h = 0.0
+
+        for case in tests:
+            inp = ValueGroup(case.inputs)
+            wi = max(wi, inp.width)
+            dh = inp.height
+            if case.outputs is not None:
+                out = ValueGroup(case.outputs, False, True)
+                wo = max(wo, out.width)
+                dh = max(dh, out.height)
+            else:
+                out = None
+            self._pairs.append((inp, out))
+            h += dh + formating.padding
+
+        self._input_body = RoundedRectangle(
+            0.0, 0.0, wi + 2 * formating.padding, h + 2 * formating.padding,
+            formating.padding, color=colors.background
+        )
+        self._output_body = RoundedRectangle(
+            0.0, 0.0, wo + 2 * formating.padding, h + 2 * formating.padding,
+            formating.padding, color=colors.background
+        )
+
+        self._run_one_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.accent)
+        self._run_all_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.accent)
+        hb = self._run_one_button.height + self._run_all_button.height + formating.padding
+
+        body_width = wi + self._run_one_button.width + wo + 2 * formating.padding + 2 * formating.corner_radius
+        body_height = max(h, hb) + 2 * formating.padding
+
+        self._body = RoundedRectangle(
+            0.0,
+            0.0,
+            body_width,
+            body_height,
+            formating.corner_radius,
+            color=colors.base
+        )
+        self._shadow = RoundedRectangle(
+            0.0,
+            0.0,
+            body_width,
+            body_height,
+            formating.corner_radius,
+            color=colors.dark,
+            program=get_shadow_shader()
+        )
+
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        l, b = self._body.position
+        w, h = self._body.width, self._body.height
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+
+
+class ResultsPanel(Element):
+
+    def __init__(self, result: BlockComputation):
+        Element.__init__(self)
+        self._data = ValueGroup(result.outputs, input_order=False)
+        self._shadow = RoundedRectangle(
+            0.0, 0.0, self._data.width, self._data.height, formating.padding,
+            color=colors.dark, program=get_shadow_shader(), group=OVERLAY_SHADOW
+        )
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._data.connect_renderer(batch)
+        self._shadow.batch = batch
+
+    def update_position(self, point: tuple[float, float]) -> None:
+        self._data.update_position(point)
+        self._shadow.position = (
+            point[0] - 2 * formating.drop_x,
+            point[1] - 2 * formating.drop_y
+        )
