@@ -1,0 +1,34 @@
+[Config]
+name = "signal_validation"
+title = "Signal Validation"
+description = """Only some of the signal's were getting are valid,
+but we need to check which ones.
+Valid signals are 8-bit numbers; they all start with a 1 in the most
+significant position, and have 5 on bits total."""
+available = []
+
+prerequisite_count = 0
+preequisite_levels = ["connect_mainbus"]
+
+base = ""
+
+[Inputs]
+input = 'int' # float, int, str, bool
+[Outputs]
+valid = 'bool' # float, int, str, bool
+
+[[Tests]]
+inputs = {'input': 0b10010111}
+outputs = {'valid': true}
+
+[[Tests]]
+inputs = {'input': 0b11011100}
+outputs = {'valid': true}
+
+[[Tests]]
+inputs = {'input': 0b11010111}
+outputs = {'valid': false}
+
+[[Tests]]
+inputs = {'input': 0b00010111}
+outputs = {'valid': false}
