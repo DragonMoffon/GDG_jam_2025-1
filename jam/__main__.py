@@ -12,7 +12,7 @@
 #   nuitka-project: --windows-console-mode=disable
 #   nuitka-project: --windows-icon-from-ico=icon.png
 
-from .main import main
+from jam.main import main
 
 if __name__ == "__main__":
     main()
