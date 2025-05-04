@@ -6,6 +6,8 @@ from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 from arcade.clock import GLOBAL_CLOCK
 
+from jam.audio import AUDIO
+
 from .core import Element, get_shadow_shader, OVERLAY_SPACING, OVERLAY_PRIMARY, OVERLAY_HIGHLIGHT
 from jam.input import inputs, Button, Axis
 from resources import style
@@ -194,6 +196,7 @@ class FrameController:
 
         if self._selected_frame is not None:
             self._animation_mode = FrameAnimationMode.HIDE
+            AUDIO.play("slide_in")
             self._animation_time = GLOBAL_CLOCK.time
             if self._next_frame is None:
                 self._next_frame = frame
@@ -204,6 +207,7 @@ class FrameController:
             frame.select()
 
             self._animation_mode = FrameAnimationMode.SHOW
+            AUDIO.play("slide_out")
             self._animation_time = GLOBAL_CLOCK.time
         else:
             self._pending_frame = frame
@@ -218,6 +222,7 @@ class FrameController:
             return
 
         self._animation_mode = FrameAnimationMode.HIDE
+        AUDIO.play("slide_in")
         self._animation_time = GLOBAL_CLOCK.time
 
     def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:

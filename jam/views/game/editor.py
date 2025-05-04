@@ -8,6 +8,7 @@ from arcade import Rect, LBWH, Vec2, Vec3, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
+from jam.audio import AUDIO
 from resources import style
 import resources.graphs as graph_path
 import resources.puzzles as puzzle_path
@@ -410,6 +411,7 @@ class Editor:
 
             self._controller.add_connection(self._incomplete_connection)
             self._incomplete_connection = None
+            AUDIO.play("blip_a")
             self.set_mode_none()
             return
 
@@ -429,6 +431,7 @@ class Editor:
             action = self._block_popup.get_hovered_item(cursor)
             if action is not None:
                 self._block_popup.actions[action]()
+            AUDIO.play("blip_e")
 
             self.set_mode_none()
 

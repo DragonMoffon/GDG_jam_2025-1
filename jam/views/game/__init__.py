@@ -143,11 +143,11 @@ class GameView(View):
 
         self._level_select: LevelSelect = LevelSelect(self._gui)
 
-        AUDIO.play("ambience_wind", "ambience1")
+        AUDIO.play("ambience_wind", "ambience1", True)
 
     def on_show_view(self) -> None:
         context.set_frames(self._frame_controller, self._editor_frame, self._info_frame, self._comms_frame, self._setting_frame)
-    
+
     def on_hide_view(self) -> None:
         context.clear_frames()
 

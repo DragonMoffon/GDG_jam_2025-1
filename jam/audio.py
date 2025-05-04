@@ -21,13 +21,17 @@ class Audio:
             self._players[channel] = Player()
 
         player = self._players[channel]
+        # Bodging this together -- bad for memory
+        player.delete()
+        player = Player()
         player.loop = loop
+        self._players[channel] = player
 
         if sound_name not in self._cache:
             sound_paths = self.root.glob(f"{sound_name}.*")
             try:
                 sound_path = next(sound_paths)
-                self._cache[sound_name] = load(sound_path)
+                self._cache[sound_name] = load(str(sound_path))
             except StopIteration as e:
                 raise ValueError(f"Invalid sound name {sound_name}.") from e
 
