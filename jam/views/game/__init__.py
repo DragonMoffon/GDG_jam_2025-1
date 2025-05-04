@@ -1,6 +1,7 @@
 from math import cos, sin, tau
 
 from pyglet.graphics import Batch
+from arcade import Camera2D
 from arcade.clock import GLOBAL_CLOCK
 from arcade.future.background import Background, BackgroundGroup
 
@@ -9,8 +10,11 @@ from resources.style import FloatMotionMode
 
 from jam.view import View
 from jam.gui.frame import Frame, FrameController
+from jam.gui.core import Gui
+from jam.gui.alert import AlertElement
 from jam.input import Button, Axis
 from jam.context import context
+from jam.puzzle import puzzles
 
 from .editor import EditorFrame
 from .settings import SettingsFrame
@@ -30,6 +34,8 @@ class ParallaxBackground:
         )
         self._background = BackgroundGroup([self._base, *self._layers])
 
+        self.layer_offsets: list[tuple[float, float]] = [(0.0, 0.0)] * len(self._layers)
+
     def cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         for idx, layer in enumerate(self._layers):
             data = style.game.background.layers[idx]
@@ -39,6 +45,7 @@ class ParallaxBackground:
             )
             shift = int((origin[0] - x) / (data.depth)), int((origin[1] - y) / (data.depth))
             layer.pos = shift
+            self.layer_offsets[idx] = shift[0] - layer.texture.offset[0], shift[1] - layer.texture.offset[1]
 
     def update(self) -> None:
         t = GLOBAL_CLOCK.time
@@ -49,13 +56,32 @@ class ParallaxBackground:
                 case FloatMotionMode.CIRCLE:
                     x = data.scale * cos(fraction * tau)
                     y = data.scale * sin(fraction * tau)
-                    layer.texture.offset = (x, y)
                 case FloatMotionMode.DIAGONAL:
                     x = data.scale * cos(fraction * tau)
-                    layer.texture.offset = (x, x)
+                    y = x
+            layer.texture.offset = (x, y)
+            self.layer_offsets[idx] = layer.pos[0] - x, layer.pos[1] - y
 
     def draw(self) -> None:
         self._background.draw()
+
+
+class LevelSelect:
+    
+    def __init__(self, gui: Gui) -> None:
+        self._gui = gui
+        puzzle = puzzles.get_puzzle('connect_mainbus')
+        pin, loc, face = puzzles.get_pin(puzzle)
+
+        alert = AlertElement(pin, loc, face, puzzle)
+        self._gui.add_element(alert)
+        self._offset = (0.0, 0.0)
+        self.alerts: dict[str, AlertElement] = {puzzle.name: alert}
+
+    def update_offset(self, offset: tuple[float, float]):
+        self._offset = offset
+        for alert in self.alerts.values():
+            alert.update_offset(offset)
 
 
 class GameView(View):
@@ -64,17 +90,22 @@ class GameView(View):
         View.__init__(self)
         self.background_color = style.game.background.colour
         self._background = ParallaxBackground()
-        self._batch = Batch()
+        self._background_projector = Camera2D(self.window.rect)
+        self._panel_projector = Camera2D(self.window.rect)
+        self._gui = Gui(
+            self._background_projector,
+            self._panel_projector
+        )
 
         self._editor_frame = EditorFrame(0.0, (self.width, 0.0), 720)
-        self._editor_frame.connect_renderer(self._batch)
+        self._gui.add_element(self._editor_frame)
 
         self._info_frame = InfoFrame(
             self._editor_frame.tag_height + 2 * style.format.padding,
             (self.width, 0.0),
             720,
         )
-        self._info_frame.connect_renderer(self._batch)
+        self._gui.add_element(self._info_frame)
 
         comm_offset = self._editor_frame.tag_height + self._info_frame.tag_height + 3 * style.format.padding
         self._comms_frame = CommsFrame(
@@ -82,10 +113,10 @@ class GameView(View):
             (self.width, 0.0),
             720,
         )
-        self._comms_frame.connect_renderer(self._batch)
+        self._gui.add_element(self._comms_frame)
 
         self._setting_frame = SettingsFrame((self.width, 0.0), 720)
-        self._setting_frame.connect_renderer(self._batch)
+        self._gui.add_element(self._setting_frame)
 
         self._frame_controller = FrameController(
             (
@@ -96,6 +127,9 @@ class GameView(View):
             ),
             (self.width, 0.0),
         )
+
+        self._level_select: LevelSelect = LevelSelect(self._gui)
+
     def on_show_view(self) -> None:
         context.set_frames(self._editor_frame, self._info_frame, self._comms_frame, self._setting_frame)
     
@@ -109,10 +143,11 @@ class GameView(View):
         self.clear()
         self._background.draw()
         self._frame_controller.on_draw()
-        self._batch.draw()
+        self._gui.draw()
 
     def on_update(self, delta_time: float) -> None:
         self._background.update()
+        self._level_select.update_offset(self._background.layer_offsets[0])
         self._frame_controller.on_update(delta_time)
 
     def on_input(self, input: Button, modifiers: int, pressed: bool) -> None:
@@ -123,6 +158,7 @@ class GameView(View):
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         self._background.cursor_motion(x, y, dx, dy)
+        self._level_select.update_offset(self._background.layer_offsets[0])
         self._frame_controller.on_cursor_motion(x, y, dx, dy)
 
     def on_cursor_scroll(

@@ -7,7 +7,7 @@ Valid signals are 8-bit numbers; they all start with a 1 in the most
 significant position, and have 5 'on' bits total."""
 
 prerequisite_count = 0
-preequisite_levels = ["connect_mainbus"]
+prerequisite_levels = ["connect_mainbus"]
 
 [Inputs]
 input = 'int' # float, int, str, bool

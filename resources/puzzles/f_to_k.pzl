@@ -14,7 +14,7 @@ available = [
 ]
 
 prerequisite_count = 0
-preequisite_levels = ["connect_mainbus"]
+prerequisite_levels = ["connect_mainbus"]
 
 [Inputs]
 fahrenheit = 'float'

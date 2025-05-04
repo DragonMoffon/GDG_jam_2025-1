@@ -753,7 +753,3 @@ class EditorFrame(Frame):
 
     def on_hide(self) -> None:
         self._editor.set_mode_none()
-        self._editor._gui.disable()
-
-    def on_select(self) -> None:
-        self._editor._gui.enable()

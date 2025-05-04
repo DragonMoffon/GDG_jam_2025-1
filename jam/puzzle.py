@@ -1,9 +1,11 @@
 from __future__ import annotations
 from pathlib import Path
-from uuid import UUID, uuid4
+from importlib.resources import path
 from tomllib import load as load_toml
 
 from jam.node.graph import BlockType, TestCase, STR_CAST, _variable
+
+import resources.puzzles as pzls
 
 class Puzzle:
     __puzzles__: dict[str, Puzzle] = {}
@@ -15,7 +17,7 @@ class Puzzle:
             description: str,
             available: tuple[BlockType, ...] | None,
             prerequisite_count: int,
-            preequisite_levels: list[str],
+            prerequisite_levels: list[str],
             input_type: BlockType,
             output_type: BlockType,
             source_graph: Path | None,
@@ -26,7 +28,7 @@ class Puzzle:
         self.description: str = description
         self.available: tuple[BlockType, ...] | None = available
         self.prerequisite_count: int = prerequisite_count
-        self.preequisite_levels: list[str] = preequisite_levels
+        self.prerequisite_levels: list[str] = prerequisite_levels
         self.input_type: BlockType = input_type
         self.output_type: BlockType = output_type
         self.source_graph: Path | None = source_graph
@@ -82,7 +84,7 @@ def load_puzzle(path: Path) -> Puzzle:
         config_data['description'],
         available,
         config_data['prerequisite_count'],
-        config_data['preequisite_levels'],
+        config_data['prerequisite_levels'],
         input_type,
         output_type,
         graph,
@@ -91,3 +93,50 @@ def load_puzzle(path: Path) -> Puzzle:
 
 def write_puzzle(path: Path, puzzle: Puzzle) -> None:
     pass
+
+class PuzzleCollection:
+
+    def __init__(self, pth: Path) -> None:
+        with open(pth, 'rb') as fp:
+            raw_data = load_toml(fp)
+
+        self._puzzles: dict[str, Puzzle] = {}
+        self._pins: dict[str, tuple[tuple[float, float], tuple[float, float], int]] = {}
+
+        for puzzle_path in pth.parent.glob('*.pzl'):
+            try:
+                puzzle = load_puzzle(puzzle_path)
+                self._puzzles[puzzle.name] = puzzle
+            except:
+                continue
+
+        for data in raw_data.get('Puzzle', []):
+            target = data['puzzle']
+            if target not in self._puzzles:
+                continue
+            self._pins[target] = (
+                data['pin'],
+                data['loc'],
+                data['face']
+            )
+
+    def get_available_puzzles(self, count: int, completed: set[str]) -> list[Puzzle]:
+        available: list[Puzzle] = []
+        for puzzle in self._puzzles.values():
+            if count < puzzle.prerequisite_count:
+                continue
+            req = completed.intersection(puzzle.prerequisite_levels)
+            if len(req) != len(puzzle.prerequisite_levels):
+                continue
+            available.append(puzzle)
+
+        return available
+    
+    def get_puzzle(self, name: str) -> Puzzle:
+        return self._puzzles[name]
+    
+    def get_pin(self, puzzle: Puzzle) -> tuple[tuple[float, float], tuple[float, float], int]:
+        return self._pins[puzzle.name]
+
+with path(pzls, "puzzles.cfg") as pth:
+    puzzles = PuzzleCollection(pth)

@@ -5,7 +5,7 @@ description = ""
 available = []
 
 prerequisite_count = 1000
-preequisite_levels = ["shaboingy"]
+prerequisite_levels = ["shaboingy"]
 
 base = ""
 

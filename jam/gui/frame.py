@@ -6,7 +6,7 @@ from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 from arcade.clock import GLOBAL_CLOCK
 
-from .core import Element, get_shadow_shader
+from .core import Element, get_shadow_shader, OVERLAY_SPACING, OVERLAY_PRIMARY, OVERLAY_HIGHLIGHT
 from jam.input import inputs, Button, Axis
 from resources import style
 
@@ -37,7 +37,7 @@ class Frame(Element):
             font_size=style.text.header.size,
             font_name=style.text.header.name,
             color=style.colors.highlight,
-            group=TAG_GROUP
+            group=OVERLAY_HIGHLIGHT
         )
         self._tag_text.set_style('line_spacing', style.text.header.size + style.format.padding)
         self._tag_panel = RoundedRectangle(
@@ -47,7 +47,7 @@ class Frame(Element):
             (style.format.corner_radius, style.format.corner_radius, 0, 0),
             (12, 12, 1, 1),
             color=style.colors.base,
-            group=TAG_GROUP
+            group=OVERLAY_HIGHLIGHT
         )
         self._tag_shadow = RoundedRectangle(
             0.0, 0.0,
@@ -55,7 +55,7 @@ class Frame(Element):
             (style.format.corner_radius, style.format.corner_radius, 0, 0),
             (12, 12, 1, 1),
             color=style.colors.dark,
-            group=SHADOW_GROUP,
+            group=OVERLAY_PRIMARY,
             program=get_shadow_shader()
         )
         radius = style.format.corner_radius + style.format.footer_size
@@ -82,7 +82,7 @@ class Frame(Element):
             (bottom_radius, top_radius, 0.0, 0.0),
             (bottom_segments, top_segments, 1, 1),
             color=style.colors.base,
-            group=ACTIVE_GROUP
+            group=OVERLAY_SPACING
         )
 
         self.update_position(position)

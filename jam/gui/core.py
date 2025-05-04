@@ -151,19 +151,13 @@ class Gui:
         )
         self._elements: dict[UUID, Element] = {}
 
-    def enable(self):
-        BASE_GROUP.projector = self._base_camera
-        OVERLAY_GROUP.projector = self._overlay_camera
-
-    def disable(self):
-        BASE_GROUP.projector = None
-        OVERLAY_GROUP.projector = None
-
     @property
     def renderer(self) -> Batch:
         return self._batch
 
     def draw(self):
+        BASE_GROUP.projector = self._base_camera
+        OVERLAY_GROUP.projector = self._overlay_camera
         self._batch.draw()
 
     def add_element(self, element: Element) -> None:
