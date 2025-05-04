@@ -4,7 +4,7 @@ from pyglet.shapes import RoundedRectangle
 
 from resources import style
 
-from jam.gui.frame import Frame, ACTIVE_GROUP
+from jam.gui.frame import Frame
 
 from jam.graphics.clip import ClippingMask
 from jam.gui import core
@@ -32,7 +32,7 @@ class CommsFrame(Frame):
         clip_rect = LBWH(0.0, 0.0, clip_size[0], clip_size[1])
         # Start position, target size, clip size, grouping for working with the frame rendering
         self.cliping_mask = ClippingMask(
-            (0.0, 0.0), clip_size, clip_size, group=ACTIVE_GROUP
+            (0.0, 0.0), clip_size, clip_size, group=core.OVERLAY_SPACING
         )
         # A projector that acts like arcade's default. Use if you want things to not move within the clip.
         self._clip_projector = ViewportProjector(clip_rect)

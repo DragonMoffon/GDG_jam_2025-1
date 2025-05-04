@@ -531,3 +531,116 @@ class TextInputPopup(Popup):
     @property
     def cursor(self) -> int:
         return self._text_input.cursor
+
+
+class PageTab(Element):
+
+    def __init__(self, text: str):
+        Element.__init__(self)
+        self._text = Label(text, 0, 0, 0, color=style.colors.accent, font_name=style.text.normal.name, font_size=style.text.normal.size, anchor_y='bottom', group=OVERLAY_PRIMARY)
+        self._panel = RoundedRectangle(
+            0.0,
+            0.0,
+            self._text.content_width + 2 * style.format.corner_radius,
+            self._text.content_height + 2 * style.format.padding,
+            (style.format.corner_radius, 0.0, 0.0, style.format.corner_radius),
+            (12, 1, 1, 12),
+            color=style.colors.base,
+            group=OVERLAY_PRIMARY
+        )
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._panel.batch = batch
+        self._text.batch = batch
+    
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        l, b = self._panel.position
+        w, h = self._panel.width, self._panel.height
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+
+    @property
+    def text(self) -> str:
+        return self._text.text
+    
+    @property
+    def width(self):
+        return self._panel.width
+
+    @property
+    def height(self):
+        return self._panel.height
+
+    def update_position(self, point: tuple[float, float]) -> None:
+        self._panel.position = point
+        self._text.position = point[0] + style.format.corner_radius, point[1] + style.format.padding, 0.0
+
+    def select(self):
+        self._text.set_style('color', style.colors.highlight)
+        self._panel.color = style.colors.base
+
+    def deselect(self):
+        self._text.set_style('color', style.colors.accent)
+        self._panel.color = style.colors.base
+
+class PageRow(Element):
+    
+    def __init__(self):
+        Element.__init__(self)
+        self._position: tuple[float, float] = (0.0, 0.0)
+        self._size: tuple[float, float] = (0.0, 0.0)
+        self._batch: Batch | None = None
+        self._tabs: list[PageTab] = []
+        self._tab_map: dict[str, PageTab] = {}
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._batch = batch
+        for tab in self._tabs:
+            tab.connect_renderer(batch)
+
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        l, t = self._position
+        w, h = self._size
+        return 0 <= point[0] - l <= w and 0 <= t - point[1] <= h
+    
+    def get_hovered_tab(self, point: tuple[float, float]) -> PageTab | None:
+        for tab in self._tabs:
+            if tab.contains_point(point):
+                return tab
+        return None
+    
+    def update_position(self, point: tuple[float, float]) -> None:
+        self._position = point
+        self.layout_tabs()
+    
+    def layout_tabs(self):
+        l, t = self._position
+        w, h = 0.0, 0.0
+        for tab in self._tabs:
+            tab.update_position((l + w, t - tab.height))
+            w = w + tab.width
+            h = max(h, tab.height)
+
+    def add_tab(self, tab: PageTab, idx: int = -1):
+        if tab.text in self._tab_map:
+            return
+        tab.connect_renderer(self._batch)
+        self._tabs.insert(idx, tab)
+        self._tab_map[tab.text] = tab
+        self.layout_tabs()
+
+    def rem_tab(self, tab: PageTab):
+        if tab.text not in self._tab_map:
+            return
+        tab.disconnect_renderer()
+        self._tabs.remove(tab)
+        self._tab_map.pop(tab.text)
+        self.layout_tabs()
+
+    def select_tab(self, tab: PageTab, only: bool = False):
+        if only:
+            for other in self._tabs:
+                other.deselect()
+        tab.select()
+
+    def get_tab(self, name: str) -> PageTab:
+        return self._tab_map[name]

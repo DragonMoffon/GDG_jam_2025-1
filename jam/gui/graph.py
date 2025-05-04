@@ -301,7 +301,6 @@ class TextPanel(Element):
             0.0,
             0.0,
             0.0,
-            anchor_y="bottom",
             font_name=style.text.normal.name,
             font_size=style.text.normal.size,
             color=colors.accent,

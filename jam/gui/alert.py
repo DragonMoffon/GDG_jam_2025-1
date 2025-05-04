@@ -23,12 +23,21 @@ class AlertElement(Element):
         self._puzzle = puzzle
 
         self._icon = Sprite(style.game.editor.puzzle_alert, location[0], location[1], group=BASE_PRIMARY)
+        self._body = RoundedRectangle(
+            self._icon.x,
+            self._icon.y,
+            self._icon.width,
+            self._icon.height,
+            style.format.padding,
+            color=style.colors.base,
+            group=BASE_PRIMARY
+        )
         self._select = RoundedRectangle(
             self._icon.x - style.format.select_radius,
             self._icon.y - style.format.select_radius,
             self._icon.width + 2 * style.format.select_radius,
             self._icon.height + 2 * style.format.select_radius,
-            style.format.corner_radius + style.format.select_radius,
+            style.format.padding + style.format.select_radius,
             color=style.colors.highlight,
             group=BASE_SPACING
         )
@@ -41,9 +50,14 @@ class AlertElement(Element):
         )
         self._place_lines()
 
+    @property
+    def puzzle(self) -> Puzzle:
+        return self._puzzle
+
     def connect_renderer(self, batch: Batch | None) -> None:
-        self._icon.batch = batch
+        self._body.batch = batch
         self._select.batch = batch
+        self._icon.batch = batch
         for line in self._lines:
             line.batch = batch
     

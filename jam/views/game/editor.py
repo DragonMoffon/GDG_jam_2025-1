@@ -16,7 +16,7 @@ from jam.node import graph
 from jam.controller import GraphController, read_graph, read_graph_from_level, write_graph, write_graph_from_level
 from jam.puzzle import Puzzle, load_puzzle
 from jam.gui import core, util, graph as gui
-from jam.gui.frame import Frame, ACTIVE_GROUP
+from jam.gui.frame import Frame
 from jam.graphics.clip import ClippingMask
 from jam.input import (
     inputs,
@@ -42,7 +42,7 @@ class EditorMode(Enum):
 
 class Editor:
 
-    def __init__(self, region: Rect, puzzle_src: Path | None = None, graph_src: Path | None = None) -> None:
+    def __init__(self, region: Rect, puzzle: Puzzle | None = None, graph_src: Path | None = None) -> None:
         self._region: Rect = region
         self._width = self._region.width
         self._height = self._region.height
@@ -58,8 +58,7 @@ class Editor:
         self._gui = core.Gui(self._base_camera, self._overlay_camera)
 
         # Graph
-        self._puzzle_src: Path | None = puzzle_src
-        self._puzzle: Puzzle | None = None if puzzle_src is None else load_puzzle(puzzle_src)
+        self._puzzle: Puzzle | None = puzzle
         self._graph_src: Path | None = graph_src
         if self._puzzle is not None:
             self._controller: GraphController = read_graph_from_level(self._puzzle, self._gui)
@@ -74,7 +73,7 @@ class Editor:
             output_type = graph.BlockType('Output', graph._variable, {}, {}, {}, exclusive=True)
             output_block = gui.BlockElement(graph.Block(output_type))
             output_block.update_position((750.0, 300.0))
-            self._controller = GraphController(self._gui, sandbox=True, input_block=input_block.uid, output_block=output_block.uid)
+            self._controller = GraphController(self._gui, "Sandbox", sandbox=True, input_block=input_block.uid, output_block=output_block.uid)
             self._graph = self._controller.graph
             self._controller.add_block(input_block)
             self._controller.add_block(output_block)
@@ -108,6 +107,10 @@ class Editor:
 
         # Save Graph
         self._save_popup: util.TextInputPopup | None = None
+
+    @property
+    def name(self) -> str:
+        return self._graph.name
 
     def set_mode_none(self) -> None:
         self._mode = EditorMode.NONE
@@ -474,11 +477,11 @@ class Editor:
         elif button == inputs.SPACE:
             self._save_popup.input_char(chr(Keys.UNDERSCORE))
         elif button == inputs.CONFIRM:
-            self._graph._name = self._save_popup.text
+            self._graph._name = self._save_popup.text.replace('_', ' ')
             if self._puzzle is not None:
                 write_graph_from_level(self._controller, self._puzzle)
             else:
-                with path(graph_path, f"{self._save_popup.text.replace('_', ' ')}.blk") as pth:
+                with path(graph_path, f"{self._graph._name}.blk") as pth:
                     write_graph(self._controller, pth)
             self.set_mode_none()
         elif button == inputs.BACKSPACE:
@@ -682,7 +685,7 @@ class EditorFrame(Frame):
         clip_size = int(size[0] - style.format.footer_size), int(
             size[1] - 2 * style.format.footer_size
         )
-        clip_rect = LBWH(0.0, 0.0, clip_size[0], clip_size[1])
+        clip_rect = self.clip_rect = LBWH(0.0, 0.0, clip_size[0], clip_size[1])
         self.cliping_mask = ClippingMask(
             (0.0, 0.0), clip_size, clip_size, group=core.OVERLAY_SPACING
         )
@@ -699,25 +702,69 @@ class EditorFrame(Frame):
                     color=(255, 255, 255, 255),
                 ).draw()
 
-        with path(puzzle_path, 'signal_validation.pzl') as pth:
-            self._editor = Editor(clip_rect, pth) # Editor(clip_rect, graph_src=Path("graph copy.toml"))
 
         # self._editor = Editor(clip_rect)
+
+        self._editor_tabs = util.PageRow()
+        self._editors: dict[str, Editor] = {'Sandbox': Editor(clip_rect)}
+        self._active_editor: Editor = self._editors['Sandbox']
+        tab = util.PageTab('Sandbox')
+        self._editor_tabs.add_tab(tab)
+        tab.select()
 
         Frame.__init__(
             self, "EDITOR", tag_offset, position, size, show_body, show_shadow
         )
 
+    def select_editor(self, name: str):
+        if name not in self._editors:
+            return
+
+        self._active_editor.set_mode_none()
+        self._active_editor = self._editors[name]
+        self._active_editor.cursor_offset = self.cliping_mask.position
+        self._active_editor.set_mode_none()
+
+    def open_editor(self, puzzle: Puzzle | None = None, graph_src: Path | None = None):
+        if puzzle is None and graph_src is None and 'Sandbox' in self._editors:
+            self.select_editor('Sandbox')
+            return
+        editor = Editor(self.clip_rect, puzzle, graph_src)
+        if editor.name in self._editors:
+            self.select_editor(editor.name)
+            return
+        self._editors[editor.name] = editor
+        tab = util.PageTab(editor.name)
+        self._editor_tabs.add_tab(tab)
+        self._editor_tabs.select_tab(tab, True)
+        self.select_editor(editor.name)
+
+    def close_editor(self, name: str):
+        if name not in self._editors:
+            return
+        
+        closing_editor = self._editors.pop(name)
+        if self._active_editor.name == name:
+            self._active_editor = tuple(self._editors.values())[0]
+            self._active_editor.set_mode_none()
+
+        # TODO: decide what to do with closing editor
+
     def connect_renderer(self, batch: Batch | None) -> None:
         Frame.connect_renderer(self, batch)
         self.cliping_mask.batch = batch
+        self._editor_tabs.connect_renderer(batch)
 
     def update_position(self, point: tuple[float, float]) -> None:
         Frame.update_position(self, point)
-        self.cliping_mask.position = self._editor.cursor_offset = (
+        self.cliping_mask.position = self._active_editor.cursor_offset = (
             point[0] + style.format.footer_size,
             point[1] + style.format.footer_size,
         )
+        self._editor_tabs.update_position((
+            point[0] + style.format.footer_size,
+            point[1] + style.format.footer_size + self.cliping_mask.size[1]
+        ))
 
     @property
     def show_body(self) -> bool:
@@ -730,26 +777,47 @@ class EditorFrame(Frame):
         self.cliping_mask.visible = show
 
     def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:
-        self._editor.on_input(input, modifiers, pressed)
+        if pressed:
+            tab = self._editor_tabs.get_hovered_tab(inputs.cursor)
+            if tab is not None:
+                if input == inputs.PRIMARY_CLICK:
+                    self._editor_tabs.select_tab(tab, True)
+                    self.select_editor(tab.text)
+                    return
+                elif input == inputs.SECONDARY_CLICK:
+                    if len(self._editors) == 1:
+                        if 'Sandbox' in self._editors:
+                            return
+                        self.open_editor()
+                    self._editor_tabs.rem_tab(tab)
+                    self.close_editor(tab.text)
+                    return
+        self._active_editor.on_input(input, modifiers, pressed)
 
     def on_axis_change(self, axis: Axis, value_1: float, value_2: float):
-        self._editor.on_axis_change(axis, value_1, value_2)
+        self._active_editor.on_axis_change(axis, value_1, value_2)
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:
-        self._editor.on_cursor_motion(x, y, dx, dy)
+        tab = self._editor_tabs.get_hovered_tab(inputs.cursor)
+        if tab is not None:
+            self._editor_tabs.select_tab(tab, True)
+            self._editor_tabs.select_tab(self._editor_tabs.get_tab(self._active_editor.name))
+        else:
+            self._editor_tabs.select_tab(self._editor_tabs.get_tab(self._active_editor.name), True)
+        self._active_editor.on_cursor_motion(x, y, dx, dy)
 
     def on_cursor_scroll(
         self, x: float, y: float, scroll_x: float, scroll_y: float
     ) -> bool | None:
-        self._editor.on_cursor_scroll(x, y, scroll_x, scroll_y)
+        self._active_editor.on_cursor_scroll(x, y, scroll_x, scroll_y)
 
     def on_draw(self) -> None:
         with self.cliping_mask.target:
             with self._clip_projector.activate():
-                self._editor.draw()
+                self._active_editor.draw()
 
     def on_update(self, delta_time: float):
-        self._editor.update(delta_time)
+        self._active_editor.update(delta_time)
 
     def on_hide(self) -> None:
-        self._editor.set_mode_none()
+        self._active_editor.set_mode_none()
