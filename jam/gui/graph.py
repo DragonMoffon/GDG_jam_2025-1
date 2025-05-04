@@ -628,7 +628,7 @@ class TempValueElement(Element):
     def update_position(self, point: tuple[float, float]) -> None:
         self.update_end(point)
 
-    def contains_point(self, point: tuple[float, float]) -> None:
+    def contains_point(self, point: tuple[float, float]) -> bool:
         return self._panel.contains_point(point)
 
     def connect_renderer(self, batch: Batch | None) -> None:

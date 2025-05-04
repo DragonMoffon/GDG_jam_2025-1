@@ -136,7 +136,9 @@ class GraphController:
 
         block_typ = block.block.type
         temp_type = BLOCK_CAST[block_typ.inputs[inp]._typ]
-        temp_block = Block(temp_type, uid=None, **{name: value for name, value in block_typ.defaults.items()})
+        temp_block = Block(temp_type, uid=None)
+        if inp in block_typ.defaults:
+            temp_block.config['value'] = block_typ.defaults[inp]
         temp_connection = Connection(temp_block.uid, "value", block.uid, inp)
         element = TempValueElement(temp_block, temp_connection)
         element.update_end(block.get_input(inp).link_pos)
