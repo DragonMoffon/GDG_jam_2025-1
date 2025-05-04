@@ -21,7 +21,7 @@ def __replace(a: StrValue, old: StrValue, new: StrValue) -> dict[str, StrValue]:
     new_ = StrValue.__acast__(new)
     return {"result": StrValue(a_.value.replace(old_, new_))}
 
-RepBlock = BlockType("Concat", __len, {'a': StrValue, 'old': StrValue, 'new': StrValue}, {'result': StrValue})
+RepBlock = BlockType("Replace", __len, {'a': StrValue, 'old': StrValue, 'new': StrValue}, {'result': StrValue})
 
 def _substr(a: StrValue, start: IntValue, end: IntValue) -> dict[str, StrValue]:
     a_ = StrValue.__acast__(a)
