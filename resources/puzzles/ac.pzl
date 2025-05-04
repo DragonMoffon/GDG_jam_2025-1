@@ -22,14 +22,18 @@ power = 'float' # float, int, str, bool
 inputs = {'temp' = 290}
 outputs = {'power' = 0}
 
+[[Tests]]
 inputs = {'temp' = 295.15}
 outputs = {'power' = 0}
 
+[[Tests]]
 inputs = {'temp' = 299.15}
 outputs = {'power' = 50}
 
+[[Tests]]
 inputs = {'temp' = 303.15}
 outputs = {'power' = 100}
 
+[[Tests]]
 inputs = {'temp' = 310}
 outputs = {'power' = 100}
