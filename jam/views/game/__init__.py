@@ -1,13 +1,6 @@
-from math import cos, sin, tau
-
-from pyglet.graphics import Batch
 from arcade import Camera2D
-from arcade.clock import GLOBAL_CLOCK
-from arcade.future.background import Background, BackgroundGroup
 
-from jam.audio import AUDIO
 from resources import style
-from resources.style import FloatMotionMode
 
 from jam.view import View
 from jam.gui.frame import Frame, FrameController
@@ -16,6 +9,7 @@ from jam.gui.alert import AlertElement
 from jam.input import inputs, Button, Axis
 from jam.context import context
 from jam.puzzle import puzzles
+from jam.graphics.background import ParallaxBackground
 
 from .editor import EditorFrame
 from .settings import SettingsFrame
@@ -23,52 +17,8 @@ from .comms import CommsFrame
 from .info import InfoFrame
 
 
-class ParallaxBackground:
-
-    def __init__(self):
-        self._base: Background = Background.from_file(
-            style.game.background.base, style.game.background.base_offset
-        )
-        self._layers: tuple[Background, ...] = tuple(
-            Background.from_file(floating.src, floating.offset)
-            for floating in style.game.background.layers
-        )
-        self._background = BackgroundGroup([self._base, *self._layers])
-
-        self.layer_offsets: list[tuple[float, float]] = [(0.0, 0.0)] * len(self._layers)
-
-    def cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
-        for idx, layer in enumerate(self._layers):
-            data = style.game.background.layers[idx]
-            origin = (
-                data.foci[0] * layer.texture.texture.width,
-                data.foci[1] * layer.texture.texture.height,
-            )
-            shift = int((origin[0] - x) / (data.depth)), int((origin[1] - y) / (data.depth))
-            layer.pos = shift
-            self.layer_offsets[idx] = shift[0] - layer.texture.offset[0], shift[1] - layer.texture.offset[1]
-
-    def update(self) -> None:
-        t = GLOBAL_CLOCK.time
-        for idx, layer in enumerate(self._layers):
-            data = style.game.background.layers[idx]
-            fraction = (t + data.sync) % data.rate / data.rate
-            match data.mode:
-                case FloatMotionMode.CIRCLE:
-                    x = data.scale * cos(fraction * tau)
-                    y = data.scale * sin(fraction * tau)
-                case FloatMotionMode.DIAGONAL:
-                    x = data.scale * cos(fraction * tau)
-                    y = x
-            layer.texture.offset = (x, y)
-            self.layer_offsets[idx] = layer.pos[0] - x, layer.pos[1] - y
-
-    def draw(self) -> None:
-        self._background.draw()
-
-
 class LevelSelect:
-    
+
     def __init__(self, gui: Gui) -> None:
         self._gui = gui
         puzzle = puzzles.get_puzzle('connect_mainbus')
@@ -79,7 +29,7 @@ class LevelSelect:
         self._offset = (0.0, 0.0)
         self._alerts: dict[str, AlertElement] = {puzzle.name: alert}
 
-    def update_offset(self, offset: tuple[float, float]):
+    def update_offset(self, offset: tuple[float, float]) -> None:
         self._offset = offset
         for alert in self._alerts.values():
             alert.update_offset(offset)
@@ -89,13 +39,14 @@ class LevelSelect:
             if alert.contains_point(point):
                 return alert
         return None
-    
+
     def highlight_alert(self, alert: AlertElement | None = None) -> None:
         for other in self._alerts.values():
             other.deselect()
-    
+
         if alert is not None:
             alert.highlight()
+
 
 class GameView(View):
 
@@ -143,7 +94,7 @@ class GameView(View):
 
         self._level_select: LevelSelect = LevelSelect(self._gui)
 
-        AUDIO.play("ambience_wind", "ambience1", True)
+        style.audio.ambient_wind.play('ambience1', True)
 
     def on_show_view(self) -> None:
         context.set_frames(self._frame_controller, self._editor_frame, self._info_frame, self._comms_frame, self._setting_frame)

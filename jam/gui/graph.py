@@ -190,7 +190,7 @@ class ConnectionElement(Element):
 
         # self._joints[link].position = point
         # self._shadow_joints[link] = shadow
-        
+
         pl = self._lines[link]
         nl = self._lines[link + 1]
 

@@ -8,14 +8,12 @@ from arcade import Rect, LBWH, Vec2, Vec3, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
-from jam.audio import AUDIO
 from resources import style
 import resources.graphs as graph_path
-import resources.puzzles as puzzle_path
 
 from jam.node import graph
 from jam.controller import GraphController, read_graph, read_graph_from_level, write_graph, write_graph_from_level
-from jam.puzzle import Puzzle, load_puzzle
+from jam.puzzle import Puzzle
 from jam.gui import core, util, graph as gui
 from jam.gui.frame import Frame
 from jam.graphics.clip import ClippingMask
@@ -370,9 +368,9 @@ class Editor:
         if button == inputs.PRIMARY_CLICK and not pressed:
             self.set_mode_none()
             return
-        
+
     def drag_connection_on_input(
-        self, button: Button, modifiers: int, pressed: bool            
+        self, button: Button, modifiers: int, pressed: bool
     ) -> None:
         if button == inputs.PRIMARY_CLICK and not pressed:
             self.set_mode_none()
@@ -411,7 +409,7 @@ class Editor:
 
             self._controller.add_connection(self._incomplete_connection)
             self._incomplete_connection = None
-            AUDIO.play("blip_a")
+            style.audio.connection.play()
             self.set_mode_none()
             return
 
@@ -431,7 +429,7 @@ class Editor:
             action = self._block_popup.get_hovered_item(cursor)
             if action is not None:
                 self._block_popup.actions[action]()
-            AUDIO.play("blip_e")
+            style.audio.block.play()
 
             self.set_mode_none()
 
@@ -745,7 +743,7 @@ class EditorFrame(Frame):
     def close_editor(self, name: str):
         if name not in self._editors:
             return
-        
+
         closing_editor = self._editors.pop(name)
         if self._active_editor.name == name:
             self._active_editor = tuple(self._editors.values())[0]
@@ -779,7 +777,7 @@ class EditorFrame(Frame):
         self._panel.visible = show
         self.cliping_mask.visible = show
 
-    def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:
+    def on_input(self, input: Button, modifiers: int, pressed: bool) -> None:
         if pressed:
             tab = self._editor_tabs.get_hovered_tab(inputs.cursor)
             if tab is not None:
@@ -797,10 +795,10 @@ class EditorFrame(Frame):
                     return
         self._active_editor.on_input(input, modifiers, pressed)
 
-    def on_axis_change(self, axis: Axis, value_1: float, value_2: float):
+    def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> None:
         self._active_editor.on_axis_change(axis, value_1, value_2)
 
-    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:
+    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         tab = self._editor_tabs.get_hovered_tab(inputs.cursor)
         if tab is not None:
             self._editor_tabs.select_tab(tab, True)

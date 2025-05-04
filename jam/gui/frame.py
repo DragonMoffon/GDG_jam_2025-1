@@ -6,8 +6,6 @@ from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 from arcade.clock import GLOBAL_CLOCK
 
-from jam.audio import AUDIO
-
 from .core import Element, get_shadow_shader, OVERLAY_SPACING, OVERLAY_PRIMARY, OVERLAY_HIGHLIGHT
 from jam.input import inputs, Button, Axis
 from resources import style
@@ -196,10 +194,10 @@ class FrameController:
 
         if self._selected_frame is not None:
             self._animation_mode = FrameAnimationMode.HIDE
-            AUDIO.play("slide_in")
             self._animation_time = GLOBAL_CLOCK.time
             if self._next_frame is None:
                 self._next_frame = frame
+                style.audio.slide_in.play()
             else:
                 self._pending_frame = frame
         elif self._next_frame is None:
@@ -207,8 +205,8 @@ class FrameController:
             frame.select()
 
             self._animation_mode = FrameAnimationMode.SHOW
-            AUDIO.play("slide_out")
             self._animation_time = GLOBAL_CLOCK.time
+            style.audio.slide_out.play()
         else:
             self._pending_frame = frame
 
@@ -222,8 +220,8 @@ class FrameController:
             return
 
         self._animation_mode = FrameAnimationMode.HIDE
-        AUDIO.play("slide_in")
         self._animation_time = GLOBAL_CLOCK.time
+        style.audio.slide_in.play()
 
     def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None:
         if input == inputs.PRIMARY_CLICK and pressed:
@@ -294,6 +292,7 @@ class FrameController:
 
                     self._animation_mode = FrameAnimationMode.SHOW
                     self._animation_time = time + style.game.panels.panel_speed - length
+                    style.audio.slide_out.play()
                 else:
                     self._animation_mode = FrameAnimationMode.NONE
                     self._animation_time = 0.0
@@ -309,6 +308,7 @@ class FrameController:
                 self._animation_time = 0.0
 
                 self._selected_frame.update_position((self._pos[0] - self._selected_frame.panel_width, self._pos[1]))
+                style.audio.slide_in.play()
             else:
                 x = self._pos[0] - (1 - (1 - fraction)**3) * self._next_frame.panel_width
                 self._next_frame.update_position((x, self._pos[1]))

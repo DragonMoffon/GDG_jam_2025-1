@@ -10,6 +10,7 @@ from pyglet.image import ImageData, load as load_texture
 
 import resources.styles as styles
 
+from .audio import Sound
 
 __all__ = ("STYLE",)
 
@@ -66,6 +67,14 @@ class Floating:
             data["rate"],
         )
 
+@dataclass
+class Audio:
+    slide_in: Sound
+    slide_out: Sound
+    connection: Sound
+    block: Sound
+    modal: Sound
+    ambient_wind: Sound
 
 @dataclass
 class Background:
@@ -140,6 +149,11 @@ class Style:
         load_font(source / self.text.header.path)
 
         self.format = Format(**self._raw["Format"])
+
+        audio_data = self._raw["Audio"]
+        self.audio = Audio(
+            **{name: Sound(source / pth) for name, pth in audio_data.items()}
+        )
 
         background_data = self._raw["Game"]["Background"]
         panel_data = self._raw["Game"]["Panels"]
