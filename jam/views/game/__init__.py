@@ -5,6 +5,7 @@ from arcade import Camera2D
 from arcade.clock import GLOBAL_CLOCK
 from arcade.future.background import Background, BackgroundGroup
 
+from jam.audio import AUDIO
 from resources import style
 from resources.style import FloatMotionMode
 
@@ -141,6 +142,8 @@ class GameView(View):
         )
 
         self._level_select: LevelSelect = LevelSelect(self._gui)
+
+        AUDIO.play("ambience_wind", "ambience1")
 
     def on_show_view(self) -> None:
         context.set_frames(self._frame_controller, self._editor_frame, self._info_frame, self._comms_frame, self._setting_frame)
