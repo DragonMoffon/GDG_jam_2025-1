@@ -70,7 +70,6 @@ def load_puzzle(path: Path) -> Puzzle:
         graph = path.parent / graph
 
     test_data: list[dict[str, dict[str, str | float | int | bool]]] = raw_data.get('Tests', [])
-    print(test_data)
     tests: list[TestCase] = []
     for case in test_data:
         case_inputs = {name: inputs[name](value) for name, value in case['inputs'].items()}

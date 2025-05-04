@@ -202,7 +202,6 @@ class Editor:
 
         config_panel = block.get_config(config)
         config_type = block.block.config[config].type
-        print(config_type)
         if config_type is bool:
             block.block.config[config] = block.block.config[config].invert()
             config_panel.active = block.block.config[config].value
