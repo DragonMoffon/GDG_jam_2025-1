@@ -1,4 +1,3 @@
-from uuid import UUID
 from jam.gui.frame import Frame
 
 class InfoFrame(Frame):

@@ -699,10 +699,10 @@ class EditorFrame(Frame):
                     color=(255, 255, 255, 255),
                 ).draw()
 
-        # with path(puzzle_path, 'connect_mainbus.pzl') as pth:
-        #     self._editor = Editor(clip_rect, pth) # Editor(clip_rect, graph_src=Path("graph copy.toml"))
+        with path(puzzle_path, 'signal_validation.pzl') as pth:
+            self._editor = Editor(clip_rect, pth) # Editor(clip_rect, graph_src=Path("graph copy.toml"))
 
-        self._editor = Editor(clip_rect)
+        # self._editor = Editor(clip_rect)
 
         Frame.__init__(
             self, "EDITOR", tag_offset, position, size, show_body, show_shadow

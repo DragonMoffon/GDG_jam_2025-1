@@ -462,6 +462,20 @@ def __not(value: OperationValue) -> dict[str, BoolValue]:
 
 NotBlock = BlockType("Not", __not, {'value': BoolValue}, {'result': BoolValue})
 
+def __and(a: BoolValue, b: BoolValue) -> dict[str, BoolValue]:
+    a_ = BoolValue.__acast__(a)
+    b_ = BoolValue.__acast__(b)
+    return {"result": BoolValue(a_.value and b_.value)}
+
+AndBlock = BlockType("And", __and, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+
+def __or(a: BoolValue, b: BoolValue) -> dict[str, BoolValue]:
+    a_ = BoolValue.__acast__(a)
+    b_ = BoolValue.__acast__(b)
+    return {"result": BoolValue(a_.value or b_.value)}
+
+OrBlock = BlockType("Or", __or, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+
 # -- Logic and Looping --
 
 # if, elif, else

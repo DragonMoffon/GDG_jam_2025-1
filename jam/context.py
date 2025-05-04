@@ -33,6 +33,8 @@ class SaveData:
 class Context:
 
     def __init__(self) -> None:
+        self._current_save: SaveData | None = None
+
         self._editor_frame: EditorFrame | None = None
         self._info_frame: InfoFrame | None = None
         self._comms_frame: CommsFrame | None = None
