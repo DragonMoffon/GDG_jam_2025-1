@@ -3,6 +3,7 @@ from pathlib import Path
 from tomllib import load as load_toml
 
 from jam.node.graph import Graph, Block, Connection, BlockType, TestCase, BLOCK_CAST, STR_CAST, _variable
+from jam.node import blocks
 from jam.puzzle import Puzzle
 from jam.gui.graph import BlockElement, ConnectionElement, TempValueElement
 from jam.gui.core import Gui
