@@ -684,7 +684,7 @@ class EditorFrame(Frame):
         )
         clip_rect = LBWH(0.0, 0.0, clip_size[0], clip_size[1])
         self.cliping_mask = ClippingMask(
-            (0.0, 0.0), clip_size, clip_size, group=ACTIVE_GROUP
+            (0.0, 0.0), clip_size, clip_size, group=core.OVERLAY_SPACING
         )
         self._clip_projector = ViewportProjector(clip_rect)
         with self.cliping_mask.clip:
