@@ -1,27 +1,26 @@
 [Config]
 name = ""
-blocks = false
-connections = false
 
-[Blocks]
+[Block]
 
-[[Blocks.Variables]]
+[[Block.Variable]]
 name = ""
 inputs = {}
 outputs = {}
 
 
-[[Blocks.Data]]
+[[Block.Data]]
 type = ""
 uid = ""
 config = {}
 position = []
 
 
-[Connections]
-[[Connections.Data]]
+[Connection]
+[[Connection.Data]]
 uid = ""
 source = ""
 output = ""
 target = ""
 input = ""
+links = []

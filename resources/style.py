@@ -54,7 +54,7 @@ class Floating:
     rate: float
 
     @classmethod
-    def create(cls, data: dict[str, Any], source) -> Self:
+    def create(cls, data: dict[str, Any], source: Path) -> Self:
         return cls(
             source / data["src"],
             data["offset"],
@@ -123,7 +123,7 @@ class Text:
 class Style:
 
     def __init__(self, source: Path):
-        with open(source / "style.toml", "rb") as fp:
+        with open(source / "style.cfg", "rb") as fp:
             self._raw = tomllib.load(fp)
 
         self.name = self._raw["name"]

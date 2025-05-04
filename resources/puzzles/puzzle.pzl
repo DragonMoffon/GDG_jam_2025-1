@@ -7,6 +7,7 @@ available = []
 prerequisite_count = 1000
 preequisite_levels = ["shaboingy"]
 
+base = ""
 
 [Inputs]
 name = 'float' # float, int, str, bool

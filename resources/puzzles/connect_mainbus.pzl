@@ -1,0 +1,47 @@
+[Config]
+name = "connect_mainbus"
+title = "Reconnect the Station"
+description = """
+The main power and data busses of the powerstation are down.
+You must reconnect them for station repairs to begin.
+"""
+available = []
+
+prerequisite_count = 0
+preequisite_levels = []
+
+[Inputs]
+POWER_BUS_1 = 'float' # float, int, str, bool
+POWER_BUS_2 = 'float' # float, int, str, bool
+POWER_BUS_3 = 'float' # float, int, str, bool
+DATA_BUS_1 = 'float' # float, int, str, bool
+DATA_BUS_2 = 'float' # float, int, str, bool
+NETWORK_BUS_1 = 'float' # float, int, str, bool
+NETWORK_BUS_2 = 'float' # float, int, str, bool
+[Outputs]
+POWER_BUS_1 = 'float' # float, int, str, bool
+POWER_BUS_2 = 'float' # float, int, str, bool
+POWER_BUS_3 = 'float' # float, int, str, bool
+DATA_BUS_1 = 'float' # float, int, str, bool
+DATA_BUS_2 = 'float' # float, int, str, bool
+NETWORK_BUS_1 = 'float' # float, int, str, bool
+NETWORK_BUS_2 = 'float' # float, int, str, bool
+
+[[Tests]]
+[Tests.inputs]
+POWER_BUS_1 = 0.0
+POWER_BUS_2 = 0.0
+POWER_BUS_3 = 0.0
+DATA_BUS_1 = 0.0
+DATA_BUS_2 = 0.0
+NETWORK_BUS_1 = 0.0
+NETWORK_BUS_2 = 0.0
+
+[Tests.outputs]
+POWER_BUS_1 = 0.0
+POWER_BUS_2 = 0.0
+POWER_BUS_3 = 0.0
+DATA_BUS_1 = 0.0
+DATA_BUS_2 = 0.0
+NETWORK_BUS_1 = 0.0
+NETWORK_BUS_2 = 0.0

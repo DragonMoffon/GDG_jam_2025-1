@@ -1,5 +1,5 @@
 [Config]
-name = "f_to_k"
+name = "f_to_k" # Internal name for reference in 
 title = "Convert Temperature"
 description = """
 The temperature nodes in the station got reset to factory settings,
@@ -10,11 +10,11 @@ and 32 fahrenheit is 0 celsius.
 0 celsius is 273.15 kelvin.
 """
 available = [ 
-    "Int", "Float", "Add", "Sub", "Multiply", "Divide"
+    "Int", "Float", "Add", "Subtract", "Multiply", "Divide"
 ]
 
 prerequisite_count = 0
-preequisite_levels = []
+preequisite_levels = ["connect_mainbus"]
 
 [Inputs]
 fahrenheit = 'float'

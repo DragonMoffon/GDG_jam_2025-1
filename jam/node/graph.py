@@ -55,7 +55,7 @@ class Value(Generic[T_co]):
 
 
 class IntValue(Value[int]):
-    __auto_castable__ = {float, bool}
+    __auto_castable__ = {float}
     _typ = int
 
     def __init__(self, value: int | None = None) -> None:
@@ -81,7 +81,7 @@ class IntValue(Value[int]):
 
 
 class FloatValue(Value[float]):
-    __auto_castable__ = {int, bool}
+    __auto_castable__ = {int}
     _typ = float
 
     def __init__(self, value: float | None = None) -> None:
@@ -89,7 +89,7 @@ class FloatValue(Value[float]):
 
 
 class StrValue(Value[str]):
-    __auto_castable__ = {bool}
+    __auto_castable__ = set()
     _typ = str
 
     def __init__(self, value: str | None = None) -> None:
@@ -97,7 +97,7 @@ class StrValue(Value[str]):
 
 
 class BoolValue(Value[bool]):
-    __auto_castable__ = {str}
+    __auto_castable__ = {str, float, int}
     _typ = bool
 
     def __init__(self, value: bool | None = None) -> None:
@@ -122,6 +122,29 @@ class BlockOperation(Protocol):
         **kwds: OperationValue,
     ) -> Mapping[str, OperationValue]: ...
 
+class TestCase:
+
+    def __init__(self, inputs: dict[str, OperationValue], outputs: dict[str, OperationValue]) -> None:
+        self.inputs = inputs
+        self.outputs = outputs
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, TestCase):
+            return False
+
+        if self.inputs.keys() != other.inputs.keys():
+            return False
+        if self.outputs.keys() != other.outputs.keys():
+            return False
+
+        for name, value in self.inputs.items():
+            if other.inputs[name].value != value.value:
+                return False
+        
+        for name, value in self.outputs.items():
+            if other.outputs[name].value != value.value:
+                return False
+        return True
 
 @dataclass
 class BlockComputation:
@@ -237,7 +260,7 @@ class Connection:
 # We don't need to define 'VariableBlock' as a type anymore yippee (just its operation)
 
 
-def __variable(**kwds: OperationValue) -> dict[str, OperationValue]:
+def _variable(**kwds: OperationValue) -> dict[str, OperationValue]:
     return kwds
 
 
@@ -362,6 +385,11 @@ DivBlock = BlockType(
 # -- Functions --
 
 # cast
+def __to_float(): ...
+def __to_int(): ...
+def __to_bool(): ...
+def __to_str(): ...
+
 # mod
 
 def __mod(value: FloatValue | IntValue, mod: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
@@ -383,8 +411,43 @@ ModBlock = BlockType(
 # sign
 # max
 # min
+# incr
+# decr
 
 # -- String Manipulation --
+
+# -- Boolean Logic
+
+def __eq(a: OperationValue, b: OperationValue) -> dict[str, BoolValue]:
+    return {'result': BoolValue(a.value == b.value)}
+
+EqBlock = BlockType('Equal', __eq, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+
+def __neq(): ...
+
+NeqBlock = BlockType('Different', __neq, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+
+def __lt(): ...
+
+LtBlock = BlockType('Less', __lt, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+
+def __gt(): ...
+
+GtBlock = BlockType('Greater', __gt, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+
+def __leq(): ...
+
+LeqBlock = BlockType("Less Or Equal", __leq, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+
+def __geq(): ...
+
+GeqBlock = BlockType("Greater Or Equal", __geq, {'a': BoolValue, 'b': BoolValue}, {'result': BoolValue})
+
+def __not(value: OperationValue) -> dict[str, BoolValue]:
+    a_ = BoolValue.__acast__(value)
+    return {"result": BoolValue(not a_.value)}
+
+NotBlock = BlockType("Not", __not, {'value': BoolValue}, {'result': BoolValue})
 
 # -- Logic and Looping --
 
@@ -405,6 +468,9 @@ class Graph:
         name: str = "graph",
         available: tuple[BlockType, ...] | None = None,
         sandbox: bool = False,
+        cases: list[TestCase] | None = None,
+        input_block: UUID | None = None,
+        output_block: UUID | None = None,
         *,
         _: None = None,
     ) -> None:
@@ -418,6 +484,13 @@ class Graph:
             if available is not None
             else tuple(BlockType.__definitions__.values())
         )
+        self.sandbox: bool = sandbox
+        self.cases: list[TestCase] = cases or []
+        self.input_uid: UUID | None = input_block
+        self.output_uid: UUID | None = output_block
+
+        # TODO: allow for running through select and every test case.
+        # TODO: allow setting input and output block
 
     def get_block(self, uid: UUID) -> Block:
         if uid not in self._blocks:
@@ -559,7 +632,7 @@ class Graph:
         return computations[target.uid]
 
 
-def read_graph(path: Path, sandbox: bool = False) -> tuple[Graph, dict[UUID, tuple[float, float]]]:
+def read_graph(path: Path, sandbox: bool = False) -> Graph:
     with open(path, "rb") as fp:
         raw_data = load(fp)
 
@@ -568,7 +641,7 @@ def read_graph(path: Path, sandbox: bool = False) -> tuple[Graph, dict[UUID, tup
     connection_table = raw_data.get("Connection", {})
 
     defined_types: dict[str, BlockType] = {}
-    for variable_data in block_table.get("Variables", ()):
+    for variable_data in block_table.get("Variable", ()):
         inputs = {name: STR_CAST[typ] for name, typ in variable_data["inputs"].items()}
         outputs = {
             name: STR_CAST[typ] for name, typ in variable_data["outputs"].items()
@@ -577,11 +650,10 @@ def read_graph(path: Path, sandbox: bool = False) -> tuple[Graph, dict[UUID, tup
 
         name = variable_data["name"]
         defined_types[name] = BlockType(
-            name, __variable, inputs, outputs, config, exclusive=True
+            name, _variable, inputs, outputs, config, exclusive=True
         )
 
     graph = Graph(name=config_table.get("name", ""), sandbox=sandbox)
-    positions: dict[UUID, tuple[float, float]] = {}
 
     for block_data in block_table.get("Data", ()):
         uid = block_data.get("uid", None)
@@ -600,7 +672,6 @@ def read_graph(path: Path, sandbox: bool = False) -> tuple[Graph, dict[UUID, tup
         }
 
         block = Block(block_type, uid, **config)
-        positions[block.uid] = tuple(block_data.get("position", (0.0, 0.0)))
         graph.add_block(block)
 
     for connection_data in connection_table.get("Data", ()):
@@ -618,13 +689,12 @@ def read_graph(path: Path, sandbox: bool = False) -> tuple[Graph, dict[UUID, tup
             )
         )
 
-    return graph, positions
+    return graph
 
 
 def write_graph(
-    path: Path, graph: Graph, positions: dict[UUID, tuple[int, int]] | None
+    path: Path, graph: Graph
 ) -> None:
-    positions = {} if positions is None else positions
     toml = document()
 
     config_table = table()
@@ -646,8 +716,6 @@ def write_graph(
             {name: typ.value for name, typ in block.config.items()}
         )
         subtable["config"] = config
-        if block.uid in positions:
-            subtable["position"] = positions[block.uid]
 
         blocks.append(subtable)  # type: ignore -- unknownMemberType
 
@@ -668,8 +736,8 @@ def write_graph(
                 }
             )
             type_table["name"] = block.type.name
-            type_table["input"] = input_table
-            type_table["output"] = output_table
+            type_table["inputs"] = input_table
+            type_table["outputs"] = output_table
             variables.append(type_table)  # type: ignore -- unknownMemberType
 
     block_table["Variables"] = variables

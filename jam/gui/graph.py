@@ -51,6 +51,8 @@ class ConnectionElement(Element):
         connection: Connection,
         start: tuple[float, float],
         end: tuple[float, float],
+        *,
+        links: tuple[tuple[float, float], ...] = ()
     ):
         Element.__init__(self, connection.uid)
         self._batch: Batch | None = None
@@ -63,16 +65,21 @@ class ConnectionElement(Element):
 
         start_link = (start[0] + formating.corner_radius, start[1])
         end_link = (end[0] - formating.corner_radius, end[1])
-        self._links: list[tuple[float, float]] = [start_link, end_link]
+        self._links: list[tuple[float, float]] = [start_link, *links, end_link]
 
-        s_line, s_s_line = self._create_link(start, start_link)
-        m_line, m_s_line = self._create_link(start_link, end_link)
-        e_line, e_s_line = self._create_link(end_link, end)
+        self._lines: list[Line] = []
+        self._shadow_lines: list[Line] = []
 
-        self._lines: list[Line] = [s_line, m_line, e_line]
+        prev = start
+        for link in self._links:
+            line, shadow = self._create_link(prev, link)
+            self._lines.append(line)
+            self._shadow_lines.append(shadow)
+        line, shadow = self._create_link(prev, end)
+        self._lines.append(line)
+        self._shadow_lines.append(shadow)
+
         # self._joints: list[Circle] = [s_joint, m_joint, e_joint]
-
-        self._shadow_lines: list[Line] = [s_s_line, m_s_line, e_s_line]
         # self._shadow_joints: list[Circle] = [s_s_joint, m_s_joint, e_s_joint]
 
     @property
@@ -636,34 +643,26 @@ class BlockElement(Element):
 
         self._input_nodes: dict[str, ConnectionNodeElement] = {}
         self._output_nodes: dict[str, ConnectionNodeElement] = {}
-        self._config_panels: dict[str, ConnectionNodeElement] = {}
+        self._config_panels: dict[str, TextPanel | BoolPanel] = {}
 
         body_width = formating.padding
-        layer_height = 0.0
         self.input_width = 0.0
-        self.input_height = formating.padding
         if block.type.inputs:
             for name in block.type.inputs:
                 node = ConnectionNodeElement(name)
                 self.input_width = max(node.width, self.input_width)
-                self.input_height += node.height + formating.padding
-                layer_height = max(layer_height, node.height)
                 self._input_nodes[name] = node
             body_width += self.input_width + formating.padding
 
         self.output_width = 0.0
-        self.output_height = formating.padding
         if block.type.outputs:
             for name in block.type.outputs:
                 node = ConnectionNodeElement(name, False)
                 self.output_width = max(node.width, self.output_width)
-                self.output_height += node.height + formating.padding
-                layer_height = max(layer_height, node.height)
                 self._output_nodes[name] = node
             body_width += self.output_width + formating.padding
 
         self.config_width = 0.0
-        self.config_height = formating.padding
         if block.type.config:
             for name, typ in block.type.config.items():
                 if typ._typ is bool:
@@ -672,13 +671,11 @@ class BlockElement(Element):
                     panel = TextPanel()
                     panel.text = str(block.config[name].value)
                 self.config_width = max(panel.width, self.config_width)
-                self.config_height += panel.height + formating.padding
-                layer_height = max(panel.height, layer_height)
                 self._config_panels[name] = panel
             body_width += self.config_width + formating.padding
 
-        body_height = max(self.input_height, self.config_height, self.output_height)
-        self.layer_height = layer_height
+        row_count = max(len(block.type.inputs), len(block.type.config), len(block.type.outputs))
+        body_height = row_count * (style.text.normal.size + 3 * formating.padding)
 
         self._title: Label = Label(
             block.type.name,
@@ -785,8 +782,8 @@ class BlockElement(Element):
         )
         dx = formating.padding
         for idx, node in enumerate(self._input_nodes.values()):
-            dy = (idx + 1) * (self.layer_height + formating.padding)
-            of = (self.layer_height - node.height) / 2.0
+            dy = (idx + 1) * (style.text.normal.size + 3*formating.padding)
+            of = (style.text.normal.size + 2*formating.padding - node.height) / 2.0
             node.update_position((point[0] + dx, self._header.y - dy + of))
 
             if self._input_connections[node.name] is not None:
@@ -794,8 +791,8 @@ class BlockElement(Element):
 
         dx = self.width - formating.padding
         for idx, node in enumerate(self._output_nodes.values()):
-            dy = (idx + 1) * (self.layer_height + formating.padding)
-            of = (self.layer_height - node.height) / 2.0
+            dy = (idx + 1) * (style.text.normal.size + 3*formating.padding)
+            of = (style.text.normal.size + 2*formating.padding - node.height) / 2.0
             node.update_position((point[0] + dx - node.width, self._header.y - dy + of))
 
             for connection in self._output_connections[node.name]:
@@ -803,8 +800,8 @@ class BlockElement(Element):
 
         dx = 2 * formating.padding + self.input_width
         for idx, panel in enumerate(self._config_panels.values()):
-            dy = (idx + 1) * (self.layer_height + formating.padding)
-            of = (self.layer_height - panel.height) / 2.0
+            dy = (idx + 1) * (style.text.normal.size + 3*formating.padding)
+            of = (style.text.normal.size + 2*formating.padding - panel.height) / 2.0
             panel.update_position((point[0] + dx, self._header.y - dy + of))
 
     def contains_point(self, point: tuple[float, float]) -> bool:

@@ -521,6 +521,13 @@ class TextInputPopup(Popup):
         self.clear_highlight()
         self.highlight_cursor()
 
+        if len(self._text.text) >= 12:
+            width = self._text.content_width + 2 * style.format.padding
+            x = self._body.x - (width - self._body.width) * 0.5
+            self._body.width = self._shadow.width = width
+            self._body.x = x
+            self._shadow.x = x - 2 * style.format.drop_x
+
     @property
     def cursor(self) -> int:
         return self._text_input.cursor

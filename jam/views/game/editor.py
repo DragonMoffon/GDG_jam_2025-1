@@ -1,6 +1,5 @@
 from pathlib import Path
 from enum import Enum, auto
-from uuid import UUID
 from importlib.resources import path
 
 from pyglet.graphics import Batch
@@ -9,11 +8,13 @@ from arcade import Rect, LBWH, Vec2, Vec3, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
-
 from resources import style
 import resources.graphs as graph_path
+import resources.puzzles as puzzle_path
 
 from jam.node import graph
+from jam.controller import GraphController, read_graph, read_graph_from_level, write_graph, write_graph_from_level
+from jam.puzzle import Puzzle, load_puzzle
 from jam.gui import core, util, graph as gui
 from jam.gui.frame import Frame, ACTIVE_GROUP
 from jam.graphics.clip import ClippingMask
@@ -21,6 +22,7 @@ from jam.input import (
     inputs,
     Button,
     Axis,
+    Keys,
     STR_KEY_SET,
     STR_ARRAY,
     STR_SET,
@@ -38,179 +40,14 @@ class EditorMode(Enum):
     ADD_CONNECTION = auto()
     SAVE_GRAPH = auto()
 
-
-class GraphController:
-
-    def __init__(
-        self,
-        block_graph: graph.Graph,
-        editor_gui: core.Gui,
-        positions: dict[UUID, tuple[float, float]],
-    ):
-        self._graph: graph.Graph = None
-
-        self._graph = block_graph
-        self._gui = editor_gui
-
-        self._block_elements: dict[UUID, gui.BlockElement] = {}
-        self._connection_elements: dict[UUID, gui.ConnectionElement] = {}
-
-        self._temp_elements: dict[UUID, gui.TempValueElement] = {}
-
-        self._init_graph(positions)
-
-    def _init_graph(self, positions: dict[UUID, tuple[float, float]]) -> None:
-        for block in self._graph.blocks:
-            pos = positions.get(block.uid, (0.0, 0.0))
-            element = gui.BlockElement(block)
-            element.update_position(pos)
-            self.add_block(element)
-
-        for connection in self._graph.connections:
-            if connection.source in self._temp_elements:
-                continue
-            source = self._block_elements[connection.source]
-            origin = source.get_output(connection.output)
-            target = self._block_elements[connection.target]
-            final = target.get_input(connection.input)
-
-            element = gui.ConnectionElement(connection, origin.link_pos, final.link_pos)
-            self.add_connection(element)
-
-    @property
-    def blocks(self) -> tuple[gui.BlockElement, ...]:
-        return tuple(self._block_elements.values())
-
-    @property
-    def connections(self) -> tuple[gui.ConnectionElement, ...]:
-        return tuple(self._connection_elements.values())
-
-    @property
-    def temporary(self) -> tuple[gui.TempValueElement, ...]:
-        return tuple(self._temp_elements.values())
-
-    def get_block(self, uid: UUID) -> gui.BlockElement:
-        if uid not in self._block_elements:
-            raise KeyError(f"No block with uid {uid}")
-        return self._block_elements[uid]
-
-    def get_connection(self, uid: UUID) -> gui.ConnectionElement:
-        if uid not in self._connection_elements.values():
-            raise KeyError(f"No connection with uid {uid}")
-
-        return self._connection_elements[uid]
-
-    def add_block(self, block: gui.BlockElement) -> None:
-        self._graph.add_block(block._block)
-        self._gui.add_element(block)
-        self._block_elements[block.uid] = block
-
-        for inp, connection in block.block.inputs.items():
-            if connection is not None:
-                continue
-            self.create_temporary(block, inp)
-
-    def remove_block(self, block: gui.BlockElement) -> None:
-        for connection in block._input_connections.values():
-            if connection is None:
-                continue
-            elif connection.uid in self._temp_elements:
-                self.remove_temporary(connection)
-            else:
-                self._unlink_connection(connection)
-
-        for output in block._output_connections.values():
-            for connection in output:
-                self._unlink_connection(connection)
-
-        self._gui.remove_element(block)
-        self._graph.remove_block(block.block)
-        self._block_elements.pop(block.uid)
-
-    def add_connection(self, connection: gui.ConnectionElement) -> None:
-        self._link_connection(connection)
-        self._graph.add_connection(connection.connection)
-
-    def remove_connection(self, connection: gui.ConnectionElement) -> None:
-        self._unlink_connection(connection)
-        self._graph.remove_connection(connection.connection)
-
-        target = self.get_block(connection.connection.target)
-        self.create_temporary(target, connection.connection.input)
-
-    def _link_connection(self, connection: gui.ConnectionElement) -> None:
-        target = self.get_block(connection.connection.target)
-        inp = target._input_connections[connection.connection.input]
-        if inp is not None:
-            if inp.uid in self._connection_elements:
-                self._unlink_connection(inp)
-            elif inp.uid in self._temp_elements:
-                self.remove_temporary(inp)
-        target._input_connections[connection.connection.input] = connection
-        source = self.get_block(connection.connection.source)
-        source._output_connections[connection.connection.output].append(connection)
-
-        target.get_input(connection.connection.input).active = True
-        source.get_output(connection.connection.output).active = True
-
-        self._connection_elements[connection.uid] = connection
-        self._gui.add_element(connection)
-
-    def _unlink_connection(self, connection: gui.ConnectionElement) -> None:
-        target = self.get_block(connection.connection.target)
-        source = self.get_block(connection.connection.source)
-
-        target._input_connections[connection.connection.input] = None
-        source._output_connections[connection.connection.output].remove(connection)
-
-        target.get_input(connection.connection.input).active = False
-        if not source._output_connections[connection.connection.output]:
-            source.get_output(connection.connection.output).active = False
-
-        self._connection_elements.pop(connection.uid)
-        self._gui.remove_element(connection)
-
-    def create_temporary(self, block: gui.BlockElement, inp: str) -> None:
-        connection = block._input_connections[inp]
-        if connection is not None:
-            return
-
-        block_typ = block.block.type
-        temp_type = graph.BLOCK_CAST[block_typ.inputs[inp]._typ]
-        temp_block = graph.Block(temp_type)
-        temp_connection = graph.Connection(temp_block.uid, "value", block.uid, inp)
-        element = gui.TempValueElement(temp_block, temp_connection)
-        element.update_end(block.get_input(inp).link_pos)
-
-        self._gui.add_element(element)
-        self._graph.add_block(temp_block)
-        self._graph.add_connection(temp_connection)
-
-        block._input_connections[inp] = element
-        block.get_input(inp).active = True
-        self._temp_elements[temp_block.uid] = element
-
-    def remove_temporary(self, temp: gui.TempValueElement) -> None:
-        self._gui.remove_element(temp)
-
-
 class Editor:
 
-    def __init__(self, region: Rect, graph_src: Path | None = None) -> None:
+    def __init__(self, region: Rect, puzzle_src: Path | None = None, graph_src: Path | None = None) -> None:
         self._region: Rect = region
         self._width = self._region.width
         self._height = self._region.height
 
         self.cursor_offset: tuple[float, float] = (0.0, 0.0)
-
-        # Graph
-        self._src: Path | None = graph_src
-        self._graph, positions = (
-            (graph.Graph(sandbox=True), {}) if graph_src is None else graph.read_graph(graph_src, sandbox=True)
-        )
-
-        self._blocks: dict[UUID, gui.BlockElement] = {}
-        self._connections: dict[UUID, gui.ConnectionElement] = {}
 
         # Rendering
         self._base_camera = Camera2D(region)
@@ -220,9 +57,27 @@ class Editor:
         )
         self._gui = core.Gui(self._base_camera, self._overlay_camera)
 
-        self._controller: GraphController = GraphController(
-            self._graph, self._gui, positions
-        )
+        # Graph
+        self._puzzle_src: Path | None = puzzle_src
+        self._puzzle: Puzzle | None = None if puzzle_src is None else load_puzzle(puzzle_src)
+        self._graph_src: Path | None = graph_src
+        if self._puzzle is not None:
+            self._controller: GraphController = read_graph_from_level(self._puzzle, self._gui)
+            self._graph: graph.Graph = self._controller.graph
+        elif graph_src is not None:
+            self._controller: GraphController = read_graph(graph_src, self._gui, True)
+            self._graph: graph.Graph = self._controller.graph
+        else:
+            input_type = graph.BlockType('Input', graph._variable, {}, {}, {}, exclusive=True)
+            input_block = gui.BlockElement(graph.Block(input_type))
+            input_block.update_position((50.0, 300.0))
+            output_type = graph.BlockType('Output', graph._variable, {}, {}, {}, exclusive=True)
+            output_block = gui.BlockElement(graph.Block(output_type))
+            output_block.update_position((750.0, 300.0))
+            self._controller = GraphController(self._gui, sandbox=True, input_block=input_block.uid, output_block=output_block.uid)
+            self._graph = self._controller.graph
+            self._controller.add_block(input_block)
+            self._controller.add_block(output_block)
 
         # Editor State
         self._mode = EditorMode.NONE
@@ -370,6 +225,9 @@ class Editor:
         self._config = config
 
     def set_mode_add_block(self) -> None:
+        if not self._graph.available:
+            self.set_mode_none()
+            return
         self._mode = EditorMode.ADD_BLOCK
 
         self._select_position = pos = self.get_overlay_cursor_pos()
@@ -416,6 +274,7 @@ class Editor:
         self._save_popup = util.TextInputPopup(
             self._overlay_camera.position, STR_SET, STR_ARRAY
         )
+        self._save_popup.text = self._graph.name.replace(' ', '_')
         self._gui.add_element(self._save_popup)
 
     # -- INPUT METHODS --
@@ -475,6 +334,8 @@ class Editor:
             self._pan_camera = True
         elif button == inputs.SECONDARY_CLICK:
             if clicked_block is not None:
+                if clicked_block.uid == self._graph.input_uid or clicked_block.uid == self._graph.output_uid:
+                    return
                 self._controller.remove_block(clicked_block)
                 return
 
@@ -596,20 +457,21 @@ class Editor:
             return
 
         if button in STR_KEY_SET:
-            if button in LETTER_KEY_SET and modifiers & inputs.SHIFT:
-                button = button - 32
+            if modifiers & inputs.SHIFT == inputs.SHIFT:
+                if button in LETTER_KEY_SET:
+                    button = button - 32
+                if button == Keys.MINUS:
+                    button = Keys.UNDERSCORE
             self._save_popup.input_char(chr(button))
+        elif button == inputs.SPACE:
+            self._save_popup.input_char(chr(Keys.UNDERSCORE))
         elif button == inputs.CONFIRM:
             self._graph._name = self._save_popup.text
-            with path(graph_path, f"{self._save_popup.text}.toml") as pth:
-                graph.write_graph(
-                    pth,
-                    self._graph,
-                    {
-                        block.uid: (block.left, block.bottom)
-                        for block in self._controller.blocks
-                    },
-                )
+            if self._puzzle is not None:
+                write_graph_from_level(self._controller, self._puzzle)
+            else:
+                with path(graph_path, f"{self._save_popup.text.replace('_', ' ')}.blk") as pth:
+                    write_graph(self._controller, pth)
             self.set_mode_none()
         elif button == inputs.BACKSPACE:
             self._save_popup.remove_char()
@@ -829,7 +691,8 @@ class EditorFrame(Frame):
                     color=(255, 255, 255, 255),
                 ).draw()
 
-        self._editor = Editor(clip_rect, Path("graph copy.toml"))
+        with path(puzzle_path, 'connect_mainbus.pzl') as pth:
+            self._editor = Editor(clip_rect, pth) # Editor(clip_rect, graph_src=Path("graph copy.toml"))
 
         Frame.__init__(
             self, "EDITOR", tag_offset, position, size, show_body, show_shadow

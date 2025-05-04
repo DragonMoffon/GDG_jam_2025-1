@@ -319,7 +319,7 @@ STR_ARRAY = (
 STR_SET = set(STR_ARRAY)
 
 
-TYPE_CHAR_SETS = {
+TYPE_CHAR_SETS: dict[type, tuple[set[str], tuple[str, ...]]] = {
     int: (DIGIT_SET, DIGIT_ARRAY),
     float: (DECIMAL_SET, DECIMAL_ARRAY),
     str: (STR_SET, STR_ARRAY),
@@ -861,6 +861,7 @@ class InputManager:
     CANCEL = MultiInput(Keys.ESCAPE, ControllerButtons.RIGHT_FACE)
 
     BACKSPACE = MultiInput(Keys.BACKSPACE, ControllerButtons.RIGHT_STICK)
+    SPACE = MultiInput(Keys.SPACE, ControllerButtons.LEFT_STICK)
     SHIFT = MultiMods(KeyModifiers.MOD_SHIFT)
 
     # GUI NAVIGATION

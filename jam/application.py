@@ -3,9 +3,13 @@ from pyglet.input import get_controllers
 from .input import inputs
 
 class Window(ArcadeWindow):
+    NAME = "station.blk"
+    WIDTH = 1280
+    HEIGHT = 720
+    SIZE = (WIDTH, HEIGHT)
     
     def __init__(self):
-        ArcadeWindow.__init__(self)
+        ArcadeWindow.__init__(self, self.WIDTH, self.HEIGHT, self.NAME)
         inputs.setup_input_reponses()
 
         controllers = get_controllers()
