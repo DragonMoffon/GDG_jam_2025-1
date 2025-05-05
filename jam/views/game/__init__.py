@@ -1,4 +1,4 @@
-from arcade import Camera2D
+from arcade import Camera2D, draw_rect_filled
 
 from resources import style
 
@@ -79,6 +79,9 @@ class GameView(View):
         )
         self._gui.add_element(self._info_frame)
 
+        self._fade_in: bool = True
+        self._timer: float = 0.0
+
         comm_offset = (
             self._editor_frame.tag_height
             + self._info_frame.tag_height
@@ -120,6 +123,9 @@ class GameView(View):
         )
         context.set_level_select(self._level_select)
 
+        self._fade_in = True
+        self._timer = self.window.time
+
     def on_hide_view(self) -> None:
         context.clear_frames()
         context.clear_level_select()
@@ -132,6 +138,12 @@ class GameView(View):
         self._background.draw()
         self._frame_controller.on_draw()
         self._gui.draw()
+        if self._fade_in:
+            fraction = (self.window.time - self._timer) / 1.0
+            amount = max(0.0, min(1.0, (1 - fraction) ** 3))
+            draw_rect_filled(self.window.rect, (0, 0, 0, int(255 * amount)))
+            if fraction >= 1.0:
+                self._fade_in = False
 
     def on_update(self, delta_time: float) -> None:
         if self.window.time >= self._level_check_time:
