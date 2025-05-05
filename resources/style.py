@@ -112,6 +112,8 @@ class Editor:
 
     run_one: ImageData
     run_all: ImageData
+    nav_up: ImageData
+    nav_down: ImageData
 
 @dataclass
 class Game:
@@ -191,7 +193,9 @@ class Style:
                 load_texture(source / editor_data["check_inactive"]),
                 load_texture(source / editor_data["check_active"]),
                 load_texture(source / editor_data["run_one"]),
-                load_texture(source / editor_data["run_all"])
+                load_texture(source / editor_data["run_all"]),
+                load_texture(source / editor_data["nav_up"]),
+                load_texture(source / editor_data["nav_down"])
             ),
         )
 

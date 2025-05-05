@@ -658,6 +658,8 @@ class Editor:
             self._base_camera.zoom = max(
                 0.5, min(1.0, self._base_camera.zoom + scroll_y / 10)
             )
+            if self._base_camera.zoom > 0.9:
+                self._base_camera.zoom = 1.0
 
     # -- GAME EVENT METHODS --
 

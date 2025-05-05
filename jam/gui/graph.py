@@ -947,7 +947,7 @@ class ValueGroup(Element):
         w = self._text_width + self._panel_width + formating.padding
         h = len(values) * line_height + (len(values) - 1) * formating.padding
 
-        self._success: BoolPanel | None = BoolPanel() if success_marker else None
+        self._success: BoolPanel | None = BoolPanel(group=OVERLAY_PRIMARY) if success_marker else None
         if success_marker:
             w += formating.padding + self._success.width
 
@@ -976,7 +976,7 @@ class ValueGroup(Element):
         for name in self._names:
             name.batch = batch
         if self._success is not None:
-            self._success.batch = batch
+            self._success.connect_renderer(batch)
 
     def contains_point(self, point: tuple[float, float]) -> bool:
         l, b = self._body.position
@@ -1008,7 +1008,7 @@ class ValueGroup(Element):
 
 class TestRunner(Element):
 
-    def __init__(self, tests: list[TestCase]):
+    def __init__(self, tests: list[TestCase], can_create_new: bool = False):
         Element.__init__(self)
         self._tests: list[TestCase] = tests
 
@@ -1038,13 +1038,23 @@ class TestRunner(Element):
             formating.padding, color=colors.background, group=OVERLAY_PRIMARY
         )
 
+        self._nav_up_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
+        self._nav_up_icon = Sprite(style.game.editor.nav_up, group=OVERLAY_PRIMARY)
+
         self._run_one_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
         self._run_one_icon = Sprite(style.game.editor.run_one, group=OVERLAY_PRIMARY)
-        self._run_one_icon.color = colors.base
+
         self._run_all_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
         self._run_all_icon = Sprite(style.game.editor.run_all, group=OVERLAY_PRIMARY)
-        self._run_all_icon.color = colors.base
-        hb = self._run_one_button.height + self._run_all_button.height + 2 * formating.padding
+
+        self._nav_down_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
+        self._nav_down_icon = Sprite(style.game.editor.nav_down)
+
+        self._buttons = [self._nav_up_button, self._run_one_button, self._run_all_button, self._nav_down_button]
+        self._icons = [self._nav_up_icon, self._run_one_icon, self._run_all_icon, self._nav_down_icon]
+        self.deselect_buttons()
+
+        hb = 32.0 * len(self._buttons) + formating.padding * (len(self._buttons) - 1)
 
         body_width = wi + self._run_one_button.width + wo + 6 * formating.padding + 2 * formating.corner_radius
         body_height = max(h, hb) + 2 * formating.corner_radius
@@ -1091,13 +1101,15 @@ class TestRunner(Element):
         )
 
         cx = self._input_body.x + self._input_body.width + formating.padding
-        cy = point[1] + self._body.height / 2.0
-        self._run_one_button.position = cx, cy + formating.padding
-        self._run_one_icon.position = cx, cy + formating.padding, 0.0
-        self._run_all_button.position = cx, cy - self._run_all_button.height - formating.padding
-        self._run_all_icon.position = cx, cy - self._run_all_button.height - formating.padding, 0.0
+        y = point[1] + self._body.height - formating.corner_radius + formating.padding
+        for idx, button in enumerate(self._buttons):
+            icon = self._icons[idx]
+            dy = y - (32.0 + formating.padding) * (idx + 1)
+            button.position = cx, dy
+            icon.position = cx, dy, 0.0
+
         y = self._input_body.y + self._input_body.height
-        for idx, (inp, out) in enumerate(self._pairs):
+        for inp, out in self._pairs:
             dy = inp.height if out is None else max(inp.height, out.height)
             y -= dy + formating.padding
             inp.update_position(
@@ -1120,14 +1132,44 @@ class TestRunner(Element):
         self._shadow.batch = batch
         self._input_body.batch = batch
         self._output_body.batch = batch
-        self._run_one_button.batch = batch
-        self._run_one_icon.batch = batch
-        self._run_all_button.batch = batch
-        self._run_all_icon.batch = batch
+        for button in self._buttons:
+            button.batch = batch
+        for icon in self._icons:
+            icon.batch = batch
         for inp, out in self._pairs:
             inp.connect_renderer(batch)
             if out is not None:
                 out.connect_renderer(batch)
+
+    def over_run_one(self, point: tuple[float, float]) -> bool:
+        l, b = self._run_one_button.position
+        w, h = self._run_one_button.width, self._run_one_button.height
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+
+    def over_run_all(self, point: tuple[float, float]) -> bool:
+        l, b = self._run_all_button.position
+        w, h = self._run_all_button.width, self._run_all_button.height
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+
+    def select_nav_up(self) -> None:
+        self.deselect_buttons()
+        self._nav_up_icon.color = colors.highlight
+
+    def select_nav_down(self) -> None:
+        self.deselect_buttons()
+        self._nav_down_icon.color = colors.highlight
+
+    def select_run_one(self) -> None:
+        self.deselect_buttons()
+        self._run_one_icon.color = colors.highlight
+
+    def select_run_all(self) -> None:
+        self.deselect_buttons()
+        self._run_all_icon.color = colors.highlight
+
+    def deselect_buttons(self) -> None:
+        for icon in self._icons:
+            icon.color = colors.base
 
 
 class ResultsPanel(Element):
