@@ -346,7 +346,20 @@ class Editor:
                     self._test_runner.next_test()
                 elif self._test_runner.over_run_one(o_cursor):
                     test = self._test_runner.get_shown_test()
-                    # TODO
+                    inp = self._controller.get_block(self._graph.input_uid)
+                    inp_config = inp.block.config.copy()
+                    inp.update_config(test.inputs)
+                    out = self._controller.get_block(self._graph.output_uid)
+                    rslt = self._graph.compute(out.block)
+                    case = graph.TestCase(rslt.inputs, rslt.outputs)
+                    if case == test:
+                        # Test Case Succeded
+                        test.complete = True
+                    else:
+                        test.complete = False
+                    self._test_runner.check_test_output()
+                    # Reset the inputs to what the user had
+                    inp.update_config(inp_config)
                 elif self._test_runner.over_run_all(o_cursor):
                     tests = self._test_runner.get_tests()
                     # TODO

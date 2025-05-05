@@ -901,6 +901,15 @@ class BlockElement(Element):
         self._select.visible = False
         self.remove_highlighting()
 
+    def update_config(self, config: dict[str, OperationValue]) -> None:
+        for name, value in config.items():
+            if value.type is bool:
+                self._config_panels[name].active = value.value
+            else:
+                self._config_panels[name].text = str(value.value)
+
+            self._block.config[name] = value
+
     @property
     def left(self) -> float:
         return self._body.x
@@ -1225,6 +1234,15 @@ class TestRunner(Element):
         self._output.connect_renderer(self._body.batch)
 
         self.update_position(self._body.position)
+
+    def check_test_output(self):
+        if self._output is None:
+            return
+
+        if self._output._success is None:
+            return
+
+        self._output._success.active = self.get_shown_test().complete
 
     def update_tests(self, test: list[TestCase]) -> None:
         if not test:
