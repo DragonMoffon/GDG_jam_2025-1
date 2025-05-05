@@ -132,6 +132,7 @@ RoundBlock = BlockType(
     __round,
     {"value": FloatValue, "precision": IntValue},
     {"result": FloatValue},
+    defaults = {"precision": 0}
 )
 
 # TODO: sign
