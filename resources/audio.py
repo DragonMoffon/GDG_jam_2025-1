@@ -8,16 +8,14 @@ class Audio:
     def __init__(self):
         self._players: dict[str, Player] = {}
 
-    def play(self, sound: Source, channel: str = "default", loop = False) -> None:
+    def play(self, sound: Source, channel: str = "default", loop=False) -> None:
         if channel not in self._players:
             self._players[channel] = Player()
 
         player = self._players[channel]
         # Bodging this together -- bad for memory
-        player.delete()
-        player = Player()
-        player.loop = loop
-        self._players[channel] = player
+        player.pause()
+        player.next_source()
 
         player.queue(sound)
         player.play()
@@ -41,5 +39,5 @@ class Sound:
             Sound.__cache__[str(pth)] = load_audio(pth)
         self._source: Source = Sound.__cache__[str(pth)]
 
-    def play(self, channel: str = 'default', loop: bool = False) -> None:
+    def play(self, channel: str = "default", loop: bool = False) -> None:
         AUDIO.play(self._source, channel, loop)
