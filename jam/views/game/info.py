@@ -5,6 +5,7 @@ from pyglet.text import Label
 
 from resources import style
 
+from jam.context import context
 from jam.gui.frame import Frame
 
 from jam.graphics.clip import ClippingMask
@@ -75,6 +76,9 @@ class InfoFrame(Frame):
         self.frame_gui: core.Gui = core.Gui(self.camera) # The gui that gets clipped by the mask.
 
     def on_draw(self) -> None:
+        self.label.text = INFO_TEXT
+        if puz := context.get_open_puzzle():
+            self.label.text += "\n" + puz.description
         with self.cliping_mask.target as fbo:
             fbo.clear(color=style.colors.background)
             with self.camera.activate():
