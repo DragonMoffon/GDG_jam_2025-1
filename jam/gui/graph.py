@@ -1011,24 +1011,22 @@ class TestRunner(Element):
     def __init__(self, tests: list[TestCase], can_create_new: bool = False):
         Element.__init__(self)
         self._tests: list[TestCase] = tests
+        self._shown: int = 0
 
-        self._pairs: list[tuple[ValueGroup, ValueGroup | None]] = []
-        wi = wo = h = 0.0
+        case = self._tests[0]
+        self._input: ValueGroup = ValueGroup(case.inputs)
+        h = self._input.height
+        wi = self._input.width
+        if case.outputs is not None:
+            out = ValueGroup(case.outputs, False, True)
+            wo = out.width
+            h = max(h, out.height)
+        else:
+            out = None
+            wo = 0
+        self._output: ValueGroup | None = out
 
-        for case in tests:
-            inp = ValueGroup(case.inputs)
-            wi = max(wi, inp.width)
-            dh = inp.height
-            if case.outputs is not None:
-                out = ValueGroup(case.outputs, False, True)
-                wo = max(wo, out.width)
-                dh = max(dh, out.height)
-            else:
-                out = None
-            self._pairs.append((inp, out))
-            h += dh + formating.padding
-
-        h += formating.padding
+        h += 2*formating.padding
         self._input_body = RoundedRectangle(
             0.0, 0.0, wi + 2 * formating.padding, h,
             formating.padding, color=colors.background, group=OVERLAY_PRIMARY
@@ -1101,31 +1099,24 @@ class TestRunner(Element):
         )
 
         cx = self._input_body.x + self._input_body.width + formating.padding
-        y = point[1] + self._body.height - formating.corner_radius + formating.padding
+        y = point[1] + formating.corner_radius
         for idx, button in enumerate(self._buttons):
             icon = self._icons[idx]
-            dy = y - (32.0 + formating.padding) * (idx + 1)
+            dy = y + (32.0 + formating.padding) * (len(self._buttons) - idx - 1)
             button.position = cx, dy
             icon.position = cx, dy, 0.0
 
-        y = self._input_body.y + self._input_body.height
-        for inp, out in self._pairs:
-            dy = inp.height if out is None else max(inp.height, out.height)
-            y -= dy + formating.padding
-            inp.update_position(
-                (
-                    self._input_body.x + formating.padding,
-                    y
-                )
-            )
-            if out is None:
-                continue
-            out.update_position(
-                (
-                    self._output_body.x + formating.padding,
-                    y
-                )
-            )
+        self._input.update_position((
+            self._input_body.x + formating.padding,
+            self._input_body.y + formating.padding
+        ))
+
+        if self._output is None:
+            return
+        self._output.update_position((
+            self._output_body.x + formating.padding,
+            self._output_body.y + formating.padding
+        ))
 
     def connect_renderer(self, batch: Batch | None) -> None:
         self._body.batch = batch
@@ -1136,10 +1127,9 @@ class TestRunner(Element):
             button.batch = batch
         for icon in self._icons:
             icon.batch = batch
-        for inp, out in self._pairs:
-            inp.connect_renderer(batch)
-            if out is not None:
-                out.connect_renderer(batch)
+        self._input.connect_renderer(batch)
+        if self._output is not None:
+            self._output.connect_renderer(batch)
 
     def over_run_one(self, point: tuple[float, float]) -> bool:
         l, b = self._run_one_button.position
