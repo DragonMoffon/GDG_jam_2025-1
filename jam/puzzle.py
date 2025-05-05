@@ -103,7 +103,7 @@ class PuzzleCollection:
         self._puzzles: dict[str, Puzzle] = {}
         self._pins: dict[str, tuple[tuple[float, float], tuple[float, float], int]] = {}
 
-        for puzzle_path in pth.parent.glob('*.pzl'):
+        for puzzle_path in Path(pth.parent).glob('*.pzl'):
             try:
                 puzzle = load_puzzle(puzzle_path)
                 self._puzzles[puzzle.name] = puzzle
