@@ -6,7 +6,13 @@ from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 from arcade.clock import GLOBAL_CLOCK
 
-from .core import Element, get_shadow_shader, OVERLAY_SPACING, OVERLAY_PRIMARY, OVERLAY_HIGHLIGHT
+from .core import (
+    Element,
+    get_shadow_shader,
+    OVERLAY_SPACING,
+    OVERLAY_PRIMARY,
+    OVERLAY_HIGHLIGHT,
+)
 from jam.input import inputs, Button, Axis
 from resources import style
 
@@ -17,7 +23,17 @@ TAG_GROUP = Group(2)
 
 class Frame(Element):
 
-    def __init__(self, name: str, tag_offset: float, position: tuple[float, float], size: tuple[float, float], show_body: bool = False, show_shadow: bool = True, anchor_top: bool = True, uid: UUID | None = None):
+    def __init__(
+        self,
+        name: str,
+        tag_offset: float,
+        position: tuple[float, float],
+        size: tuple[float, float],
+        show_body: bool = False,
+        show_shadow: bool = True,
+        anchor_top: bool = True,
+        uid: UUID | None = None,
+    ):
         Element.__init__(self, uid)
         self._name = name
         self._size = size
@@ -29,46 +45,61 @@ class Frame(Element):
         self._show_shadow: bool = True
 
         self._tag_text = Label(
-            '\n'.join(name),
-            0, 0, 0,
+            "\n".join(name),
+            0,
+            0,
+            0,
             int(style.text.header.size) + 1,
-            anchor_y='top',
+            anchor_y="top",
             multiline=True,
             font_size=style.text.header.size,
             font_name=style.text.header.name,
             color=style.colors.highlight,
-            group=OVERLAY_HIGHLIGHT
+            group=OVERLAY_HIGHLIGHT,
         )
-        self._tag_text.set_style('line_spacing', style.text.header.size + style.format.padding)
+        self._tag_text.set_style(
+            "line_spacing", style.text.header.size + style.format.padding
+        )
         self._tag_panel = RoundedRectangle(
-            0.0, 0.0,
-            style.format.corner_radius + 2 * style.format.padding + self._tag_text.content_width,
-            self._tag_text.content_height + 2 * style.format.corner_radius + 2 * style.format.padding,
+            0.0,
+            0.0,
+            style.format.corner_radius
+            + 2 * style.format.padding
+            + self._tag_text.content_width,
+            self._tag_text.content_height
+            + 2 * style.format.corner_radius
+            + 2 * style.format.padding,
             (style.format.corner_radius, style.format.corner_radius, 0, 0),
             (12, 12, 1, 1),
             color=style.colors.base,
-            group=OVERLAY_HIGHLIGHT
+            group=OVERLAY_HIGHLIGHT,
         )
         self._tag_shadow = RoundedRectangle(
-            0.0, 0.0,
-            self._tag_panel.width + style.format.drop_x, self._tag_panel.height,
+            0.0,
+            0.0,
+            self._tag_panel.width + style.format.drop_x,
+            self._tag_panel.height,
             (style.format.corner_radius, style.format.corner_radius, 0, 0),
             (12, 12, 1, 1),
             color=style.colors.dark,
             group=OVERLAY_PRIMARY,
-            program=get_shadow_shader()
+            program=get_shadow_shader(),
         )
         radius = style.format.corner_radius + style.format.footer_size
         if anchor_top:
             hide_top = tag_offset < radius and 0.0 < tag_offset + self._tag_panel.height
 
             bottom_dist = size[1] - tag_offset - self._tag_panel.height
-            hide_bottom = bottom_dist < radius and 0.0 < bottom_dist + self._tag_panel.height
+            hide_bottom = (
+                bottom_dist < radius and 0.0 < bottom_dist + self._tag_panel.height
+            )
         else:
             top_dist = size[1] - tag_offset - self._tag_panel.height
             hide_top = top_dist < radius and 0.0 < top_dist + self._tag_panel.height
 
-            hide_bottom = tag_offset < radius and 0.0 < tag_offset + self._tag_panel.height
+            hide_bottom = (
+                tag_offset < radius and 0.0 < tag_offset + self._tag_panel.height
+            )
 
         top_radius = 0.0 if hide_top else radius
         top_segments = 1 if hide_top else 12
@@ -77,12 +108,14 @@ class Frame(Element):
         bottom_segments = 1 if hide_bottom else 12
 
         self._panel = RoundedRectangle(
-            0.0, 0.0,
-            size[0], size[1],
+            0.0,
+            0.0,
+            size[0],
+            size[1],
             (bottom_radius, top_radius, 0.0, 0.0),
             (bottom_segments, top_segments, 1, 1),
             color=style.colors.base,
-            group=OVERLAY_SPACING
+            group=OVERLAY_SPACING,
         )
 
         self.update_position(position)
@@ -111,10 +144,21 @@ class Frame(Element):
         self._position = point
         self._panel.position = point
 
-        tag_y = point[1] + (self._panel.height - self._tag_offset - self._tag_panel.height if self._anchor_top else self._tag_offset)
+        tag_y = point[1] + (
+            self._panel.height - self._tag_offset - self._tag_panel.height
+            if self._anchor_top
+            else self._tag_offset
+        )
         self._tag_panel.position = point[0] - self._tag_panel.width, tag_y
-        self._tag_shadow.position = self._tag_panel.x - style.format.drop_x, self._tag_panel.y - style.format.drop_y
-        self._tag_text.position = self._tag_panel.x + style.format.corner_radius / 2.0, self._tag_panel.y + self._tag_panel.height - style.format.corner_radius, 0.0
+        self._tag_shadow.position = (
+            self._tag_panel.x - style.format.drop_x,
+            self._tag_panel.y - style.format.drop_y,
+        )
+        self._tag_text.position = (
+            self._tag_panel.x + style.format.corner_radius / 2.0,
+            self._tag_panel.y + self._tag_panel.height - style.format.corner_radius,
+            0.0,
+        )
 
     @property
     def show_body(self) -> bool:
@@ -146,17 +190,29 @@ class Frame(Element):
 
     def contains_point(self, point: tuple[float, float]) -> bool:
         return (
-            (0 <= point[0] - self._panel.x <= self._panel.width and 0 <= point[1] - self._panel.y <= self._panel.height)
-            or (0 <= point[0] - self._tag_panel.x <= self._tag_panel.width and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height)
+            0 <= point[0] - self._panel.x <= self._panel.width
+            and 0 <= point[1] - self._panel.y <= self._panel.height
+        ) or (
+            0 <= point[0] - self._tag_panel.x <= self._tag_panel.width
+            and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
         )
 
     def tag_contains_point(self, point: tuple[float, float]) -> bool:
-        return 0 <= point[0] - self._tag_panel.x <= self._tag_panel.width and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
+        return (
+            0 <= point[0] - self._tag_panel.x <= self._tag_panel.width
+            and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
+        )
 
     def on_input(self, input: Button, modifiers: int, pressed: bool) -> bool | None: ...
-    def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> bool | None: ...
-    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None: ...
-    def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool | None: ...
+    def on_axis_change(
+        self, axis: Axis, value_1: float, value_2: float
+    ) -> bool | None: ...
+    def on_cursor_motion(
+        self, x: float, y: float, dx: float, dy: float
+    ) -> bool | None: ...
+    def on_cursor_scroll(
+        self, x: float, y: float, scroll_x: float, scroll_y: float
+    ) -> bool | None: ...
 
     def on_draw(self) -> None: ...
     def on_update(self, delta_time: float) -> None: ...
@@ -173,7 +229,9 @@ class FrameAnimationMode(Enum):
 
 class FrameController:
 
-    def __init__(self, frames: tuple[Frame, ...], position: tuple[float, float]) -> None:
+    def __init__(
+        self, frames: tuple[Frame, ...], position: tuple[float, float]
+    ) -> None:
         self._frames: tuple[Frame, ...] = frames
 
         self._pos: tuple[float, float] = position
@@ -190,7 +248,7 @@ class FrameController:
             return
 
         if frame not in self._frames:
-            raise ValueError(f'{frame} is not controlled by this controller.')
+            raise ValueError(f"{frame} is not controlled by this controller.")
 
         if self._selected_frame is not None:
             self._animation_mode = FrameAnimationMode.HIDE
@@ -206,16 +264,22 @@ class FrameController:
 
             self._animation_mode = FrameAnimationMode.SHOW
             self._animation_time = GLOBAL_CLOCK.time
+            style.audio.slide_out.play()
         else:
             self._pending_frame = frame
 
     def select_frame_by_idx(self, frame_idx: int) -> None:
         if not (0 <= frame_idx < len(self._frames)):
-            raise IndexError(f'The controller only has {len(self._frames)} frames to select')
+            raise IndexError(
+                f"The controller only has {len(self._frames)} frames to select"
+            )
         self.select_frame(self._frames[frame_idx])
 
     def deselect_frame(self) -> None:
-        if self._selected_frame is None or self._animation_mode != FrameAnimationMode.NONE:
+        if (
+            self._selected_frame is None
+            or self._animation_mode != FrameAnimationMode.NONE
+        ):
             return
 
         self._animation_mode = FrameAnimationMode.HIDE
@@ -244,35 +308,52 @@ class FrameController:
         if self._selected_frame is not None:
             self._selected_frame.on_input(input, modifiers, pressed)
 
-        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+        if (
+            self._next_frame is not None
+            and self._animation_mode == FrameAnimationMode.SHOW
+        ):
             self._next_frame.on_input(input, modifiers, pressed)
 
     def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> None:
         if self._selected_frame is not None:
             self._selected_frame.on_axis_change(axis, value_1, value_2)
 
-        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+        if (
+            self._next_frame is not None
+            and self._animation_mode == FrameAnimationMode.SHOW
+        ):
             self._next_frame.on_axis_change(axis, value_1, value_2)
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> bool | None:
         if self._selected_frame is not None:
             self._selected_frame.on_cursor_motion(x, y, dx, dy)
 
-        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+        if (
+            self._next_frame is not None
+            and self._animation_mode == FrameAnimationMode.SHOW
+        ):
             self._next_frame.on_cursor_motion(x, y, dx, dy)
 
-    def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool | None:
+    def on_cursor_scroll(
+        self, x: float, y: float, scroll_x: float, scroll_y: float
+    ) -> bool | None:
         if self._selected_frame is not None:
             self._selected_frame.on_cursor_scroll(x, y, scroll_x, scroll_y)
 
-        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+        if (
+            self._next_frame is not None
+            and self._animation_mode == FrameAnimationMode.SHOW
+        ):
             self._next_frame.on_cursor_scroll(x, y, scroll_x, scroll_y)
 
     def on_draw(self) -> None:
         if self._selected_frame is not None:
             self._selected_frame.on_draw()
 
-        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+        if (
+            self._next_frame is not None
+            and self._animation_mode == FrameAnimationMode.SHOW
+        ):
             self._next_frame.on_draw()
 
     def on_update(self, delta_time: float) -> None:
@@ -280,7 +361,10 @@ class FrameController:
         length = time - self._animation_time
         fraction = length / style.game.panels.panel_speed
 
-        if self._selected_frame is not None and self._animation_mode == FrameAnimationMode.HIDE:
+        if (
+            self._selected_frame is not None
+            and self._animation_mode == FrameAnimationMode.HIDE
+        ):
             if fraction >= 1.0:
                 self._selected_frame.hide()
                 self._selected_frame.update_position(self._pos)
@@ -296,9 +380,15 @@ class FrameController:
                     self._animation_mode = FrameAnimationMode.NONE
                     self._animation_time = 0.0
             else:
-                x = self._pos[0] - (1 - fraction)**3 * self._selected_frame.panel_width
+                x = (
+                    self._pos[0]
+                    - (1 - fraction) ** 3 * self._selected_frame.panel_width
+                )
                 self._selected_frame.update_position((x, self._pos[1]))
-        elif self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+        elif (
+            self._next_frame is not None
+            and self._animation_mode == FrameAnimationMode.SHOW
+        ):
             if fraction >= 1.0:
                 self._selected_frame = self._next_frame
                 self._next_frame = None
@@ -306,19 +396,30 @@ class FrameController:
                 self._animation_mode = FrameAnimationMode.NONE
                 self._animation_time = 0.0
 
-                self._selected_frame.update_position((self._pos[0] - self._selected_frame.panel_width, self._pos[1]))
+                self._selected_frame.update_position(
+                    (self._pos[0] - self._selected_frame.panel_width, self._pos[1])
+                )
             else:
-                x = self._pos[0] - (1 - (1 - fraction)**3) * self._next_frame.panel_width
+                x = (
+                    self._pos[0]
+                    - (1 - (1 - fraction) ** 3) * self._next_frame.panel_width
+                )
                 self._next_frame.update_position((x, self._pos[1]))
 
-        if self._pending_frame is not None and self._animation_mode == FrameAnimationMode.NONE:
+        if (
+            self._pending_frame is not None
+            and self._animation_mode == FrameAnimationMode.NONE
+        ):
             self.select_frame(self._pending_frame)
             self._pending_frame = None
 
         if self._selected_frame is not None:
             self._selected_frame.on_update(delta_time)
 
-        if self._next_frame is not None and self._animation_mode == FrameAnimationMode.SHOW:
+        if (
+            self._next_frame is not None
+            and self._animation_mode == FrameAnimationMode.SHOW
+        ):
             self._next_frame.on_update(delta_time)
 
     @property
