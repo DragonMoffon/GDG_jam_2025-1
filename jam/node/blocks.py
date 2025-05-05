@@ -261,7 +261,7 @@ MatchBlock = BlockType(
 
 def _format(value: BoolValue | IntValue | FloatValue | StrValue, format: StrValue) -> dict[str, StrValue]:
     _format = StrValue.__acast__(format)
-    return {"result": StrValue(f"{value}:{_format.value}")}
+    return {"result": StrValue(f"{value:_format.value}")}
 
 FormatBlock = BlockType(
     "Format", _format, {"value": StrValue | IntValue | FloatValue | BoolValue, "format": StrValue}, {"result": BoolValue}
