@@ -67,6 +67,7 @@ class Floating:
             data["rate"],
         )
 
+
 @dataclass
 class Audio:
     slide_in: Sound
@@ -75,6 +76,7 @@ class Audio:
     block: Sound
     modal: Sound
     ambient_wind: Sound
+
 
 @dataclass
 class Background:
@@ -114,6 +116,7 @@ class Editor:
     run_all: ImageData
     nav_up: ImageData
     nav_down: ImageData
+
 
 @dataclass
 class Game:
@@ -180,7 +183,7 @@ class Style:
                 panel_speed=panel_data["panel_speed"],
             ),
             Editor(
-                editor_data['blink_speed'],
+                editor_data["blink_speed"],
                 source / editor_data["background"],
                 load_texture(source / editor_data["puzzle_alert"]),
                 load_texture(source / editor_data["node_inactive"]),
@@ -195,7 +198,7 @@ class Style:
                 load_texture(source / editor_data["run_one"]),
                 load_texture(source / editor_data["run_all"]),
                 load_texture(source / editor_data["nav_up"]),
-                load_texture(source / editor_data["nav_down"])
+                load_texture(source / editor_data["nav_down"]),
             ),
         )
 

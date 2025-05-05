@@ -8,13 +8,7 @@ from resources import style
 
 # from jam.graphics.line import Line
 
-from jam.node.graph import (
-    Block,
-    Connection,
-    BlockComputation,
-    OperationValue,
-    TestCase
-)
+from jam.node.graph import Block, Connection, BlockComputation, OperationValue, TestCase
 
 from .core import (
     Element,
@@ -23,7 +17,7 @@ from .core import (
     BASE_SHADOW,
     BASE_SPACING,
     OVERLAY_PRIMARY,
-    OVERLAY_SHADOW
+    OVERLAY_SHADOW,
 )
 
 formating = style.format
@@ -54,7 +48,7 @@ class ConnectionElement(Element):
         start: tuple[float, float],
         end: tuple[float, float],
         *,
-        links: tuple[tuple[float, float], ...] = ()
+        links: tuple[tuple[float, float], ...] = (),
     ):
         Element.__init__(self, connection.uid)
         self._batch: Batch | None = None
@@ -220,7 +214,10 @@ class ConnectionElement(Element):
 
         o_s_line = self._shadow_lines[link]
         o_s_line.position = point[0] - formating.drop_x, point[1] - formating.drop_y
-        o_s_line.x2, o_s_line.y2 = old_end[0] - formating.drop_x, old_end[1] - formating.drop_y
+        o_s_line.x2, o_s_line.y2 = (
+            old_end[0] - formating.drop_x,
+            old_end[1] - formating.drop_y,
+        )
 
         n_line, n_s_line = self._create_link(old_start, point)
 
@@ -676,7 +673,9 @@ class BlockElement(Element):
                 self._config_panels[name] = panel
             body_width += self.config_width + formating.padding
 
-        row_count = max(len(block.type.inputs), len(block.type.config), len(block.type.outputs))
+        row_count = max(
+            len(block.type.inputs), len(block.type.config), len(block.type.outputs)
+        )
         body_height = row_count * (style.text.normal.size + 3 * formating.padding)
 
         self._title: Label = Label(
@@ -783,7 +782,7 @@ class BlockElement(Element):
             0.0,
         )
 
-        line_height = (style.text.normal.size + 3 * formating.padding)
+        line_height = style.text.normal.size + 3 * formating.padding
 
         dx = formating.padding
         for idx, node in enumerate(self._input_nodes.values()):
@@ -921,7 +920,12 @@ class BlockElement(Element):
 
 class ValueGroup(Element):
 
-    def __init__(self, values: dict[str, OperationValue], input_order: bool = True, success_marker: bool = False):
+    def __init__(
+        self,
+        values: dict[str, OperationValue],
+        input_order: bool = True,
+        success_marker: bool = False,
+    ):
         Element.__init__(self)
         self._values = values
         self._input_order = input_order
@@ -933,7 +937,16 @@ class ValueGroup(Element):
         self._text_width: float = 0.0
         self._panel_width: float = 0.0
         for name, value in values.items():
-            label = Label(name, 0.0, 0.0, 0.0, font_name=style.text.normal.name, font_size=style.text.normal.size, color=colors.highlight, group=OVERLAY_PRIMARY)
+            label = Label(
+                name,
+                0.0,
+                0.0,
+                0.0,
+                font_name=style.text.normal.name,
+                font_size=style.text.normal.size,
+                color=colors.highlight,
+                group=OVERLAY_PRIMARY,
+            )
             self._names.append(label)
             if value.type is bool:
                 panel = BoolPanel(group=OVERLAY_PRIMARY)
@@ -947,7 +960,9 @@ class ValueGroup(Element):
         w = self._text_width + self._panel_width + formating.padding
         h = len(values) * line_height + (len(values) - 1) * formating.padding
 
-        self._success: BoolPanel | None = BoolPanel(group=OVERLAY_PRIMARY) if success_marker else None
+        self._success: BoolPanel | None = (
+            BoolPanel(group=OVERLAY_PRIMARY) if success_marker else None
+        )
         if success_marker:
             w += formating.padding + self._success.width
 
@@ -958,7 +973,7 @@ class ValueGroup(Element):
             h + 2 * formating.padding,
             formating.padding,
             color=colors.base,
-            group=OVERLAY_PRIMARY
+            group=OVERLAY_PRIMARY,
         )
 
     @property
@@ -1026,35 +1041,93 @@ class TestRunner(Element):
             wo = 0
         self._output: ValueGroup | None = out
 
-        h += 2*formating.padding
+        h += 2 * formating.padding
         self._input_body = RoundedRectangle(
-            0.0, 0.0, wi + 2 * formating.padding, h,
-            formating.padding, color=colors.background, group=OVERLAY_PRIMARY
+            0.0,
+            0.0,
+            wi + 2 * formating.padding,
+            h,
+            formating.padding,
+            color=colors.background,
+            group=OVERLAY_PRIMARY,
         )
         self._output_body = RoundedRectangle(
-            0.0, 0.0, wo + 2 * formating.padding, h,
-            formating.padding, color=colors.background, group=OVERLAY_PRIMARY
+            0.0,
+            0.0,
+            wo + 2 * formating.padding,
+            h,
+            formating.padding,
+            color=colors.background,
+            group=OVERLAY_PRIMARY,
         )
 
-        self._nav_up_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
+        self._nav_up_button = RoundedRectangle(
+            0.0,
+            0.0,
+            32.0,
+            32.0,
+            formating.padding,
+            color=colors.background,
+            group=OVERLAY_PRIMARY,
+        )
         self._nav_up_icon = Sprite(style.game.editor.nav_up, group=OVERLAY_PRIMARY)
 
-        self._run_one_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
+        self._run_one_button = RoundedRectangle(
+            0.0,
+            0.0,
+            32.0,
+            32.0,
+            formating.padding,
+            color=colors.background,
+            group=OVERLAY_PRIMARY,
+        )
         self._run_one_icon = Sprite(style.game.editor.run_one, group=OVERLAY_PRIMARY)
 
-        self._run_all_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
+        self._run_all_button = RoundedRectangle(
+            0.0,
+            0.0,
+            32.0,
+            32.0,
+            formating.padding,
+            color=colors.background,
+            group=OVERLAY_PRIMARY,
+        )
         self._run_all_icon = Sprite(style.game.editor.run_all, group=OVERLAY_PRIMARY)
 
-        self._nav_down_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
+        self._nav_down_button = RoundedRectangle(
+            0.0,
+            0.0,
+            32.0,
+            32.0,
+            formating.padding,
+            color=colors.background,
+            group=OVERLAY_PRIMARY,
+        )
         self._nav_down_icon = Sprite(style.game.editor.nav_down)
 
-        self._buttons = [self._nav_up_button, self._run_one_button, self._run_all_button, self._nav_down_button]
-        self._icons = [self._nav_up_icon, self._run_one_icon, self._run_all_icon, self._nav_down_icon]
+        self._buttons = [
+            self._nav_up_button,
+            self._run_one_button,
+            self._run_all_button,
+            self._nav_down_button,
+        ]
+        self._icons = [
+            self._nav_up_icon,
+            self._run_one_icon,
+            self._run_all_icon,
+            self._nav_down_icon,
+        ]
         self.deselect_buttons()
 
         hb = 32.0 * len(self._buttons) + formating.padding * (len(self._buttons) - 1)
 
-        body_width = wi + self._run_one_button.width + wo + 6 * formating.padding + 2 * formating.corner_radius
+        body_width = (
+            wi
+            + self._run_one_button.width
+            + wo
+            + 6 * formating.padding
+            + 2 * formating.corner_radius
+        )
         body_height = max(h, hb) + 2 * formating.corner_radius
 
         self._body = RoundedRectangle(
@@ -1064,7 +1137,7 @@ class TestRunner(Element):
             body_height,
             formating.corner_radius,
             color=colors.base,
-            group=OVERLAY_PRIMARY
+            group=OVERLAY_PRIMARY,
         )
         self._shadow = RoundedRectangle(
             0.0,
@@ -1074,7 +1147,7 @@ class TestRunner(Element):
             formating.corner_radius,
             color=colors.dark,
             program=get_shadow_shader(),
-            group=OVERLAY_SHADOW
+            group=OVERLAY_SHADOW,
         )
 
     def contains_point(self, point: tuple[float, float]) -> bool:
@@ -1086,16 +1159,19 @@ class TestRunner(Element):
         self._body.position = point
         self._shadow.position = (
             point[0] - 2 * formating.drop_x,
-            point[1] - 2 * formating.drop_y
+            point[1] - 2 * formating.drop_y,
         )
 
         self._input_body.position = (
             point[0] + formating.corner_radius,
-            point[1] + formating.corner_radius
+            point[1] + formating.corner_radius,
         )
         self._output_body.position = (
-            point[0] + self._body.width - self._output_body.width - formating.corner_radius,
-            point[1] + formating.corner_radius
+            point[0]
+            + self._body.width
+            - self._output_body.width
+            - formating.corner_radius,
+            point[1] + formating.corner_radius,
         )
 
         cx = self._input_body.x + self._input_body.width + formating.padding
@@ -1106,17 +1182,21 @@ class TestRunner(Element):
             button.position = cx, dy
             icon.position = cx, dy, 0.0
 
-        self._input.update_position((
-            self._input_body.x + formating.padding,
-            self._input_body.y + formating.padding
-        ))
+        self._input.update_position(
+            (
+                self._input_body.x + formating.padding,
+                self._input_body.y + formating.padding,
+            )
+        )
 
         if self._output is None:
             return
-        self._output.update_position((
-            self._output_body.x + formating.padding,
-            self._output_body.y + formating.padding
-        ))
+        self._output.update_position(
+            (
+                self._output_body.x + formating.padding,
+                self._output_body.y + formating.padding,
+            )
+        )
 
     def connect_renderer(self, batch: Batch | None) -> None:
         self._body.batch = batch
@@ -1168,8 +1248,14 @@ class ResultsPanel(Element):
         Element.__init__(self)
         self._data = ValueGroup(result.outputs, input_order=False)
         self._shadow = RoundedRectangle(
-            0.0, 0.0, self._data.width, self._data.height, formating.padding,
-            color=colors.dark, program=get_shadow_shader(), group=OVERLAY_SHADOW
+            0.0,
+            0.0,
+            self._data.width,
+            self._data.height,
+            formating.padding,
+            color=colors.dark,
+            program=get_shadow_shader(),
+            group=OVERLAY_SHADOW,
         )
 
     def connect_renderer(self, batch: Batch | None) -> None:
@@ -1180,5 +1266,5 @@ class ResultsPanel(Element):
         self._data.update_position(point)
         self._shadow.position = (
             point[0] - 2 * formating.drop_x,
-            point[1] - 2 * formating.drop_y
+            point[1] - 2 * formating.drop_y,
         )

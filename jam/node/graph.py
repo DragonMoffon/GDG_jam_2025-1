@@ -120,11 +120,20 @@ class BlockOperation(Protocol):
     def __call__(
         self,
         **kwds: OperationValue,
-    ) -> Mapping[str, OperationValue] | Mapping[str, FloatValue] | Mapping[str, IntValue] | Mapping[str, BoolValue] | Mapping[str, StrValue]: ...
+    ) -> (
+        Mapping[str, OperationValue]
+        | Mapping[str, FloatValue]
+        | Mapping[str, IntValue]
+        | Mapping[str, BoolValue]
+        | Mapping[str, StrValue]
+    ): ...
+
 
 class TestCase:
 
-    def __init__(self, inputs: dict[str, OperationValue], outputs: dict[str, OperationValue]) -> None:
+    def __init__(
+        self, inputs: dict[str, OperationValue], outputs: dict[str, OperationValue]
+    ) -> None:
         self.inputs = inputs
         self.outputs = outputs
 
@@ -140,11 +149,12 @@ class TestCase:
         for name, value in self.inputs.items():
             if other.inputs[name].value != value.value:
                 return False
-        
+
         for name, value in self.outputs.items():
             if other.outputs[name].value != value.value:
                 return False
         return True
+
 
 @dataclass
 class BlockComputation:
@@ -253,6 +263,7 @@ class Connection:
 
     def __repr__(self):
         return self.__str__()
+
 
 # -- VARIABLES --
 # We don't need to define 'VariableBlock' as a type anymore yippee (just its operation)
@@ -546,9 +557,7 @@ def read_graph(path: Path, sandbox: bool = False) -> Graph:
     return graph
 
 
-def write_graph(
-    path: Path, graph: Graph
-) -> None:
+def write_graph(path: Path, graph: Graph) -> None:
     toml = document()
 
     config_table = table()
