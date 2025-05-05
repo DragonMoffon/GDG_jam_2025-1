@@ -205,5 +205,12 @@ class Context:
         )
         return tuple(p for p in available if not self._current_save.completed(p))
 
+    def get_open_puzzle(self) -> Puzzle | None:
+        if self._editor_frame is None:
+            return
+
+        #TODO: AHHHHH
+        retrun self._editor_frame._active_editor._puzzle
+
 
 context = Context()
