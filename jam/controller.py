@@ -2,11 +2,21 @@ from uuid import UUID, uuid4
 from pathlib import Path
 from tomllib import load as load_toml
 
-from jam.node.graph import Graph, Block, Connection, BlockType, TestCase, BLOCK_CAST, STR_CAST, _variable
+from jam.node.graph import (
+    Graph,
+    Block,
+    Connection,
+    BlockType,
+    TestCase,
+    BLOCK_CAST,
+    STR_CAST,
+    _variable,
+)
 from jam.node import blocks as block_impl
 from jam.puzzle import Puzzle
 from jam.gui.graph import BlockElement, ConnectionElement, TempValueElement
 from jam.gui.core import Gui
+
 
 class GraphController:
 
@@ -20,7 +30,9 @@ class GraphController:
         input_block: UUID | None = None,
         output_block: UUID | None = None,
     ):
-        self._graph: Graph = Graph(name, available, sandbox, cases, input_block, output_block)
+        self._graph: Graph = Graph(
+            name, available, sandbox, cases, input_block, output_block
+        )
         self._gui = gui
 
         self._block_elements: dict[UUID, BlockElement] = {}
@@ -138,7 +150,7 @@ class GraphController:
         temp_type = BLOCK_CAST[block_typ.inputs[inp]._typ]
         temp_block = Block(temp_type, uid=None)
         if inp in block_typ.defaults:
-            temp_block.config['value'] = block_typ.defaults[inp]
+            temp_block.config["value"] = block_typ.defaults[inp]
         temp_connection = Connection(temp_block.uid, "value", block.uid, inp)
         element = TempValueElement(temp_block, temp_connection)
         element.update_end(block.get_input(inp).link_pos)
@@ -158,7 +170,7 @@ class GraphController:
 
 
 def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
-    with open(path, 'rb') as fp:
+    with open(path, "rb") as fp:
         raw_data = load_toml(fp)
 
     config_table = raw_data["Config"]
@@ -166,18 +178,16 @@ def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
     connection_table = raw_data.get("Connection", {})
 
     controller = GraphController(
-        gui,
-        config_table.get('name', 'graph'),
-        sandbox=sandbox
+        gui, config_table.get("name", "graph"), sandbox=sandbox
     )
 
     variable_types: dict[str, BlockType] = {}
-    for variable in block_table.get('Variable', []):
-        inputs = {name: STR_CAST[typ] for name, typ in variable['inputs'].items()}
-        outputs = {name: STR_CAST[typ] for name, typ in variable['outputs'].items()}
+    for variable in block_table.get("Variable", []):
+        inputs = {name: STR_CAST[typ] for name, typ in variable["inputs"].items()}
+        outputs = {name: STR_CAST[typ] for name, typ in variable["outputs"].items()}
         config = outputs.copy()
 
-        name = variable['name']
+        name = variable["name"]
         variable_types[name] = BlockType(name, _variable, inputs, outputs, config)
 
     for block in block_table.get("Data", []):
@@ -187,7 +197,7 @@ def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
         else:
             uid = uuid4()
 
-        type_str: str = block['type']
+        type_str: str = block["type"]
         if type_str in variable_types:
             block_type = variable_types[type_str]
         else:
@@ -195,12 +205,12 @@ def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
 
         config = {
             name: block_type.config[name](value)
-            for name, value in block.get('config', {}).items()
+            for name, value in block.get("config", {}).items()
         }
 
         graph_block = Block(block_type, uid, *config)
         element = BlockElement(graph_block)
-        element.update_position(block.get('position', (0.0, 0.0)))
+        element.update_position(block.get("position", (0.0, 0.0)))
         controller.add_block(element)
 
     for connection in connection_table.get("Data", []):
@@ -242,8 +252,16 @@ def read_graph_from_level(puzzle: Puzzle, gui: Gui) -> GraphController:
         output_block = Block(puzzle.output_type)
         output_element = BlockElement(output_block)
         output_element.update_position((750.0, 300.0))
-        
-        controller = GraphController(gui, puzzle.title, puzzle.available, False, puzzle.tests, input_block.uid, output_block.uid)
+
+        controller = GraphController(
+            gui,
+            puzzle.title,
+            puzzle.available,
+            False,
+            puzzle.tests,
+            input_block.uid,
+            output_block.uid,
+        )
 
         controller.add_block(input_element)
         controller.add_block(output_element)
@@ -256,7 +274,7 @@ def read_graph_from_level(puzzle: Puzzle, gui: Gui) -> GraphController:
     if puzzle.available is not None:
         graph.available = puzzle.available
     graph.cases = puzzle.tests
-    
+
     input_uid = output_uid = None
     for block in graph.blocks:
         if input_uid is None and block.type.name == puzzle.input_type.name:
@@ -268,18 +286,25 @@ def read_graph_from_level(puzzle: Puzzle, gui: Gui) -> GraphController:
             break
 
     if input_uid is None:
-        raise ValueError(f"Puzzle {puzzle.name}, and its graph are missing an input block")
+        raise ValueError(
+            f"Puzzle {puzzle.name}, and its graph are missing an input block"
+        )
     if output_uid is None:
-        raise ValueError(f"Puzzle {puzzle.name}, and its graph are missing an output block")
+        raise ValueError(
+            f"Puzzle {puzzle.name}, and its graph are missing an output block"
+        )
 
     graph.input_uid = input_uid
     graph.output_uid = output_uid
 
     return controller
- 
-# TODO
+
+
 def write_graph(controller: GraphController, path: Path) -> None:
     pass
 
-def write_graph_from_level(controller: GraphController, puzzle: Puzzle) -> None:
+
+def write_graph_from_level(
+    controller: GraphController, puzzle: Puzzle, path: Path
+) -> None:
     pass

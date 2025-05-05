@@ -8,7 +8,7 @@ from jam.gui.core import Gui
 from jam.gui.alert import AlertElement
 from jam.input import inputs, Button, Axis
 from jam.context import context
-from jam.puzzle import puzzles
+from jam.puzzle import puzzles, Puzzle
 from jam.graphics.background import ParallaxBackground
 
 from .editor import EditorFrame
@@ -21,13 +21,8 @@ class LevelSelect:
 
     def __init__(self, gui: Gui) -> None:
         self._gui = gui
-        puzzle = puzzles.get_puzzle("ac")
-        pin, loc, face = puzzles.get_pin(puzzle)
-
-        alert = AlertElement(pin, loc, face, puzzle)
-        self._gui.add_element(alert)
         self._offset = (0.0, 0.0)
-        self._alerts: dict[str, AlertElement] = {puzzle.name: alert}
+        self._alerts: dict[str, AlertElement] = {}
 
     def update_offset(self, offset: tuple[float, float]) -> None:
         self._offset = offset
@@ -46,6 +41,22 @@ class LevelSelect:
 
         if alert is not None:
             alert.highlight()
+
+    def clear_puzzle(self, puzzle: Puzzle) -> None:
+        if puzzle.name not in self._alerts:
+            return
+        alert = self._alerts.pop(puzzle.name)
+        self._gui.remove_element(alert)
+
+    def find_new_puzzles(self) -> None:
+        available = context.get_available_puzzles()
+        for puzzle in available:
+            if puzzle.name in self._alerts:
+                continue
+            pin, loc, face = puzzles.get_pin(puzzle)
+            alert = AlertElement(pin, loc, face, puzzle)
+            self._gui.add_element(alert)
+            self._alerts[puzzle.name] = alert
 
 
 class GameView(View):
@@ -94,10 +105,12 @@ class GameView(View):
         )
 
         self._level_select: LevelSelect = LevelSelect(self._gui)
+        self._level_check_time: float = self.window.time
 
         style.audio.ambient_wind.play("ambience1", True)
 
     def on_show_view(self) -> None:
+        self._level_check_time = self.window.time
         context.set_frames(
             self._frame_controller,
             self._editor_frame,
@@ -105,11 +118,13 @@ class GameView(View):
             self._comms_frame,
             self._setting_frame,
         )
+        context.set_level_select(self._level_select)
 
     def on_hide_view(self) -> None:
         context.clear_frames()
+        context.clear_level_select()
 
-    def select_frame(self, frame: Frame):
+    def select_frame(self, frame: Frame) -> None:
         self._frame_controller.select_frame(frame)
 
     def on_draw(self) -> None:
@@ -119,6 +134,10 @@ class GameView(View):
         self._gui.draw()
 
     def on_update(self, delta_time: float) -> None:
+        if self.window.time >= self._level_check_time:
+            self._level_select.find_new_puzzles()
+            self._level_check_time += 5.0  # wait 5 seconds
+
         self._background.update()
         self._level_select.update_offset(self._background.layer_offsets[0])
         self._frame_controller.on_update(delta_time)

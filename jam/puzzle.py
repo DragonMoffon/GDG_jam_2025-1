@@ -10,7 +10,6 @@ import resources.puzzles as pzls
 
 
 class Puzzle:
-    __puzzles__: dict[str, Puzzle] = {}
 
     def __init__(
         self,
@@ -36,21 +35,8 @@ class Puzzle:
         self.source_graph: Path | None = source_graph
         self.tests: list[TestCase] = tests
 
-        Puzzle.__puzzles__[self.name] = self
-
-    @classmethod
-    def get_puzzle(cls, name: str):
-        if name not in cls.__puzzles__:
-            return None
-        return cls.__puzzles__[name]
-
 
 def load_puzzle(path: Path) -> Puzzle:
-    if path.stem in Puzzle.__puzzles__:
-        puzzle = Puzzle.get_puzzle(path.stem)
-        if puzzle is not None:
-            return puzzle
-
     with open(path, "rb") as fp:
         raw_data = load_toml(fp)
 
@@ -130,7 +116,7 @@ class PuzzleCollection:
                 continue
             self._pins[target] = (data["pin"], data["loc"], data["face"])
 
-    def get_available_puzzles(self, count: int, completed: set[str]) -> list[Puzzle]:
+    def get_available_puzzles(self, count: int, completed: set[str]) -> tuple[Puzzle]:
         available: list[Puzzle] = []
         for puzzle in self._puzzles.values():
             if count < puzzle.prerequisite_count:
@@ -140,7 +126,7 @@ class PuzzleCollection:
                 continue
             available.append(puzzle)
 
-        return available
+        return tuple(available)
 
     def get_puzzle(self, name: str) -> Puzzle:
         return self._puzzles[name]

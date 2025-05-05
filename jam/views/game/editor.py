@@ -23,6 +23,7 @@ from jam.puzzle import Puzzle
 from jam.gui import core, util, graph as gui
 from jam.gui.frame import Frame
 from jam.graphics.clip import ClippingMask
+from jam.context import context
 from jam.input import (
     inputs,
     Button,
@@ -372,9 +373,8 @@ class Editor:
                     self._test_runner.check_test_output()
 
                     if full_success:
-                        pass
-                        # TODO: Save solution, mark the puzzle as completed and show
-                        # all new alerts
+                        context.complete_puzzle(self._puzzle, self._controller)
+                        return
                 return
 
         # Find if we are hovering over a temp block
@@ -450,7 +450,11 @@ class Editor:
 
             # If no block and no noodle clicked then add new block
             self.set_mode_add_block()
-        elif button == inputs.SAVE_INPUT and modifiers & inputs.SAVE_MOD:
+        elif (
+            button == inputs.SAVE_INPUT
+            and modifiers & inputs.SAVE_MOD
+            and self._graph.sandbox
+        ):
             self.set_mode_save_graph()
 
     def drag_block_on_input(
@@ -862,6 +866,7 @@ class EditorFrame(Frame):
             return
 
         closing_editor = self._editors.pop(name)
+        self._editor_tabs.rem_tab(self._editor_tabs.get_tab(name))
         if self._active_editor.name == name:
             self._active_editor = tuple(self._editors.values())[0]
             self._active_editor.set_mode_none()
