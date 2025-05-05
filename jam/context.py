@@ -209,8 +209,8 @@ class Context:
         if self._editor_frame is None:
             return
 
-        #TODO: AHHHHH
-        retrun self._editor_frame._active_editor._puzzle
+        # TODO: AHHHHH
+        return self._editor_frame._active_editor._puzzle
 
 
 context = Context()
