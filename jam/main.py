@@ -3,7 +3,7 @@ from pyglet.gl import GL_LINEAR
 
 from .context import context
 from .application import Window
-from .views.game import GameView
+from .views.menu import MainMenuView
 
 
 def main() -> None:
@@ -11,6 +11,6 @@ def main() -> None:
     pyglet.image.Texture.default_mag_filter = GL_LINEAR
     context.choose_first_save()
     win = Window()
-    win.show_view(GameView())
+    win.show_view(MainMenuView())
     win.run()
     context.close()

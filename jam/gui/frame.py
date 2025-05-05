@@ -16,10 +16,6 @@ from .core import (
 from jam.input import inputs, Button, Axis
 from resources import style
 
-ACTIVE_GROUP = Group(0)
-SHADOW_GROUP = Group(1)
-TAG_GROUP = Group(2)
-
 
 class Frame(Element):
 

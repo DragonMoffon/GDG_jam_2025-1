@@ -188,7 +188,7 @@ class SelectionPopup(Popup):
             t = self._action_text[action]
             t.batch = batch
 
-    def get_hovered_item(self, point: tuple[float, float]):
+    def get_hovered_item(self, point: tuple[float, float]) -> str | None:
         for name, panel in self._action_panels.items():
             if (
                 0 <= point[0] - panel.x <= panel.width
@@ -496,17 +496,14 @@ class TextInputPopup(Popup):
         self._text.document.set_style(
             self.cursor,
             self.cursor + 1,
-            {
-                "color": style.colors.base,
-                'background_color': style.colors.accent
-            }
+            {"color": style.colors.base, "background_color": style.colors.accent},
         )
 
     def clear_highlight(self) -> None:
         self._text.document.set_style(
             0,
             len(self._text.text),
-            {"color": style.colors.accent, 'background_color': None}
+            {"color": style.colors.accent, "background_color": None},
         )
 
     @property
@@ -537,7 +534,17 @@ class PageTab(Element):
 
     def __init__(self, text: str):
         Element.__init__(self)
-        self._text = Label(text, 0, 0, 0, color=style.colors.accent, font_name=style.text.normal.name, font_size=style.text.normal.size, anchor_y='bottom', group=OVERLAY_PRIMARY)
+        self._text = Label(
+            text,
+            0,
+            0,
+            0,
+            color=style.colors.accent,
+            font_name=style.text.normal.name,
+            font_size=style.text.normal.size,
+            anchor_y="bottom",
+            group=OVERLAY_PRIMARY,
+        )
         self._panel = RoundedRectangle(
             0.0,
             0.0,
@@ -546,13 +553,13 @@ class PageTab(Element):
             (style.format.corner_radius, 0.0, 0.0, style.format.corner_radius),
             (12, 1, 1, 12),
             color=style.colors.base,
-            group=OVERLAY_PRIMARY
+            group=OVERLAY_PRIMARY,
         )
 
     def connect_renderer(self, batch: Batch | None) -> None:
         self._panel.batch = batch
         self._text.batch = batch
-    
+
     def contains_point(self, point: tuple[float, float]) -> bool:
         l, b = self._panel.position
         w, h = self._panel.width, self._panel.height
@@ -561,7 +568,7 @@ class PageTab(Element):
     @property
     def text(self) -> str:
         return self._text.text
-    
+
     @property
     def width(self):
         return self._panel.width
@@ -572,18 +579,23 @@ class PageTab(Element):
 
     def update_position(self, point: tuple[float, float]) -> None:
         self._panel.position = point
-        self._text.position = point[0] + style.format.corner_radius, point[1] + style.format.padding, 0.0
+        self._text.position = (
+            point[0] + style.format.corner_radius,
+            point[1] + style.format.padding,
+            0.0,
+        )
 
     def select(self):
-        self._text.set_style('color', style.colors.highlight)
+        self._text.set_style("color", style.colors.highlight)
         self._panel.color = style.colors.base
 
     def deselect(self):
-        self._text.set_style('color', style.colors.accent)
+        self._text.set_style("color", style.colors.accent)
         self._panel.color = style.colors.base
 
+
 class PageRow(Element):
-    
+
     def __init__(self):
         Element.__init__(self)
         self._position: tuple[float, float] = (0.0, 0.0)
@@ -601,17 +613,17 @@ class PageRow(Element):
         l, t = self._position
         w, h = self._size
         return 0 <= point[0] - l <= w and 0 <= t - point[1] <= h
-    
+
     def get_hovered_tab(self, point: tuple[float, float]) -> PageTab | None:
         for tab in self._tabs:
             if tab.contains_point(point):
                 return tab
         return None
-    
+
     def update_position(self, point: tuple[float, float]) -> None:
         self._position = point
         self.layout_tabs()
-    
+
     def layout_tabs(self):
         l, t = self._position
         w, h = 0.0, 0.0
