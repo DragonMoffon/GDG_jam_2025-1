@@ -37,9 +37,9 @@ class Sound:
     __cache__: dict[Path, Source] = {}
 
     def __init__(self, pth: Path):
-        if pth not in Sound.__cache__:
-            Sound.__cache__[pth] = load_audio(pth)
-        self._source: Source = Sound.__cache__[pth]
+        if str(pth) not in Sound.__cache__:
+            Sound.__cache__[str(pth)] = load_audio(pth)
+        self._source: Source = Sound.__cache__[str(pth)]
 
     def play(self, channel: str = 'default', loop: bool = False) -> None:
         AUDIO.play(self._source, channel, loop)
