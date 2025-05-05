@@ -110,6 +110,8 @@ class Editor:
     check_inactive: ImageData
     check_active: ImageData
 
+    run_one: ImageData
+    run_all: ImageData
 
 @dataclass
 class Game:
@@ -188,6 +190,8 @@ class Style:
                 load_texture(source / editor_data["dropdown"]),
                 load_texture(source / editor_data["check_inactive"]),
                 load_texture(source / editor_data["check_active"]),
+                load_texture(source / editor_data["run_one"]),
+                load_texture(source / editor_data["run_all"])
             ),
         )
 

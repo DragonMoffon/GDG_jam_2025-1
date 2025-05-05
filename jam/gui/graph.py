@@ -1038,8 +1038,12 @@ class TestRunner(Element):
             formating.padding, color=colors.background, group=OVERLAY_PRIMARY
         )
 
-        self._run_one_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.accent, group=OVERLAY_PRIMARY)
-        self._run_all_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.accent, group=OVERLAY_PRIMARY)
+        self._run_one_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
+        self._run_one_icon = Sprite(style.game.editor.run_one, group=OVERLAY_PRIMARY)
+        self._run_one_icon.color = colors.base
+        self._run_all_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.background, group=OVERLAY_PRIMARY)
+        self._run_all_icon = Sprite(style.game.editor.run_all, group=OVERLAY_PRIMARY)
+        self._run_all_icon.color = colors.base
         hb = self._run_one_button.height + self._run_all_button.height + 2 * formating.padding
 
         body_width = wi + self._run_one_button.width + wo + 6 * formating.padding + 2 * formating.corner_radius
@@ -1088,14 +1092,10 @@ class TestRunner(Element):
 
         cx = self._input_body.x + self._input_body.width + formating.padding
         cy = point[1] + self._body.height / 2.0
-        self._run_one_button.position = (
-            cx,
-            cy + formating.padding
-        )
-        self._run_all_button.position = (
-            cx,
-            cy - self._run_all_button.height - formating.padding
-        )
+        self._run_one_button.position = cx, cy + formating.padding
+        self._run_one_icon.position = cx, cy + formating.padding, 0.0
+        self._run_all_button.position = cx, cy - self._run_all_button.height - formating.padding
+        self._run_all_icon.position = cx, cy - self._run_all_button.height - formating.padding, 0.0
         y = self._input_body.y + self._input_body.height
         for idx, (inp, out) in enumerate(self._pairs):
             dy = inp.height if out is None else max(inp.height, out.height)
@@ -1121,7 +1121,9 @@ class TestRunner(Element):
         self._input_body.batch = batch
         self._output_body.batch = batch
         self._run_one_button.batch = batch
+        self._run_one_icon.batch = batch
         self._run_all_button.batch = batch
+        self._run_all_icon.batch = batch
         for inp, out in self._pairs:
             inp.connect_renderer(batch)
             if out is not None:
