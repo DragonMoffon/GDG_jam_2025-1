@@ -1,5 +1,5 @@
 import re
-from math import ceil, copysign, floor
+from math import ceil, copysign, cos, floor, pi, sin, tan
 from .graph import BlockType, FloatValue, IntValue, StrValue, BoolValue, OperationValue
 
 # -- BLOCK TYPES --
@@ -81,6 +81,33 @@ DivBlock = BlockType(
     {"a": FloatValue, "b": FloatValue},
     {"result": FloatValue},
 )
+
+def __sin(value: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
+    _value = FloatValue.__acast__(value)
+    return {"result": FloatValue(sin(_value.value))}
+
+
+SinBlock = BlockType("Sin", __sin, {"value": FloatValue}, {"result": FloatValue})
+
+def __cos(value: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
+    _value = FloatValue.__acast__(value)
+    return {"result": FloatValue(cos(_value.value))}
+
+
+CosBlock = BlockType("Cos", __sin, {"value": FloatValue}, {"result": FloatValue})
+
+def __tan(value: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
+    _value = FloatValue.__acast__(value)
+    return {"result": FloatValue(tan(_value.value))}
+
+
+TanBlock = BlockType("Tan", __tan, {"value": FloatValue}, {"result": FloatValue})
+
+def __pi() -> dict[str, FloatValue]:
+    return {"pi": FloatValue(pi)}
+
+
+PiBlock = BlockType("Pi", __pi, {}, {"pi": FloatValue})
 
 # -- Functions --
 
@@ -241,7 +268,7 @@ def __decr(value: IntValue | FloatValue) -> dict[str, IntValue | FloatValue]:
     return {"result": IntValue(a_.value - 1)}
 
 
-IncrBlock = BlockType("Decrement", __decr, {"value": IntValue}, {"result": IntValue})
+DecrBlock = BlockType("Decrement", __decr, {"value": IntValue}, {"result": IntValue})
 
 # -- String Manipulation --
 
