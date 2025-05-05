@@ -27,11 +27,13 @@ class MainMenuView(View):
         self._fade_out = True
         self._timer = self.window.time
         context.new_save()
+        style.audio.crash.play()
 
     def pick_save(self, name: str):
         self._fade_out = True
         self._timer = self.window.time
         context.choose_save(name)
+        style.audio.crash.play()
 
     def on_cursor_motion(self, x, y, dx, dy):
         l = self._popup.get_hovered_item((x, y))
@@ -49,7 +51,7 @@ class MainMenuView(View):
         self._background.draw()
         self._gui.draw()
         if self._fade_out:
-            fraction = (self.window.time - self._timer) / 1.0
+            fraction = (self.window.time - self._timer) / 5.0
             amount = max(0.0, min(1.0, (1 - (1 - fraction) ** 3)))
             draw_rect_filled(self.window.rect, (0, 0, 0, int(255 * amount)))
 
@@ -57,5 +59,5 @@ class MainMenuView(View):
         if not self._fade_out:
             return
 
-        if self.window.time - self._timer > 1.0:
+        if self.window.time - self._timer > 5.0:
             self.window.show_view(GameView())

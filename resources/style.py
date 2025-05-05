@@ -76,6 +76,7 @@ class Audio:
     block: Sound
     modal: Sound
     ambient_wind: Sound
+    crash: Sound
 
 
 @dataclass
