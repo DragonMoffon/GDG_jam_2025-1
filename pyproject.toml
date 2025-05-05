@@ -1,5 +1,5 @@
 [project]
-name = "pyfont"
+name = "station.block"
 version = "0.0.1"
 description = ""
 readme = "README.md"
@@ -10,7 +10,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
-requires-python = ">= 3.13"
+requires-python = ">= 3.12"
 dependencies = [
     "arcade>=3.0.2",
     "tomlkit==0.13.2"
