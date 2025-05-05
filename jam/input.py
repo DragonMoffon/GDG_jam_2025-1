@@ -292,9 +292,9 @@ class Keys(IntEnum):
 
 
 LETTER_KEY_SET = {Keys(n) for n in range(97, 123)}
-DIGIT_KEY_SET = {Keys(n) for n in range(48, 58)}
+DIGIT_KEY_SET = {*(Keys(n) for n in range(48, 58)), Keys.MINUS}
 
-DIGIT_ARRAY = tuple(chr(n) for n in range(48, 58))
+DIGIT_ARRAY = tuple((*(chr(n) for n in range(48, 58)), "-"))
 DIGIT_SET = set(DIGIT_ARRAY)
 
 DECIMAL_KEY_SET = DIGIT_KEY_SET.union([Keys.PERIOD])

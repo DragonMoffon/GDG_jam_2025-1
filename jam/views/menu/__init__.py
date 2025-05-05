@@ -18,7 +18,10 @@ class MainMenuView(View):
         self._background = ParallaxBackground()
         self._gui = Gui(self.window.default_camera)
         new_save = PopupAction("New Game", self.new_save)
-        self._popup = SelectionPopup((new_save,), (self.center_x, self.center_y))
+        cont_save = PopupAction("Continue", self.pick_save)
+        self._popup = SelectionPopup(
+            (new_save, cont_save), (self.center_x, self.center_y)
+        )
         self._gui.add_element(self._popup)
         self._fade_out: bool = False
         self._timer: float = 0.0
@@ -29,10 +32,10 @@ class MainMenuView(View):
         context.new_save()
         style.audio.crash.play()
 
-    def pick_save(self, name: str):
+    def pick_save(self):
         self._fade_out = True
         self._timer = self.window.time
-        context.choose_save(name)
+        context.choose_first_save()
         style.audio.crash.play()
 
     def on_cursor_motion(self, x, y, dx, dy):

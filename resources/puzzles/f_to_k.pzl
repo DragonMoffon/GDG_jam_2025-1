@@ -27,4 +27,4 @@ inputs = {"fahrenheit"=32.0}
 outputs = {"celsius"=0.0, "kelvin"=273.15}
 [[Tests]]
 inputs = {"fahrenheit"=0.0}
-outputs = {"celsius"=-17.7778, "kelvin"=255.3722}
+outputs = {"celsius"=-17.7777778, "kelvin"=255.3722}

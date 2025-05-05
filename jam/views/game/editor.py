@@ -348,28 +348,26 @@ class Editor:
                 elif self._test_runner.over_run_one(o_cursor):
                     test = self._test_runner.get_shown_test()
                     inp = self._controller.get_block(self._graph.input_uid)
-                    inp_config = inp.block.config.copy()
-                    inp.block.config.update(test.inputs)
+                    inp.update_config(test.inputs)
                     out = self._controller.get_block(self._graph.output_uid)
                     rslt = self._graph.compute(out.block)
                     case = graph.TestCase(test.inputs, rslt.outputs)
                     test.complete = case == test
                     self._test_runner.check_test_output()
-                    # Reset the inputs to what the user had
-                    inp.update_config(inp_config)
                 elif self._test_runner.over_run_all(o_cursor):
                     tests = self._test_runner.get_tests()
                     inp = self._controller.get_block(self._graph.input_uid)
                     out = self._controller.get_block(self._graph.output_uid)
-                    inp_config = inp.block.config.copy()
                     full_success = True
                     for test in tests:
-                        inp.block.config.update(test.inputs)
+                        inp.update_config(test.inputs)
                         rslt = self._graph.compute(out.block)
                         case = graph.TestCase(test.inputs, rslt.outputs)
                         test.complete = case == test
                         full_success = full_success and test.complete
-                    inp.update_config(inp_config)
+                        if not full_success:
+                            break
+
                     self._test_runner.check_test_output()
 
                     if full_success:

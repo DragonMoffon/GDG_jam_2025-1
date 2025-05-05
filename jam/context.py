@@ -80,6 +80,8 @@ def read_savedata(pth: Path) -> SaveData:
 def new_savedata(name: str, origin: Path) -> SaveData:
     source = zipfile.ZipFile(origin / f"{name}.svd", "x")
     source.write(origin / "save.cfg")
+    source.close()
+    source = zipfile.ZipFile(origin / f"{name}.svd", "a")
     return SaveData(source, name)
 
 
