@@ -120,8 +120,16 @@ class Editor:
 
 
 @dataclass
+class Hack:
+    stars: Path
+    station: Path
+    logo: Path
+
+
+@dataclass
 class Game:
     background: Background
+    hack: Hack
     panels: Panels
     editor: Editor
 
@@ -164,6 +172,7 @@ class Style:
         )
 
         background_data = self._raw["Game"]["Background"]
+        hack_data = self._raw["Game"]["Hack"]
         panel_data = self._raw["Game"]["Panels"]
         editor_data = self._raw["Game"]["Editor"]
         self.game = Game(
@@ -175,6 +184,11 @@ class Style:
                     Floating.create(data, source)
                     for data in background_data["Floating"]
                 ),
+            ),
+            Hack(
+                stars = source / hack_data["stars"],
+                station = source / hack_data["station"],
+                logo = source / hack_data["logo"],
             ),
             Panels(
                 settings_tag=source / panel_data["settings_tag"],

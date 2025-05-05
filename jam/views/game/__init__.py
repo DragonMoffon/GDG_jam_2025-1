@@ -1,4 +1,5 @@
-from arcade import Camera2D, draw_rect_filled
+from arcade import Camera2D, draw_rect_filled, Sprite
+from arcade.draw import draw_sprite
 
 from resources import style
 
@@ -65,6 +66,7 @@ class GameView(View):
         View.__init__(self)
         self.background_color = style.game.background.colour
         self._background = ParallaxBackground()
+        self._logo = Sprite(style.game.hack.logo, center_x = self.center_x, center_y = self.center_y)
         self._background_projector = Camera2D(self.window.rect)
         self._panel_projector = Camera2D(self.window.rect)
         self._gui = Gui(self._background_projector, self._panel_projector)
@@ -139,9 +141,11 @@ class GameView(View):
         self._frame_controller.on_draw()
         self._gui.draw()
         if self._fade_in:
-            fraction = (self.window.time - self._timer) / 1.0
+            fraction = (self.window.time - self._timer) / 3.0
             amount = max(0.0, min(1.0, (1 - fraction) ** 3))
             draw_rect_filled(self.window.rect, (0, 0, 0, int(255 * amount)))
+            self._logo.alpha = int(255 * amount)
+            draw_sprite(self._logo)
             if fraction >= 1.0:
                 self._fade_in = False
 
