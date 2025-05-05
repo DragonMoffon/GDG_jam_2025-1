@@ -1,0 +1,33 @@
+[Config]
+name = "navigation"
+title = "Navigation"
+description = """We need to figure out where we are, and all we're getting are
+signal strength from two nearby asteroids.
+The first asteroid is at (1000, 2300) on the interstellar positioning grid.
+The second is at (2540, 900).
+Using the data we have, we know our bearings to the two asteroids, but
+not our IPG position.
+
+The Emergency Handbook has this scrawled inside by a previous captain:
+"x = ((y1 - y2) + x2 tan(bearing_b) - x1 tan(bearing_a)) / tan(bearing_b) - tan(bearing_a)
+y = ([y1 tan (bearing_b) - y2 tan(bearing_a)] - [(x1 - x2) tan(bearing_b) tan (bearing_a)]) / (tan(bearing_b) - tan(bearing_a))"
+"""
+
+prerequisite_count = 0
+prerequisite_levels = ["connect_mainbus"]
+
+
+[Inputs]
+name = 'bearing_a' # float
+name = 'bearing_b' # float
+[Outputs]
+name = 'pos_x' # float
+name = 'pos_y
+
+[[Tests]]
+inputs = {"bearing_a" = 25.6, "bearing_b" = 150}
+outputs = {"pos_x" = 2393.5, "pos_y" = 3380}
+
+[[Tests]]
+inputs = {"bearing_a" = 102, "bearing_b" = 44}
+outputs = {"pos_x" = 2687.5, "pos_y" = 951.9}
