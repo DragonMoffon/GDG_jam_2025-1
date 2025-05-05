@@ -197,7 +197,6 @@ class FrameController:
             self._animation_time = GLOBAL_CLOCK.time
             if self._next_frame is None:
                 self._next_frame = frame
-                style.audio.slide_in.play()
             else:
                 self._pending_frame = frame
         elif self._next_frame is None:
@@ -206,7 +205,6 @@ class FrameController:
 
             self._animation_mode = FrameAnimationMode.SHOW
             self._animation_time = GLOBAL_CLOCK.time
-            style.audio.slide_out.play()
         else:
             self._pending_frame = frame
 
