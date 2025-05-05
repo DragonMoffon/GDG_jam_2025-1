@@ -152,17 +152,17 @@ class TestCase:
             return False
 
         for name, value in self.inputs.items():
-            if value.type is float:
-                if round(value.value, 2) != round(other.inputs[name].value, 2):
-                    print(f" no input: {name} match")
-                    return False
-            elif other.inputs[name].value != value.value:
-                print(f" no input: {name} match")
+            if other.inputs[name].value != value.value:
+                print(f" no input value match for: {name}")
                 return False
 
         for name, value in self.outputs.items():
-            if other.outputs[name].value != value.value:
-                print(f" no output: {name} match")
+            if value.type is float:
+                if round(value.value, 2) != round(other.outputs[name].value, 2):
+                    print(f"no output value match for: {name}")
+                    return False
+            elif other.outputs[name].value != value.value:
+                print(f" no  value match for: {name}")
                 return False
         return True
 
