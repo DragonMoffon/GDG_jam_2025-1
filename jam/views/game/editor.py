@@ -571,6 +571,7 @@ class Editor:
         elif button == inputs.SPACE:
             self._save_popup.input_char(chr(Keys.UNDERSCORE))
         elif button == inputs.CONFIRM:
+            # TODO: fix no path
             self._graph._name = self._save_popup.text.replace("_", " ")
             if self._puzzle is not None:
                 write_graph_from_level(self._controller, self._puzzle)
