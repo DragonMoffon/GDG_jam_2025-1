@@ -348,7 +348,7 @@ class Editor:
                     test = self._test_runner.get_shown_test()
                     inp = self._controller.get_block(self._graph.input_uid)
                     inp_config = inp.block.config.copy()
-                    inp.update_config(test.inputs)
+                    inp.block.config.update(test.inputs)
                     out = self._controller.get_block(self._graph.output_uid)
                     rslt = self._graph.compute(out.block)
                     case = graph.TestCase(rslt.inputs, rslt.outputs)
@@ -362,7 +362,16 @@ class Editor:
                     inp.update_config(inp_config)
                 elif self._test_runner.over_run_all(o_cursor):
                     tests = self._test_runner.get_tests()
-                    # TODO
+                    inp = self._controller.get_block(self._graph.input_uid)
+                    out = self._controller.get_block(self._graph.output_uid)
+                    inp_config = inp.block.config.copy()
+                    for test in tests:
+                        inp.block.config.update(test.inputs)
+                        rslt = self._graph.compute(out.block)
+                        case = graph.TestCase(rslt.inputs, rslt.outputs)
+                        test.complete = case == test
+                    inp.update_config(inp_config)
+                    self._test_runner.check_test_output()
                 return
 
         # Find if we are hovering over a temp block

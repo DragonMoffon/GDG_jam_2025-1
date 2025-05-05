@@ -1049,6 +1049,7 @@ class TestRunner(Element):
         wi = self._input.width
         if case.outputs is not None:
             out = ValueGroup(case.outputs, False, True)
+            out._success.active = case.complete
             wo = out.width
             h = max(h, out.height)
         else:
@@ -1226,6 +1227,7 @@ class TestRunner(Element):
         self._input: ValueGroup = ValueGroup(case.inputs)
         if case.outputs is not None:
             out = ValueGroup(case.outputs, False, True)
+            out._success.active = case.complete
         else:
             out = None
         self._output: ValueGroup | None = out
