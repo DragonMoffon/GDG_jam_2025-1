@@ -1,6 +1,7 @@
 from arcade import LBWH, Camera2D
 from arcade.camera.default import ViewportProjector
 from pyglet.shapes import RoundedRectangle
+from pyglet.text import Label
 
 from resources import style
 
@@ -37,6 +38,8 @@ class CommsFrame(Frame):
         # A projector that acts like arcade's default. Use if you want things to not move within the clip.
         self._clip_projector = ViewportProjector(clip_rect)
 
+        self.label = Label("[COMMS OFFLINE]", x = size[0] / 2, y = size[1] / 2, color = style.colors.highlight, font_name = style.text.normal.name, align = "center", anchor_x = "center", anchor_y = "center")
+
         # activate the clip texture to draw into, use the basic clip projector,
         # then create and immediatly use a rounded rectangle.
         with self.cliping_mask.clip:
@@ -52,7 +55,7 @@ class CommsFrame(Frame):
                 ).draw()
 
         # This has to happen before init because the Frame called update_position which refers to the clipping mask
-        
+
         Frame.__init__(self, "COMMS", tag_offset, position, size, show_body, show_shadow, anchor_top=True)
 
         self.camera = Camera2D(clip_rect) # Camera2D with the viewport of the clip_rect to draw the gui.
@@ -60,9 +63,10 @@ class CommsFrame(Frame):
 
     def on_draw(self) -> None:
         with self.cliping_mask.target as fbo:
-            fbo.clear(color=(255, 255, 255, 255))
+            fbo.clear(color=style.colors.background)
             with self.camera.activate():
                 self.frame_gui.draw()
+                self.label.draw()
 
     def connect_renderer(self, batch: core.Batch | None) -> None:
         Frame.connect_renderer(self, batch)
