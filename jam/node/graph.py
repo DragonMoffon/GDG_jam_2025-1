@@ -145,16 +145,20 @@ class TestCase:
             return False
 
         if self.inputs.keys() != other.inputs.keys():
+            print(" no input match")
             return False
         if self.outputs.keys() != other.outputs.keys():
+            print(" no output match")
             return False
 
         for name, value in self.inputs.items():
             if other.inputs[name].value != value.value:
+                print(f" no input: {name} match")
                 return False
 
         for name, value in self.outputs.items():
             if other.outputs[name].value != value.value:
+                print(f" no output: {name} match")
                 return False
         return True
 

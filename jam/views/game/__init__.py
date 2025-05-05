@@ -21,7 +21,7 @@ class LevelSelect:
 
     def __init__(self, gui: Gui) -> None:
         self._gui = gui
-        puzzle = puzzles.get_puzzle("connect_mainbus")
+        puzzle = puzzles.get_puzzle("ac")
         pin, loc, face = puzzles.get_pin(puzzle)
 
         alert = AlertElement(pin, loc, face, puzzle)

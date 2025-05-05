@@ -351,12 +351,8 @@ class Editor:
                     inp.block.config.update(test.inputs)
                     out = self._controller.get_block(self._graph.output_uid)
                     rslt = self._graph.compute(out.block)
-                    case = graph.TestCase(rslt.inputs, rslt.outputs)
-                    if case == test:
-                        # Test Case Succeded
-                        test.complete = True
-                    else:
-                        test.complete = False
+                    case = graph.TestCase(test.inputs, rslt.outputs)
+                    test.complete = case == test
                     self._test_runner.check_test_output()
                     # Reset the inputs to what the user had
                     inp.update_config(inp_config)
@@ -368,8 +364,9 @@ class Editor:
                     for test in tests:
                         inp.block.config.update(test.inputs)
                         rslt = self._graph.compute(out.block)
-                        case = graph.TestCase(rslt.inputs, rslt.outputs)
+                        case = graph.TestCase(test.inputs, rslt.outputs)
                         test.complete = case == test
+                        print(test.complete)
                     inp.update_config(inp_config)
                     self._test_runner.check_test_output()
                 return
