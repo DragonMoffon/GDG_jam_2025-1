@@ -18,13 +18,7 @@ class MainMenuView(View):
         self._background = ParallaxBackground()
         self._gui = Gui(self.window.default_camera)
         new_save = PopupAction("New Game", self.new_save)
-        pick_save = (
-            PopupAction(f"Continue Save: {name}", context.choose_save, name)
-            for name in context.get_save_names()
-        )
-        self._popup = SelectionPopup(
-            (new_save, *pick_save), (self.center_x, self.center_y)
-        )
+        self._popup = SelectionPopup((new_save,), (self.center_x, self.center_y))
         self._gui.add_element(self._popup)
         self._fade_out: bool = False
         self._timer: float = 0.0
@@ -48,7 +42,7 @@ class MainMenuView(View):
         if button == inputs.PRIMARY_CLICK and pressed:
             l = self._popup.get_hovered_item(inputs.cursor)
             if l is not None:
-                self._popup.actions[l].action()
+                self._popup.actions[l]()
 
     def on_draw(self):
         self.clear()
