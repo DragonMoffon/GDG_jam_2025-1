@@ -250,14 +250,21 @@ SubstringBlock = BlockType(
 
 
 # -- killing Digi --
-def _match(a: StrValue, pattern: StrValue) -> dict[str, BoolValue]:
-    a_ = StrValue.__acast__(a)
+def _match(value: StrValue, pattern: StrValue) -> dict[str, BoolValue]:
+    value_ = StrValue.__acast__(value)
     pattern_ = StrValue.__acast__(pattern)
-    return {"result": BoolValue(re.match(pattern_, a_) is not None)}
-
+    return {"result": BoolValue(re.match(pattern_, value_) is not None)}
 
 MatchBlock = BlockType(
-    "Match", __len, {"a": StrValue, "pattern": StrValue}, {"result": BoolValue}
+    "Match", _match, {"a": StrValue, "pattern": StrValue}, {"result": BoolValue}
+)
+
+def _format(value: BoolValue | IntValue | FloatValue | StrValue, format: StrValue) -> dict[str, StrValue]:
+    _format = StrValue.__acast__(format)
+    return {"result": StrValue(f"{value}:{_format.value}")}
+
+FormatBlock = BlockType(
+    "Format", _format, {"value": StrValue | IntValue | FloatValue | BoolValue, "format": StrValue}, {"result": BoolValue}
 )
 
 # -- Boolean Logic
