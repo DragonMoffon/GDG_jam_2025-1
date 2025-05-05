@@ -83,6 +83,12 @@ class Editor:
         self._pan_camera: bool = False
         self._hovered_block: gui.BlockElement | None = None
         self._results: gui.ResultsPanel | None = None
+        self._test_runner: gui.TestRunner | None = None
+
+        if self._puzzle is not None:
+            self._test_runner = gui.TestRunner(self._puzzle.tests)
+            self._test_runner.update_position((300.0, 50.0))
+            self._gui.add_element(self._test_runner)
 
         # Drag Block
         self._selected_block: gui.BlockElement | None = None

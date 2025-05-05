@@ -1028,21 +1028,22 @@ class TestRunner(Element):
             self._pairs.append((inp, out))
             h += dh + formating.padding
 
+        h += formating.padding
         self._input_body = RoundedRectangle(
-            0.0, 0.0, wi + 2 * formating.padding, h + 2 * formating.padding,
-            formating.padding, color=colors.background
+            0.0, 0.0, wi + 2 * formating.padding, h,
+            formating.padding, color=colors.background, group=OVERLAY_PRIMARY
         )
         self._output_body = RoundedRectangle(
-            0.0, 0.0, wo + 2 * formating.padding, h + 2 * formating.padding,
-            formating.padding, color=colors.background
+            0.0, 0.0, wo + 2 * formating.padding, h,
+            formating.padding, color=colors.background, group=OVERLAY_PRIMARY
         )
 
-        self._run_one_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.accent)
-        self._run_all_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.accent)
-        hb = self._run_one_button.height + self._run_all_button.height + formating.padding
+        self._run_one_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.accent, group=OVERLAY_PRIMARY)
+        self._run_all_button = RoundedRectangle(0.0, 0.0, 32.0, 32.0, formating.padding, color=colors.accent, group=OVERLAY_PRIMARY)
+        hb = self._run_one_button.height + self._run_all_button.height + 2 * formating.padding
 
-        body_width = wi + self._run_one_button.width + wo + 2 * formating.padding + 2 * formating.corner_radius
-        body_height = max(h, hb) + 2 * formating.padding
+        body_width = wi + self._run_one_button.width + wo + 6 * formating.padding + 2 * formating.corner_radius
+        body_height = max(h, hb) + 2 * formating.corner_radius
 
         self._body = RoundedRectangle(
             0.0,
@@ -1050,7 +1051,8 @@ class TestRunner(Element):
             body_width,
             body_height,
             formating.corner_radius,
-            color=colors.base
+            color=colors.base,
+            group=OVERLAY_PRIMARY
         )
         self._shadow = RoundedRectangle(
             0.0,
@@ -1059,13 +1061,71 @@ class TestRunner(Element):
             body_height,
             formating.corner_radius,
             color=colors.dark,
-            program=get_shadow_shader()
+            program=get_shadow_shader(),
+            group=OVERLAY_SHADOW
         )
 
     def contains_point(self, point: tuple[float, float]) -> bool:
         l, b = self._body.position
         w, h = self._body.width, self._body.height
         return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+
+    def update_position(self, point: tuple[float, float]) -> None:
+        self._body.position = point
+        self._shadow.position = (
+            point[0] - 2 * formating.drop_x,
+            point[1] - 2 * formating.drop_y
+        )
+
+        self._input_body.position = (
+            point[0] + formating.corner_radius,
+            point[1] + formating.corner_radius
+        )
+        self._output_body.position = (
+            point[0] + self._body.width - self._output_body.width - formating.corner_radius,
+            point[1] + formating.corner_radius
+        )
+
+        cx = self._input_body.x + self._input_body.width + formating.padding
+        cy = point[1] + self._body.height / 2.0
+        self._run_one_button.position = (
+            cx,
+            cy + formating.padding
+        )
+        self._run_all_button.position = (
+            cx,
+            cy - self._run_all_button.height - formating.padding
+        )
+        y = self._input_body.y + self._input_body.height
+        for idx, (inp, out) in enumerate(self._pairs):
+            dy = inp.height if out is None else max(inp.height, out.height)
+            y -= dy + formating.padding
+            inp.update_position(
+                (
+                    self._input_body.x + formating.padding,
+                    y
+                )
+            )
+            if out is None:
+                continue
+            out.update_position(
+                (
+                    self._output_body.x + formating.padding,
+                    y
+                )
+            )
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._body.batch = batch
+        self._shadow.batch = batch
+        self._input_body.batch = batch
+        self._output_body.batch = batch
+        self._run_one_button.batch = batch
+        self._run_all_button.batch = batch
+        for inp, out in self._pairs:
+            inp.connect_renderer(batch)
+            if out is not None:
+                out.connect_renderer(batch)
 
 
 class ResultsPanel(Element):
