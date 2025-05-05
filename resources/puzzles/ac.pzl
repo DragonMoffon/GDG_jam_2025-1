@@ -6,12 +6,10 @@ the environmental control system logic needs to be fixed.
 If it gets above 22C in here, we need to turn the power on,
 but we also need to cap out at 100 power after 30C or we're
 going to blow a fuse.
-
-Oh, also, the input is in Kelvin. Oops!
 """
 
 prerequisite_count = 0
-preequisite_levels = ["f_to_k"]
+prerequisite_levels = ["f_to_k"]
 
 [Inputs]
 temp = 'float' # float, int, str, bool
@@ -19,21 +17,21 @@ temp = 'float' # float, int, str, bool
 power = 'float' # float, int, str, bool
 
 [[Tests]]
-inputs = {'temp' = 290}
+inputs = {'temp' = 18}
 outputs = {'power' = 0}
 
 [[Tests]]
-inputs = {'temp' = 295.15}
+inputs = {'temp' = 22}
 outputs = {'power' = 0}
 
 [[Tests]]
-inputs = {'temp' = 299.15}
+inputs = {'temp' = 26}
 outputs = {'power' = 50}
 
 [[Tests]]
-inputs = {'temp' = 303.15}
+inputs = {'temp' = 30}
 outputs = {'power' = 100}
 
 [[Tests]]
-inputs = {'temp' = 310}
+inputs = {'temp' = 38}
 outputs = {'power' = 100}
