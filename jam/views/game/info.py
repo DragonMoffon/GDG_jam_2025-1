@@ -78,7 +78,7 @@ class InfoFrame(Frame):
     def on_draw(self) -> None:
         self.label.text = INFO_TEXT
         if puz := context.get_open_puzzle():
-            self.label.text += "\n" + puz.description
+            self.label.text += "\n------\n\n[CURRENT TASK]\n\n" + puz.description
         with self.cliping_mask.target as fbo:
             fbo.clear(color=style.colors.background)
             with self.camera.activate():
