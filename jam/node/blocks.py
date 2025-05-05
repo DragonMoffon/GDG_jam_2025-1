@@ -1,5 +1,5 @@
 import re
-from math import copysign
+from math import ceil, copysign, floor
 from .graph import BlockType, FloatValue, IntValue, StrValue, BoolValue, OperationValue
 
 # -- BLOCK TYPES --
@@ -127,13 +127,21 @@ def __round(value: FloatValue | IntValue, precision: IntValue) -> dict[str, Floa
     return {"result": FloatValue(round(_value.value, _precision.value))}
 
 
-RoundBlock = BlockType(
-    "Round",
-    __round,
-    {"value": FloatValue, "precision": IntValue},
-    {"result": FloatValue},
+RoundBlock = BlockType( "Round", __round, {"value": FloatValue, "precision": IntValue}, {"result": FloatValue},
     defaults = {"precision": 0}
 )
+
+def __floor(value: FloatValue | IntValue) -> dict[str, FloatValue]:
+    _value = FloatValue.__acast__(value)
+    return {"result": FloatValue(floor(_value.value))}
+
+FloorBlock = BlockType( "Floor", __floor, {"value": FloatValue}, {"result": FloatValue})
+
+def __ceil(value: FloatValue | IntValue) -> dict[str, FloatValue]:
+    _value = FloatValue.__acast__(value)
+    return {"result": FloatValue(ceil(_value.value))}
+
+CeilBlock = BlockType( "Ceiling", __ceil, {"value": FloatValue}, {"result": FloatValue})
 
 # TODO: sign
 
