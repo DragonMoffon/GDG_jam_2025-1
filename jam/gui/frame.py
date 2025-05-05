@@ -197,6 +197,7 @@ class FrameController:
             self._animation_time = GLOBAL_CLOCK.time
             if self._next_frame is None:
                 self._next_frame = frame
+                style.audio.slide_in.play()
             else:
                 self._pending_frame = frame
         elif self._next_frame is None:
@@ -306,7 +307,6 @@ class FrameController:
                 self._animation_time = 0.0
 
                 self._selected_frame.update_position((self._pos[0] - self._selected_frame.panel_width, self._pos[1]))
-                style.audio.slide_in.play()
             else:
                 x = self._pos[0] - (1 - (1 - fraction)**3) * self._next_frame.panel_width
                 self._next_frame.update_position((x, self._pos[1]))
