@@ -26,14 +26,16 @@ Each system has a code graph. Use the blocks provided and add new ones
 to make each system run according to spec.
 """
 
+
 class InfoFrame(Frame):
 
-    def __init__(self,
+    def __init__(
+        self,
         tag_offset: float,
         position: tuple[float, float],
         height: float,
         show_body: bool = False,
-        show_shadow: bool = True
+        show_shadow: bool = True,
     ):
         size = (450, height)
 
@@ -52,7 +54,18 @@ class InfoFrame(Frame):
         # A projector that acts like arcade's default. Use if you want things to not move within the clip.
         self._clip_projector = ViewportProjector(clip_rect)
 
-        self.label = Label(INFO_TEXT, x = size[0] / 2, y = size[1] / 2, color = style.colors.highlight, font_name = style.text.normal.name, align = "center", anchor_x = "center", anchor_y = "center", multiline = "True", width = size[0] * 0.8)
+        self.label = Label(
+            INFO_TEXT,
+            x=size[0] / 2,
+            y=size[1] / 2,
+            color=style.colors.highlight,
+            font_name=style.text.normal.name,
+            align="center",
+            anchor_x="center",
+            anchor_y="center",
+            multiline="True",
+            width=size[0] * 0.8,
+        )
 
         # activate the clip texture to draw into, use the basic clip projector,
         # then create and immediatly use a rounded rectangle.
@@ -70,15 +83,25 @@ class InfoFrame(Frame):
 
         # This has to happen before init because the Frame called update_position which refers to the clipping mask
 
-        Frame.__init__(self, "INFO", tag_offset, position, size, show_body, show_shadow, anchor_top=True)
+        Frame.__init__(
+            self,
+            "INFO",
+            tag_offset,
+            position,
+            size,
+            show_body,
+            show_shadow,
+            anchor_top=True,
+        )
 
-        self.camera = Camera2D(clip_rect) # Camera2D with the viewport of the clip_rect to draw the gui.
-        self.frame_gui: core.Gui = core.Gui(self.camera) # The gui that gets clipped by the mask.
+        self.camera = Camera2D(
+            clip_rect
+        )  # Camera2D with the viewport of the clip_rect to draw the gui.
+        self.frame_gui: core.Gui = core.Gui(
+            self.camera
+        )  # The gui that gets clipped by the mask.
 
     def on_draw(self) -> None:
-        self.label.text = INFO_TEXT
-        if puz := context.get_open_puzzle():
-            self.label.text += "\n------\n\n[CURRENT TASK]\n\n" + puz.description
         with self.cliping_mask.target as fbo:
             fbo.clear(color=style.colors.background)
             with self.camera.activate():
@@ -105,5 +128,12 @@ class InfoFrame(Frame):
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         pass
 
-    def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> None:
+    def on_cursor_scroll(
+        self, x: float, y: float, scroll_x: float, scroll_y: float
+    ) -> None:
         pass
+
+    def on_select(self) -> None:
+        self.label.text = INFO_TEXT
+        if puz := context.get_open_puzzle():
+            self.label.text += "\n------\n\n[CURRENT TASK]\n\n" + puz.description
