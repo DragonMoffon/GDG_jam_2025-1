@@ -851,10 +851,10 @@ class EditorFrame(Frame):
         if puzzle is None and graph_src is None and "Sandbox" in self._editors:
             self.select_editor("Sandbox")
             return
-        editor = Editor(self.clip_rect, puzzle, graph_src)
-        if editor.name in self._editors:
-            self.select_editor(editor.name)
+        if puzzle.name in self._editors:
+            self.select_editor(puzzle.name)
             return
+        editor = Editor(self.clip_rect, puzzle, graph_src)
         self._editors[editor.name] = editor
         tab = util.PageTab(editor.name)
         self._editor_tabs.add_tab(tab)
