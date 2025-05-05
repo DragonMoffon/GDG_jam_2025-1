@@ -361,14 +361,20 @@ class Editor:
                     inp = self._controller.get_block(self._graph.input_uid)
                     out = self._controller.get_block(self._graph.output_uid)
                     inp_config = inp.block.config.copy()
+                    full_success = True
                     for test in tests:
                         inp.block.config.update(test.inputs)
                         rslt = self._graph.compute(out.block)
                         case = graph.TestCase(test.inputs, rslt.outputs)
                         test.complete = case == test
-                        print(test.complete)
+                        full_success = full_success and test.complete
                     inp.update_config(inp_config)
                     self._test_runner.check_test_output()
+
+                    if full_success:
+                        pass
+                        # TODO: Save solution, mark the puzzle as completed and show
+                        # all new alerts
                 return
 
         # Find if we are hovering over a temp block
