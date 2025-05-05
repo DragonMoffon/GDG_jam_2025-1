@@ -13,6 +13,10 @@ The Emergency Handbook has this scrawled inside by a previous captain:
 y = ([y1 tan (bearing_b) - y2 tan(bearing_a)] - [(x1 - x2) tan(bearing_b) tan (bearing_a)]) / (tan(bearing_b) - tan(bearing_a))"
 """
 
+available = [ 
+    "Int", "Float", "Add", "Subtract", "Multiply", "Divide", "Minimum", "Maximum", "Round"
+]
+
 prerequisite_count = 0
 prerequisite_levels = ["connect_mainbus"]
 

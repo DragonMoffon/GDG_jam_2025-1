@@ -8,6 +8,10 @@ but we also need to cap out at 100 power after 30C or we're
 going to blow a fuse.
 """
 
+available = [ 
+    "Int", "Float", "Add", "Subtract", "Multiply", "Divide", "Minimum", "Maximum", "Round"
+]
+
 prerequisite_count = 0
 prerequisite_levels = ["f_to_k"]
 

@@ -123,16 +123,24 @@ AbsBlock = BlockType("Absolute", __abs, {"value": FloatValue}, {"result": FloatV
 
 def __round(value: FloatValue | IntValue, precision: IntValue) -> dict[str, FloatValue]:
     _value = FloatValue.__acast__(value)
-    _precision  = IntValue.__acast__(precision)
+    _precision = IntValue.__acast__(precision)
     return {"result": FloatValue(round(_value.value, _precision.value))}
 
 
-RoundBlock = BlockType("Round", __round, {"value": FloatValue, "precision": IntValue}, {"result": FloatValue})
+RoundBlock = BlockType(
+    "Round",
+    __round,
+    {"value": FloatValue, "precision": IntValue},
+    {"result": FloatValue},
+)
 
 # TODO: sign
 
-def __max(a: FloatValue | IntValue, b: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
-    if a.type is int:
+
+def __max(
+    a: FloatValue | IntValue, b: FloatValue | IntValue
+) -> dict[str, IntValue | FloatValue]:
+    if a.type is int and b.type is int:
         _a = IntValue.__acast__(a)
         _b = IntValue.__acast__(b)
         return {"result": IntValue(max(_a.value, _b.value))}
@@ -140,10 +148,19 @@ def __max(a: FloatValue | IntValue, b: FloatValue | IntValue) -> dict[str, IntVa
     _b = FloatValue.__acast__(b)
     return {"result": FloatValue(max(_a.value, _b.value))}
 
-MaxBlock = BlockType("Maximum", __max, {"a": FloatValue | IntValue, "b": FloatValue | IntValue}, {"result": FloatValue | IntValue})
 
-def __min(a: FloatValue | IntValue, b: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
-    if a.type is int:
+MaxBlock = BlockType(
+    "Maximum",
+    __max,
+    {"a": FloatValue | IntValue, "b": FloatValue | IntValue},
+    {"result": FloatValue | IntValue},
+)
+
+
+def __min(
+    a: FloatValue | IntValue, b: FloatValue | IntValue
+) -> dict[str, IntValue | FloatValue]:
+    if a.type is int and b.type is int:
         _a = IntValue.__acast__(a)
         _b = IntValue.__acast__(b)
         return {"result": IntValue(min(_a.value, _b.value))}
@@ -151,7 +168,14 @@ def __min(a: FloatValue | IntValue, b: FloatValue | IntValue) -> dict[str, IntVa
     _b = FloatValue.__acast__(b)
     return {"result": FloatValue(min(_a.value, _b.value))}
 
-MinBlock = BlockType("Minimum", __min, {"a": FloatValue | IntValue, "b": FloatValue | IntValue}, {"result": FloatValue | IntValue})
+
+MinBlock = BlockType(
+    "Minimum",
+    __min,
+    {"a": FloatValue | IntValue, "b": FloatValue | IntValue},
+    {"result": FloatValue | IntValue},
+)
+
 
 def __incr(value: IntValue | FloatValue) -> dict[str, IntValue | FloatValue]:
     if value.type is float:
