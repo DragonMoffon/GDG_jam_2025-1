@@ -118,14 +118,40 @@ def __abs(value: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
     return {"result": FloatValue(abs(_a.value))}
 
 
-AbsBlock = BlockType("Absolute", __abs, {"Value": FloatValue}, {"result": FloatValue})
+AbsBlock = BlockType("Absolute", __abs, {"value": FloatValue}, {"result": FloatValue})
 
-# abs
-# sign
-# max
-# min
-# clamp
 
+def __round(value: FloatValue | IntValue, precision: IntValue) -> dict[str, FloatValue]:
+    _value = FloatValue.__acast__(value)
+    _precision  = IntValue.__acast__(precision)
+    return {"result": FloatValue(round(_value.value, _precision.value))}
+
+
+RoundBlock = BlockType("Round", __round, {"value": FloatValue, "precision": IntValue}, {"result": FloatValue})
+
+# TODO: sign
+
+def __max(a: FloatValue | IntValue, b: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
+    if a.type is int:
+        _a = IntValue.__acast__(a)
+        _b = IntValue.__acast__(b)
+        return {"result": IntValue(max(_a.value, _b.value))}
+    _a = FloatValue.__acast__(a)
+    _b = FloatValue.__acast__(b)
+    return {"result": FloatValue(max(_a.value, _b.value))}
+
+MaxBlock = BlockType("Maximum", __max, {"a": FloatValue | IntValue, "b": FloatValue | IntValue}, {"result": FloatValue | IntValue})
+
+def __min(a: FloatValue | IntValue, b: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
+    if a.type is int:
+        _a = IntValue.__acast__(a)
+        _b = IntValue.__acast__(b)
+        return {"result": IntValue(min(_a.value, _b.value))}
+    _a = FloatValue.__acast__(a)
+    _b = FloatValue.__acast__(b)
+    return {"result": FloatValue(min(_a.value, _b.value))}
+
+MinBlock = BlockType("Minimum", __min, {"a": FloatValue | IntValue, "b": FloatValue | IntValue}, {"result": FloatValue | IntValue})
 
 def __incr(value: IntValue | FloatValue) -> dict[str, IntValue | FloatValue]:
     if value.type is float:
