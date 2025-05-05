@@ -86,10 +86,40 @@ DivBlock = BlockType(
 
 
 # cast
-def __to_float(): ...
-def __to_int(): ...
-def __to_bool(): ...
-def __to_str(): ...
+def __to_float(value: OperationValue) -> dict[str, FloatValue]:
+    return {"result": FloatValue.__cast__(value)}
+
+
+CastFloatBLock = BlockType(
+    "Float Cast", __to_float, {"value": StrValue}, {"result": FloatValue}
+)
+
+
+def __to_int(value: OperationValue) -> dict[str, IntValue]:
+    return {"result": IntValue.__cast__(value)}
+
+
+CastIntBLock = BlockType(
+    "Int Cast", __to_int, {"value": StrValue}, {"result": IntValue}
+)
+
+
+def __to_bool(value: OperationValue) -> dict[str, BoolValue]:
+    return {"result": BoolValue.__cast__(value)}
+
+
+CastBoolBLock = BlockType(
+    "Boolean Cast", __to_bool, {"value": StrValue}, {"result": BoolValue}
+)
+
+
+def __to_str(value: OperationValue) -> dict[str, StrValue]:
+    return {"result": StrValue.__cast__(value)}
+
+
+CastStrBLock = BlockType(
+    "String Cast", __to_str, {"value": StrValue}, {"result": StrValue}
+)
 
 
 # mod
@@ -127,21 +157,29 @@ def __round(value: FloatValue | IntValue, precision: IntValue) -> dict[str, Floa
     return {"result": FloatValue(round(_value.value, _precision.value))}
 
 
-RoundBlock = BlockType( "Round", __round, {"value": FloatValue, "precision": IntValue}, {"result": FloatValue},
-    defaults = {"precision": 0}
+RoundBlock = BlockType(
+    "Round",
+    __round,
+    {"value": FloatValue, "precision": IntValue},
+    {"result": FloatValue},
+    defaults={"precision": 0},
 )
+
 
 def __floor(value: FloatValue | IntValue) -> dict[str, FloatValue]:
     _value = FloatValue.__acast__(value)
     return {"result": FloatValue(floor(_value.value))}
 
-FloorBlock = BlockType( "Floor", __floor, {"value": FloatValue}, {"result": FloatValue})
+
+FloorBlock = BlockType("Floor", __floor, {"value": FloatValue}, {"result": FloatValue})
+
 
 def __ceil(value: FloatValue | IntValue) -> dict[str, FloatValue]:
     _value = FloatValue.__acast__(value)
     return {"result": FloatValue(ceil(_value.value))}
 
-CeilBlock = BlockType( "Ceiling", __ceil, {"value": FloatValue}, {"result": FloatValue})
+
+CeilBlock = BlockType("Ceiling", __ceil, {"value": FloatValue}, {"result": FloatValue})
 
 # TODO: sign
 
@@ -264,16 +302,24 @@ def _match(value: StrValue, pattern: StrValue) -> dict[str, BoolValue]:
     pattern_ = StrValue.__acast__(pattern)
     return {"result": BoolValue(re.match(pattern_, value_) is not None)}
 
+
 MatchBlock = BlockType(
     "Match", _match, {"a": StrValue, "pattern": StrValue}, {"result": BoolValue}
 )
 
-def _format(value: BoolValue | IntValue | FloatValue | StrValue, format: StrValue) -> dict[str, StrValue]:
+
+def _format(
+    value: BoolValue | IntValue | FloatValue | StrValue, format: StrValue
+) -> dict[str, StrValue]:
     _format = StrValue.__acast__(format)
     return {"result": StrValue(f"{value:_format.value}")}
 
+
 FormatBlock = BlockType(
-    "Format", _format, {"value": StrValue | IntValue | FloatValue | BoolValue, "format": StrValue}, {"result": BoolValue}
+    "Format",
+    _format,
+    {"value": StrValue | IntValue | FloatValue | BoolValue, "format": StrValue},
+    {"result": BoolValue},
 )
 
 # -- Boolean Logic
