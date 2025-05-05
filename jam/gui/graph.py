@@ -1023,10 +1023,16 @@ class ValueGroup(Element):
 
 class TestRunner(Element):
 
-    def __init__(self, tests: list[TestCase], can_create_new: bool = False):
+    def __init__(
+        self,
+        tests: list[TestCase],
+    ):
         Element.__init__(self)
         self._tests: list[TestCase] = tests
         self._shown: int = 0
+
+        if not tests:
+            raise ValueError("TestRunner requires atleast one test")
 
         case = self._tests[0]
         self._input: ValueGroup = ValueGroup(case.inputs)
@@ -1070,7 +1076,7 @@ class TestRunner(Element):
             color=colors.background,
             group=OVERLAY_PRIMARY,
         )
-        self._nav_up_icon = Sprite(style.game.editor.nav_up, group=OVERLAY_PRIMARY)
+        self._nav_up_icon = Sprite(style.game.editor.nav_p, group=OVERLAY_PRIMARY)
 
         self._run_one_button = RoundedRectangle(
             0.0,
@@ -1103,7 +1109,7 @@ class TestRunner(Element):
             color=colors.background,
             group=OVERLAY_PRIMARY,
         )
-        self._nav_down_icon = Sprite(style.game.editor.nav_down)
+        self._nav_down_icon = Sprite(style.game.editor.nav_n, group=OVERLAY_PRIMARY)
 
         self._buttons = [
             self._nav_up_button,
@@ -1119,16 +1125,12 @@ class TestRunner(Element):
         ]
         self.deselect_buttons()
 
-        hb = 32.0 * len(self._buttons) + formating.padding * (len(self._buttons) - 1)
-
-        body_width = (
-            wi
-            + self._run_one_button.width
-            + wo
-            + 6 * formating.padding
-            + 2 * formating.corner_radius
+        self.wb = wb = 32.0 * len(self._buttons) + formating.padding * (
+            len(self._buttons) - 1
         )
-        body_height = max(h, hb) + 2 * formating.corner_radius
+
+        body_width = max(wi + wo + formating.padding, wb) + 2 * formating.corner_radius
+        body_height = h + 32.0 + formating.padding + 2 * formating.corner_radius
 
         self._body = RoundedRectangle(
             0.0,
@@ -1162,25 +1164,24 @@ class TestRunner(Element):
             point[1] - 2 * formating.drop_y,
         )
 
+        pw = self._input_body.width + self._output_body.width + formating.padding
+        px = point[0] + (self._body.width - pw) / 2.0
         self._input_body.position = (
-            point[0] + formating.corner_radius,
-            point[1] + formating.corner_radius,
+            px,
+            point[1] + 32.0 + formating.padding + formating.corner_radius,
         )
         self._output_body.position = (
-            point[0]
-            + self._body.width
-            - self._output_body.width
-            - formating.corner_radius,
-            point[1] + formating.corner_radius,
+            px + formating.padding + self._input_body.width,
+            point[1] + 32.0 + formating.padding + formating.corner_radius,
         )
 
-        cx = self._input_body.x + self._input_body.width + formating.padding
+        cx = point[0] + (self._body.width - self.wb) / 2.0
         y = point[1] + formating.corner_radius
         for idx, button in enumerate(self._buttons):
             icon = self._icons[idx]
-            dy = y + (32.0 + formating.padding) * (len(self._buttons) - idx - 1)
-            button.position = cx, dy
-            icon.position = cx, dy, 0.0
+            dx = cx + (32.0 + formating.padding) * idx
+            button.position = dx, y
+            icon.position = dx, y, 0.0
 
         self._input.update_position(
             (
@@ -1189,14 +1190,13 @@ class TestRunner(Element):
             )
         )
 
-        if self._output is None:
-            return
-        self._output.update_position(
-            (
-                self._output_body.x + formating.padding,
-                self._output_body.y + formating.padding,
+        if self._output is not None:
+            self._output.update_position(
+                (
+                    self._output_body.x + formating.padding,
+                    self._output_body.y + formating.padding,
+                )
             )
-        )
 
     def connect_renderer(self, batch: Batch | None) -> None:
         self._body.batch = batch
@@ -1211,6 +1211,47 @@ class TestRunner(Element):
         if self._output is not None:
             self._output.connect_renderer(batch)
 
+    def _create_inp_out(self):
+        # TODO: don't assume they'll stay the same size
+        case = self._tests[self._shown]
+        self._input: ValueGroup = ValueGroup(case.inputs)
+        if case.outputs is not None:
+            out = ValueGroup(case.outputs, False, True)
+        else:
+            out = None
+        self._output: ValueGroup | None = out
+
+        self._input.connect_renderer(self._body.batch)
+        self._output.connect_renderer(self._body.batch)
+
+        self.update_position(self._body.position)
+
+    def update_tests(self, test: list[TestCase]) -> None:
+        if not test:
+            return
+        self._tests = test
+        self._shown = self._shown % len(test)
+        self._create_inp_out()
+
+    def next_test(self):
+        prev = self._shown
+        self._shown = (self._shown + 1) % len(self._tests)
+        if self._shown == prev:
+            return
+        self._create_inp_out()
+
+    def prev_test(self):
+        prev = self._shown
+        self._shown = (self._shown - 1) % len(self._tests)
+        if self._shown == prev:
+            return
+        self._create_inp_out()
+
+    def over_nav_up(self, point: tuple[float, float]) -> bool:
+        l, b = self._nav_up_button.position
+        w, h = self._nav_up_button.width, self._run_one_button.height
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+
     def over_run_one(self, point: tuple[float, float]) -> bool:
         l, b = self._run_one_button.position
         w, h = self._run_one_button.width, self._run_one_button.height
@@ -1219,6 +1260,11 @@ class TestRunner(Element):
     def over_run_all(self, point: tuple[float, float]) -> bool:
         l, b = self._run_all_button.position
         w, h = self._run_all_button.width, self._run_all_button.height
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+
+    def over_nav_down(self, point: tuple[float, float]) -> bool:
+        l, b = self._nav_down_button.position
+        w, h = self._nav_down_button.width, self._run_one_button.height
         return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
 
     def select_nav_up(self) -> None:
@@ -1240,6 +1286,12 @@ class TestRunner(Element):
     def deselect_buttons(self) -> None:
         for icon in self._icons:
             icon.color = colors.base
+
+    def get_shown_test(self) -> TestCase:
+        return self._tests[self._shown]
+
+    def get_tests(self) -> list[TestCase]:
+        return self._tests
 
 
 class ResultsPanel(Element):

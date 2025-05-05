@@ -132,10 +132,13 @@ class BlockOperation(Protocol):
 class TestCase:
 
     def __init__(
-        self, inputs: dict[str, OperationValue], outputs: dict[str, OperationValue]
+        self,
+        inputs: dict[str, OperationValue],
+        outputs: dict[str, OperationValue],
     ) -> None:
         self.inputs = inputs
         self.outputs = outputs
+        self.complete: bool = False
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, TestCase):

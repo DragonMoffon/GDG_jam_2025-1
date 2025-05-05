@@ -12,7 +12,13 @@ from resources import style
 import resources.graphs as graph_path
 
 from jam.node import graph
-from jam.controller import GraphController, read_graph, read_graph_from_level, write_graph, write_graph_from_level
+from jam.controller import (
+    GraphController,
+    read_graph,
+    read_graph_from_level,
+    write_graph,
+    write_graph_from_level,
+)
 from jam.puzzle import Puzzle
 from jam.gui import core, util, graph as gui
 from jam.gui.frame import Frame
@@ -42,7 +48,9 @@ class EditorMode(Enum):
 
 class Editor:
 
-    def __init__(self, region: Rect, puzzle: Puzzle | None = None, graph_src: Path | None = None) -> None:
+    def __init__(
+        self, region: Rect, puzzle: Puzzle | None = None, graph_src: Path | None = None
+    ) -> None:
         self._region: Rect = region
         self._width = self._region.width
         self._height = self._region.height
@@ -61,19 +69,31 @@ class Editor:
         self._puzzle: Puzzle | None = puzzle
         self._graph_src: Path | None = graph_src
         if self._puzzle is not None:
-            self._controller: GraphController = read_graph_from_level(self._puzzle, self._gui)
+            self._controller: GraphController = read_graph_from_level(
+                self._puzzle, self._gui
+            )
             self._graph: graph.Graph = self._controller.graph
         elif graph_src is not None:
             self._controller: GraphController = read_graph(graph_src, self._gui, True)
             self._graph: graph.Graph = self._controller.graph
         else:
-            input_type = graph.BlockType('Input', graph._variable, {}, {}, {}, exclusive=True)
+            input_type = graph.BlockType(
+                "Input", graph._variable, {}, {}, {}, exclusive=True
+            )
             input_block = gui.BlockElement(graph.Block(input_type))
             input_block.update_position((50.0, 300.0))
-            output_type = graph.BlockType('Output', graph._variable, {}, {}, {}, exclusive=True)
+            output_type = graph.BlockType(
+                "Output", graph._variable, {}, {}, {}, exclusive=True
+            )
             output_block = gui.BlockElement(graph.Block(output_type))
             output_block.update_position((750.0, 300.0))
-            self._controller = GraphController(self._gui, "Sandbox", sandbox=True, input_block=input_block.uid, output_block=output_block.uid)
+            self._controller = GraphController(
+                self._gui,
+                "Sandbox",
+                sandbox=True,
+                input_block=input_block.uid,
+                output_block=output_block.uid,
+            )
             self._graph = self._controller.graph
             self._controller.add_block(input_block)
             self._controller.add_block(output_block)
@@ -199,10 +219,12 @@ class Editor:
             return
 
         self._results = gui.ResultsPanel(rslt)
-        self._results.update_position((
-            output.left + output.width + style.format.corner_radius,
-            output.bottom + style.format.footer_size
-        ))
+        self._results.update_position(
+            (
+                output.left + output.width + style.format.corner_radius,
+                output.bottom + style.format.footer_size,
+            )
+        )
         self._gui.add_element(self._results)
 
     def set_mode_drag_block(self, block: gui.BlockElement) -> None:
@@ -217,7 +239,9 @@ class Editor:
         self._selected_block = block
         self._selected_block.select()
 
-    def set_mode_drag_connection(self, noodle: gui.ConnectionElement, link: int) -> None:
+    def set_mode_drag_connection(
+        self, noodle: gui.ConnectionElement, link: int
+    ) -> None:
         self._mode = EditorMode.DRAG_CONNECTION
         self._selected_noodle = noodle
         self._link = link
@@ -245,9 +269,7 @@ class Editor:
         y = config_panel.bottom + config_panel.height / 2.0
 
         charset, chararray = TYPE_CHAR_SETS[config_type]
-        self._config_popup = util.TextInputPopup(
-            (x, y), charset, chararray
-        )
+        self._config_popup = util.TextInputPopup((x, y), charset, chararray)
         self._config_popup.text = str(self._prev_value.value)
         self._gui.add_element(self._config_popup)
 
@@ -303,7 +325,7 @@ class Editor:
         self._save_popup = util.TextInputPopup(
             self._overlay_camera.position, STR_SET, STR_ARRAY
         )
-        self._save_popup.text = self._graph.name.replace(' ', '_')
+        self._save_popup.text = self._graph.name.replace(" ", "_")
         self._gui.add_element(self._save_popup)
 
     # -- INPUT METHODS --
@@ -315,12 +337,27 @@ class Editor:
             return
         cursor = self.get_base_cursor_pos()
 
+        o_cursor = self.get_overlay_cursor_pos()
+        if self._test_runner is not None and button == inputs.PRIMARY_CLICK:
+            if self._test_runner.contains_point(o_cursor):
+                if self._test_runner.over_nav_up(o_cursor):
+                    self._test_runner.prev_test()
+                elif self._test_runner.over_nav_down(o_cursor):
+                    self._test_runner.next_test()
+                elif self._test_runner.over_run_one(o_cursor):
+                    test = self._test_runner.get_shown_test()
+                    # TODO
+                elif self._test_runner.over_run_all(o_cursor):
+                    tests = self._test_runner.get_tests()
+                    # TODO
+                return
+
         # Find if we are hovering over a temp block
         clicked_temp = None
         for temp in self._controller.temporary:
-                if temp.contains_point(cursor):
-                    clicked_temp = temp
-                    break
+            if temp.contains_point(cursor):
+                clicked_temp = temp
+                break
 
         # Find if we are hovering over a block
         clicked_block = None
@@ -335,7 +372,6 @@ class Editor:
             if noodle.contains_point(cursor):
                 clicked_noodle = noodle
                 break
-
 
         if button == inputs.PRIMARY_CLICK:
             if clicked_temp is not None:
@@ -371,7 +407,10 @@ class Editor:
             self._pan_camera = True
         elif button == inputs.SECONDARY_CLICK:
             if clicked_block is not None:
-                if clicked_block.uid == self._graph.input_uid or clicked_block.uid == self._graph.output_uid:
+                if (
+                    clicked_block.uid == self._graph.input_uid
+                    or clicked_block.uid == self._graph.output_uid
+                ):
                     return
                 self._controller.remove_block(clicked_block)
                 return
@@ -505,7 +544,7 @@ class Editor:
         elif button == inputs.SPACE:
             self._save_popup.input_char(chr(Keys.UNDERSCORE))
         elif button == inputs.CONFIRM:
-            self._graph._name = self._save_popup.text.replace('_', ' ')
+            self._graph._name = self._save_popup.text.replace("_", " ")
             if self._puzzle is not None:
                 write_graph_from_level(self._controller, self._puzzle)
             else:
@@ -562,6 +601,20 @@ class Editor:
             self._background.texture.offset = self._base_camera.position
             return
 
+        o_cursor = self.get_overlay_cursor_pos()
+        if self._test_runner is not None:
+            self._test_runner.deselect_buttons()
+            if self._test_runner.contains_point(o_cursor):
+                if self._test_runner.over_nav_up(o_cursor):
+                    self._test_runner.select_nav_up()
+                elif self._test_runner.over_nav_down(o_cursor):
+                    self._test_runner.select_nav_down()
+                elif self._test_runner.over_run_one(o_cursor):
+                    self._test_runner.select_run_one()
+                elif self._test_runner.over_run_all(o_cursor):
+                    self._test_runner.select_run_all()
+                return
+
         cursor = self.get_base_cursor_pos()
         hovered_block = None
         for block in self._controller.blocks:
@@ -587,12 +640,17 @@ class Editor:
 
         x, y = self.get_base_cursor_pos()
         self._selected_block.update_position((x - self._offset[0], y - self._offset[1]))
-        if self._selected_block.uid == self._graph.output_uid and self._results is not None:
+        if (
+            self._selected_block.uid == self._graph.output_uid
+            and self._results is not None
+        ):
             output = self._selected_block
-            self._results.update_position((
-                output.left + output.width + style.format.corner_radius,
-                output.bottom + style.format.footer_size
-            ))
+            self._results.update_position(
+                (
+                    output.left + output.width + style.format.corner_radius,
+                    output.bottom + style.format.footer_size,
+                )
+            )
 
     def drag_connection_on_cursor_motion(
         self, x: float, y: float, dx: float, dy: float
@@ -738,13 +796,12 @@ class EditorFrame(Frame):
                     color=(255, 255, 255, 255),
                 ).draw()
 
-
         # self._editor = Editor(clip_rect)
 
         self._editor_tabs = util.PageRow()
-        self._editors: dict[str, Editor] = {'Sandbox': Editor(clip_rect)}
-        self._active_editor: Editor = self._editors['Sandbox']
-        tab = util.PageTab('Sandbox')
+        self._editors: dict[str, Editor] = {"Sandbox": Editor(clip_rect)}
+        self._active_editor: Editor = self._editors["Sandbox"]
+        tab = util.PageTab("Sandbox")
         self._editor_tabs.add_tab(tab)
         tab.select()
 
@@ -762,8 +819,8 @@ class EditorFrame(Frame):
         self._active_editor.set_mode_none()
 
     def open_editor(self, puzzle: Puzzle | None = None, graph_src: Path | None = None):
-        if puzzle is None and graph_src is None and 'Sandbox' in self._editors:
-            self.select_editor('Sandbox')
+        if puzzle is None and graph_src is None and "Sandbox" in self._editors:
+            self.select_editor("Sandbox")
             return
         editor = Editor(self.clip_rect, puzzle, graph_src)
         if editor.name in self._editors:
@@ -797,10 +854,12 @@ class EditorFrame(Frame):
             point[0] + style.format.footer_size,
             point[1] + style.format.footer_size,
         )
-        self._editor_tabs.update_position((
-            point[0] + style.format.footer_size,
-            point[1] + style.format.footer_size + self.cliping_mask.size[1]
-        ))
+        self._editor_tabs.update_position(
+            (
+                point[0] + style.format.footer_size,
+                point[1] + style.format.footer_size + self.cliping_mask.size[1],
+            )
+        )
 
     @property
     def show_body(self) -> bool:
@@ -822,7 +881,7 @@ class EditorFrame(Frame):
                     return
                 elif input == inputs.SECONDARY_CLICK:
                     if len(self._editors) == 1:
-                        if 'Sandbox' in self._editors:
+                        if "Sandbox" in self._editors:
                             return
                         self.open_editor()
                     self._editor_tabs.rem_tab(tab)
@@ -837,9 +896,13 @@ class EditorFrame(Frame):
         tab = self._editor_tabs.get_hovered_tab(inputs.cursor)
         if tab is not None:
             self._editor_tabs.select_tab(tab, True)
-            self._editor_tabs.select_tab(self._editor_tabs.get_tab(self._active_editor.name))
+            self._editor_tabs.select_tab(
+                self._editor_tabs.get_tab(self._active_editor.name)
+            )
         else:
-            self._editor_tabs.select_tab(self._editor_tabs.get_tab(self._active_editor.name), True)
+            self._editor_tabs.select_tab(
+                self._editor_tabs.get_tab(self._active_editor.name), True
+            )
         self._active_editor.on_cursor_motion(x, y, dx, dy)
 
     def on_cursor_scroll(

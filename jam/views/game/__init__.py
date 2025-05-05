@@ -21,7 +21,7 @@ class LevelSelect:
 
     def __init__(self, gui: Gui) -> None:
         self._gui = gui
-        puzzle = puzzles.get_puzzle('connect_mainbus')
+        puzzle = puzzles.get_puzzle("ac")
         pin, loc, face = puzzles.get_pin(puzzle)
 
         alert = AlertElement(pin, loc, face, puzzle)
@@ -56,10 +56,7 @@ class GameView(View):
         self._background = ParallaxBackground()
         self._background_projector = Camera2D(self.window.rect)
         self._panel_projector = Camera2D(self.window.rect)
-        self._gui = Gui(
-            self._background_projector,
-            self._panel_projector
-        )
+        self._gui = Gui(self._background_projector, self._panel_projector)
 
         self._editor_frame = EditorFrame(0.0, (self.width, 0.0), 720)
         self._gui.add_element(self._editor_frame)
@@ -71,7 +68,11 @@ class GameView(View):
         )
         self._gui.add_element(self._info_frame)
 
-        comm_offset = self._editor_frame.tag_height + self._info_frame.tag_height + 3 * style.format.padding
+        comm_offset = (
+            self._editor_frame.tag_height
+            + self._info_frame.tag_height
+            + 3 * style.format.padding
+        )
         self._comms_frame = CommsFrame(
             comm_offset,
             (self.width, 0.0),
@@ -94,10 +95,16 @@ class GameView(View):
 
         self._level_select: LevelSelect = LevelSelect(self._gui)
 
-        style.audio.ambient_wind.play('ambience1', True)
+        style.audio.ambient_wind.play("ambience1", True)
 
     def on_show_view(self) -> None:
-        context.set_frames(self._frame_controller, self._editor_frame, self._info_frame, self._comms_frame, self._setting_frame)
+        context.set_frames(
+            self._frame_controller,
+            self._editor_frame,
+            self._info_frame,
+            self._comms_frame,
+            self._setting_frame,
+        )
 
     def on_hide_view(self) -> None:
         context.clear_frames()
