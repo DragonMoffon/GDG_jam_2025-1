@@ -80,11 +80,21 @@ class Audio:
 
 
 @dataclass
+class Textures:
+    logo_big: ImageData
+
+
+@dataclass
 class Background:
     colour: tuple[int, int, int, int]
     base: Path
     base_offset: tuple[float, float]
     layers: tuple[Floating, ...]
+
+
+@dataclass
+class Menu:
+    background: Background
 
 
 @dataclass
@@ -120,16 +130,8 @@ class Editor:
 
 
 @dataclass
-class Hack:
-    stars: Path
-    station: Path
-    logo: Path
-
-
-@dataclass
 class Game:
     background: Background
-    hack: Hack
     panels: Panels
     editor: Editor
 
@@ -171,8 +173,23 @@ class Style:
             **{name: Sound(source / pth) for name, pth in audio_data.items()}
         )
 
+        image_data = self._raw["Textures"]
+        self.textures = Textures(load_texture(source / image_data["logo_big"]))
+
+        background_data = self._raw["Menu"]["Background"]
+        self.menu = Menu(
+            Background(
+                colour=tuple(background_data["color"]),
+                base=source / background_data["base"],
+                base_offset=background_data["base_offset"],
+                layers=tuple(
+                    Floating.create(data, source)
+                    for data in background_data["Floating"]
+                ),
+            )
+        )
+
         background_data = self._raw["Game"]["Background"]
-        hack_data = self._raw["Game"]["Hack"]
         panel_data = self._raw["Game"]["Panels"]
         editor_data = self._raw["Game"]["Editor"]
         self.game = Game(
@@ -184,11 +201,6 @@ class Style:
                     Floating.create(data, source)
                     for data in background_data["Floating"]
                 ),
-            ),
-            Hack(
-                stars = source / hack_data["stars"],
-                station = source / hack_data["station"],
-                logo = source / hack_data["logo"],
             ),
             Panels(
                 settings_tag=source / panel_data["settings_tag"],

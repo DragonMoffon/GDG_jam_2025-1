@@ -1,7 +1,7 @@
-from resources import style
-
 from arcade import draw_rect_filled
-from arcade.future.background import BackgroundGroup, Background
+from pyglet.sprite import Sprite
+
+from resources import style
 
 from jam.view import View
 from jam.graphics.background import ParallaxBackground
@@ -16,24 +16,13 @@ class MainMenuView(View):
 
     def __init__(self):
         View.__init__(self)
-        # !: Hacking this together -- I don't want the default background,
-        # but since background doesn't have a constructor yet,
-        # I'm just going to draw Sprites.
-        # self._background = ParallaxBackground()
-
-        self._background = BackgroundGroup(
-            [
-                Background.from_file(style.game.hack.stars),
-                Background.from_file(style.game.hack.station)
-            ]
-        )
-
-        self._logo = Background.from_file(style.game.hack.logo)
-
+        self._background = ParallaxBackground(style.menu.background)
+        self._logo = Sprite(style.textures.logo_big)
+        self._logo.color = (255, 255, 255, 0)
 
         self._gui = Gui(self.window.default_camera)
         new_save = PopupAction("New Game", self.new_save)
-        cont_save = PopupAction("Continue", self.pick_save)
+        cont_save = PopupAction("Continue", self.continue_save)
         self._popup = SelectionPopup(
             (new_save, cont_save), (self.center_x, self.center_y)
         )
@@ -41,24 +30,31 @@ class MainMenuView(View):
         self._fade_out: bool = False
         self._timer: float = 0.0
 
-    def new_save(self):
+    def new_save(self) -> None:
         self._fade_out = True
         self._timer = self.window.time
         context.new_save()
         style.audio.crash.play()
 
-    def pick_save(self):
+    def continue_save(self) -> None:
         self._fade_out = True
         self._timer = self.window.time
         context.choose_first_save()
         style.audio.crash.play()
 
-    def on_cursor_motion(self, x, y, dx, dy):
+    def pick_save(self, name: str) -> None:
+        self._fade_out = True
+        self._timer = self.window.time
+        context.choose_save(name)
+        style.audio.crash.play()
+
+    def on_cursor_motion(self, x, y, dx, dy) -> None:
         l = self._popup.get_hovered_item((x, y))
         if l is not None:
             self._popup.highlight_action(l)
+        self._background.cursor_motion(x, y, dx, dy)
 
-    def on_input(self, button, modifiers, pressed):
+    def on_input(self, button, modifiers, pressed) -> None:
         if button == inputs.PRIMARY_CLICK and pressed:
             l = self._popup.get_hovered_item(inputs.cursor)
             if l is not None:
@@ -69,15 +65,16 @@ class MainMenuView(View):
         self._background.draw()
         self._gui.draw()
         if self._fade_out:
-            fraction = (self.window.time - self._timer) / 5.0 # fade for five seconds
+            fraction = (self.window.time - self._timer) / 4.0  # fade for five seconds
             amount = max(0.0, min(1.0, (1 - (1 - fraction) ** 3)))
             draw_rect_filled(self.window.rect, (0, 0, 0, int(255 * amount)))
-        if self.window.time - self._timer > 5.0:
+            self._logo.color = (255, 255, 255, int(255 * amount))
             self._logo.draw()
 
-    def on_update(self, delta_time: float):
+    def on_update(self, delta_time: float) -> None:
+        self._background.update()
         if not self._fade_out:
             return
 
-        if self.window.time - self._timer > 8.0:
+        if self.window.time - self._timer > 6.0:
             self.window.show_view(GameView())

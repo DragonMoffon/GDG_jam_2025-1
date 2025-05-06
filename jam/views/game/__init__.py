@@ -1,5 +1,5 @@
-from arcade import Camera2D, draw_rect_filled, Sprite
-from arcade.draw import draw_sprite
+from arcade import draw_rect_filled
+from pyglet.sprite import Sprite
 
 from resources import style
 
@@ -65,11 +65,10 @@ class GameView(View):
     def __init__(self) -> None:
         View.__init__(self)
         self.background_color = style.game.background.colour
-        self._background = ParallaxBackground()
-        self._logo = Sprite(style.game.hack.logo, center_x = self.center_x, center_y = self.center_y)
-        self._background_projector = Camera2D(self.window.rect)
-        self._panel_projector = Camera2D(self.window.rect)
-        self._gui = Gui(self._background_projector, self._panel_projector)
+        self._background = ParallaxBackground(style.game.background)
+        self._logo = Sprite(style.textures.logo_big)
+        self._logo.color = (255, 255, 255, 0)
+        self._gui = Gui(self.window.default_camera)
 
         self._editor_frame = EditorFrame(0.0, (self.width, 0.0), 720)
         self._gui.add_element(self._editor_frame)
@@ -144,8 +143,8 @@ class GameView(View):
             fraction = (self.window.time - self._timer) / 3.0
             amount = max(0.0, min(1.0, (1 - fraction) ** 3))
             draw_rect_filled(self.window.rect, (0, 0, 0, int(255 * amount)))
-            self._logo.alpha = int(255 * amount)
-            draw_sprite(self._logo)
+            self._logo.color = 255, 255, 255, int(255 * amount)
+            self._logo.draw()
             if fraction >= 1.0:
                 self._fade_in = False
 
