@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any
 from importlib.resources import path
 from time import time_ns as get_time
 from os import mkdir
+from shutil import rmtree
 
 import zipfile
 from tomllib import load as load_toml
@@ -26,56 +27,91 @@ if TYPE_CHECKING:
 
 class SaveData:
 
-    def __init__(self, source: zipfile.ZipFile, name: str = "1") -> None:
-        self.name: str = name
-        self._src: zipfile.ZipFile = source
+    def __init__(self, root: Path, info: SaveInfo) -> None:
+        self._root: Path = root
+        self._target: Path = info.path
 
-        self._puzzle_solutions: dict[str, Path | zipfile.Path] = {}
-        self._incomplete_puzzle_solutions: dict[str, Path | zipfile.Path] = {}
-        self._completed_puzzles: list[Puzzle] = []
-        self._sandbox_graphs: dict[str, Path | zipfile.Path] = {}
+        self._name: str = info.name
+        self._creation_time: int = info.creation_time
+        self._last_open_time: int = get_time()
 
-    def write(self) -> None:
-        self._src.close()
-
-    @property
-    def completed_puzzles(self) -> tuple[Puzzle, ...]:
-        return tuple(self._completed_puzzles)
+        self._complete: dict[str, str] = info.completed_puzzles
+        self._incomplete: dict[str, str] = info.incompleted_puzzles
+        self._sandbox: dict[str, str] = info.sandbox_graphs
 
     @property
-    def completed_puzzle_names(self) -> tuple[str, ...]:
-        return tuple(puzzle.name for puzzle in self._completed_puzzles)
-
-    @property
-    def completed_count(self) -> int:
-        return len(self._completed_puzzles)
-
-    @property
-    def completed_graphs(self) -> tuple[Path | zipfile.Path, ...]:
-        return tuple(self._puzzle_solutions.values())
-
-    @property
-    def incomplete_graphs(self) -> tuple[Path | zipfile.Path, ...]:
-        return tuple(self._incomplete_puzzle_solutions.values())
-
-    @property
-    def sandbox_graphs(self) -> tuple[Path | zipfile.Path, ...]:
-        return tuple(self._sandbox_graphs.values())
-
-    def complete_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
-        self._completed_puzzles.append(puzzle)
-        puzzle_pth = zipfile.Path(self._src, f"{puzzle.name}.pzl")
-        write_graph_from_level(solution, puzzle, puzzle_pth)
-        self._puzzle_solutions[puzzle.name] = puzzle_pth
-
-    def save_incomplete(self, puzzle: Puzzle, working: GraphController) -> None:
-        pass
-
-    def completed(self, puzzle: Puzzle) -> bool:
-        return puzzle.name in self._puzzle_solutions
+    def name(self) -> str: return self._name
     
-    def close_save(self):
+    @property
+    def creation_time(self) -> int: return self._creation_time
+
+    @property
+    def last_open_time(self) -> int: return self._last_open_time
+
+    @property
+    def completed(self) -> tuple[str, ...]:
+        return tuple(self._complete)
+    
+    def has_completed(self, name: str) -> bool:
+        return name in self._complete
+
+    @property
+    def incompleted(self) -> tuple[str,  ...]:
+        return tuple(self._incomplete)
+    
+    @property
+    def sandbox(self) -> tuple[str, ...]:
+        return tuple(self._sandbox)
+    
+    @property
+    def number_completed(self) -> int:
+        return len(self._complete)
+    
+    @property
+    def number_attempted(self) -> int:
+        return len(self._complete) + len(self._incomplete)
+
+    def open_puzzle(self) -> None:
         pass
+
+    def save_puzzle(self) -> None:
+        pass
+
+    def save_sandbox(self) -> None:
+        pass
+
+    def complete_puzzle(self) -> None:
+        pass
+
+    def _update_cfg(self) -> str:
+        return dumps_toml({
+            'Info': {
+                'name': self.name,
+                'creation_time': self.creation_time,
+                'last_open_time': self.last_open_time
+            },
+            'Complete': self._complete,
+            'Incomplete': self._incomplete,
+            'Sandbox': self._sandbox
+        })
+    
+    def update_cfg(self) -> None:
+        with open(self._root / 'save.cfg', 'w') as fp:
+            fp.write(self._update_cfg())
+    
+    def update_save(self) -> None:
+        with zipfile.ZipFile(self._target, 'w') as zip:
+            zip.writestr('save.cfg', self._update_cfg())
+            for item in self._complete.values():
+                zip.write(self._root / item, item)
+            for item in self._incomplete.values():
+                zip.write(self._root / item, item)
+            for item in self._sandbox.values():
+                zip.write(self._root / item, item)
+    
+    def close_save(self) -> None:
+        self._update_cfg()
+        rmtree(self._root)
 
 
 class SaveInfo:
@@ -88,7 +124,7 @@ class SaveInfo:
                     cfg = load_toml(fp)
         self._name: str = cfg['Info']['name']
         self._creation_time: int = cfg['Info']['creation_time']
-        self._last_launch_time: int = cfg['Info']['last_open_time']
+        self._last_open_time: int = cfg['Info']['last_open_time']
 
         self._complete_puzzles: dict[str, str] = cfg['Complete']
         self._incomplete_puzzles: dict[str, str] = cfg['Incomplete']
@@ -96,12 +132,59 @@ class SaveInfo:
 
     @property
     def name(self) -> str: return self._name
+
+    @property
+    def path(self) -> Path: return self._path
     
     @property
     def creation_time(self) -> int: return self._creation_time
 
     @property
-    def last_launch_time(self) -> int: return self._last_launch_time
+    def last_open_time(self) -> int: return self._last_open_time
+
+    @property
+    def completed(self) -> tuple[str, ...]:
+        return tuple(self._complete_puzzles)
+    
+    @property
+    def completed_puzzles(self) -> dict[str, str]:
+        return self._complete_puzzles.copy()
+    
+    def get_completed(self, name: str) -> str:
+        return self._complete_puzzles[name]
+    
+    def has_completed(self, name: str) -> bool:
+        return name in self._complete_puzzles
+
+    @property
+    def incompleted(self) -> tuple[str,  ...]:
+        return tuple(self._incomplete_puzzles)
+    
+    @property
+    def incompleted_puzzles(self) -> dict[str, str]:
+        return self._incomplete_puzzles.copy()
+    
+    def get_incompleted(self, name: str) -> str:
+        return self._incomplete_puzzles[name]
+    
+    @property
+    def sandbox(self) -> tuple[str, ...]:
+        return tuple(self._sandbox_graphs)
+    
+    @property
+    def sandbox_graphs(self) -> dict[str, str]:
+        return self._sandbox_graphs.copy()
+    
+    def get_sandbox(self, name: str) -> str:
+        return self._sandbox_graphs[name]
+
+    @property
+    def number_completed(self) -> int:
+        return len(self._complete_puzzles)
+    
+    @property
+    def number_attempted(self) -> int:
+        return len(self._complete_puzzles) + len(self._incomplete_puzzles)
 
     @classmethod
     def create_new_save(cls, name: str, root: Path) -> SaveInfo:
@@ -116,10 +199,18 @@ class SaveInfo:
         return cls(pth, cfg)
     
     def open_save(self) -> SaveData:
+        pth = self._path.parent / '.save'
+        # Protect against the game not cleaning up the save folder.
+        # It sucks we have to do this, but there is no deleting from a zip folder so yippeeeee
+        if pth.exists():
+            with open(pth / 'save.cfg', 'rb') as fp:
+                cfg = load_toml(fp)
+            pth.rename(self._path.parent / f"crash-{cfg['Info']['name']}_{cfg['Info']['last_open_time']}")
+
         with zipfile.ZipFile(self._path, 'r') as zip:
-            pth = self._path.parent / 'save'
             mkdir(pth)
             zip.extractall(pth)
+        return SaveData(pth, self)
 
 class Context:
 
@@ -143,6 +234,9 @@ class Context:
         self._level_select: LevelSelect | None = None
 
     def close(self) -> None:
+        if self._current_save is None:
+            return
+
         self._current_save.close_save()
         # for save in self._saves.values():
         #     save.write()
@@ -156,10 +250,16 @@ class Context:
         self.choose_save(name)
 
     def choose_first_save(self) -> None:
-        if not self._saves:
+        oldest = 0
+        name = None
+        for save in self._saves.values():
+            if save.last_open_time > oldest:
+                oldest = save.last_open_time
+                name = save.name
+        if name is None:
             self.new_save()
             return
-        self.choose_save("0")
+        self.choose_save(name)
 
     def choose_save(self, name: str) -> None:
         self._current_save = self._saves[name].open_save()
@@ -230,6 +330,8 @@ class Context:
         self._frame_controller.select_frame(self._settings_frame)
 
     def complete_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
+        return
+
         if self._current_save is None:
             return
         self._current_save.complete_puzzle(puzzle, solution)
@@ -242,10 +344,10 @@ class Context:
         if self._current_save is None:
             return []
         available = puzzles.get_available_puzzles(
-            self._current_save.completed_count,
-            set(self._current_save.completed_puzzle_names),
+            self._current_save.number_completed,
+            set(self._current_save.completed),
         )
-        return tuple(p for p in available if not self._current_save.completed(p))
+        return tuple(puzzle for puzzle in available if not self._current_save.has_completed(puzzle.name))
 
     def get_open_puzzle(self) -> Puzzle | None:
         if self._editor_frame is None:

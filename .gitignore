@@ -54,3 +54,4 @@ cython_debug/
 
 # save files
 *.svd
+.save/
