@@ -13,16 +13,17 @@ from jam.input import inputs, Button
 
 
 class MainMenuView(View):
-    SLOW_FADE = 4.0
-    SLOW_TRANSITION = 6.0
+    SLOW_FADE = 5.0
+    SLOW_TRANSITION = 7.0
+    SLOW_FLASH = 5.25
     FAST_FADE = 1.0
     FAST_TRANSITION = 1.5
+    FAST_FLASH = 0.0
 
     def __init__(self):
         View.__init__(self)
         self._background = ParallaxBackground(style.menu.background)
         self._logo = Sprite(style.textures.logo_big)
-        self._logo.color = (255, 255, 255, 0)
 
         self._gui = Gui(self.window.default_camera)
 
@@ -42,6 +43,7 @@ class MainMenuView(View):
         self._fade_out: bool = False
         self._speed: float = self.SLOW_FADE
         self._tranistion: float = self.SLOW_TRANSITION
+        self._flash: float = self.SLOW_FLASH
         self._timer: float = 0.0
 
     def new_save(self) -> None:
@@ -55,6 +57,7 @@ class MainMenuView(View):
         self._timer = self.window.time
         self._speed = self.FAST_FADE
         self._tranistion = self.FAST_TRANSITION
+        self._flash = self.FAST_FLASH
         context.choose_first_save()
 
     def pick_save(self, name: str) -> None:
@@ -62,6 +65,7 @@ class MainMenuView(View):
         self._timer = self.window.time
         self._speed = self.FAST_FADE
         self._tranistion = self.FAST_TRANSITION
+        self._flash = self.FAST_FLASH
         context.choose_save(name)
 
     def on_cursor_motion(self, x, y, dx, dy) -> None:
@@ -81,18 +85,21 @@ class MainMenuView(View):
         self._background.draw()
         self._gui.draw()
         if self._fade_out:
-            fraction = (
-                self.window.time - self._timer
-            ) / self._speed  # fade for five seconds
+            dt = self.window.time - self._timer
+            fraction = dt / self._speed  # fade for five seconds
             amount = max(0.0, min(1.0, (1 - (1 - fraction) ** 3)))
             draw_rect_filled(self.window.rect, (0, 0, 0, int(255 * amount)))
-            self._logo.color = (255, 255, 255, int(255 * amount))
-            self._logo.draw()
+
+            if dt >= self._flash:
+                self._logo.color = (255, 255, 255, int(255 * amount))
+                self._logo.draw()
 
     def on_update(self, delta_time: float) -> None:
         self._background.update()
         if not self._fade_out:
             return
 
-        if self.window.time - self._timer > self._tranistion:
+        dt = self.window.time - self._timer
+
+        if dt > self._tranistion:
             self.window.show_view(GameView())

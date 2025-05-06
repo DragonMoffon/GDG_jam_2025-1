@@ -108,7 +108,7 @@ class PuzzleCollection:
                 puzzle = load_puzzle(puzzle_path)
                 self._puzzles[puzzle.name] = puzzle
             except Exception as e:
-                continue
+                print(f"{puzzle_path}: {e}")
 
         for data in raw_data.get("Puzzle", []):
             target = data["puzzle"]

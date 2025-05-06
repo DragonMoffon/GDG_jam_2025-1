@@ -14,19 +14,19 @@ y = ([y1 tan (bearing_b) - y2 tan(bearing_a)] - [(x1 - x2) tan(bearing_b) tan (b
 """
 
 available = [ 
-    "Int", "Float", "Add", "Subtract", "Multiply", "Divide", "Minimum", "Maximum", "Round"
+    "Int", "Float", "Add", "Subtract", "Multiply", "Divide", "Minimum", "Maximum", "Round", "Sin", "Cos", "Tan", "Pi"
 ]
 
 prerequisite_count = 0
-prerequisite_levels = ["connect_mainbus"]
+prerequisite_levels = []
 
 
 [Inputs]
-name = 'bearing_a' # float
-name = 'bearing_b' # float
+bearing_a = 'float'
+bearing_b = 'float'
 [Outputs]
-name = 'pos_x' # float
-name = 'pos_y
+pos_x = 'float'
+pos_y = 'float'
 
 [[Tests]]
 inputs = {"bearing_a" = 25.6, "bearing_b" = 150}

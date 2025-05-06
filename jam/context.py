@@ -5,16 +5,15 @@ from importlib.resources import path
 import zipfile
 
 from pathlib import Path
-from uuid import UUID, uuid4
 
-from jam.puzzle import Puzzle, PuzzleCollection, puzzles
+from jam.puzzle import Puzzle, puzzles
 from jam.controller import GraphController, write_graph_from_level
 
 import resources.saves as save_path
 
 if TYPE_CHECKING:
     from jam.gui.frame import FrameController
-    from jam.views.game import GameView, LevelSelect
+    from jam.views.game import LevelSelect
     from jam.views.game.comms import CommsFrame
     from jam.views.game.settings import SettingsFrame
     from jam.views.game.info import InfoFrame
@@ -27,10 +26,10 @@ class SaveData:
         self.name: str = name
         self._src: zipfile.ZipFile = source
 
-        self._puzzle_solutions: dict[str, Path] = {}
-        self._incomplete_puzzle_solutiohns: dict[str, Path] = {}
+        self._puzzle_solutions: dict[str, Path | zipfile.Path] = {}
+        self._incomplete_puzzle_solutions: dict[str, Path | zipfile.Path] = {}
         self._completed_puzzles: list[Puzzle] = []
-        self._sandbox_graphs: dict[str, Path] = {}
+        self._sandbox_graphs: dict[str, Path | zipfile.Path] = {}
 
     def write(self) -> None:
         self._src.close()
@@ -48,22 +47,26 @@ class SaveData:
         return len(self._completed_puzzles)
 
     @property
-    def compeleted_graphs(self) -> tuple[Path, ...]:
-        return tuple(self._puzzle_solutions)
+    def completed_graphs(self) -> tuple[Path | zipfile.Path, ...]:
+        return tuple(self._puzzle_solutions.values())
 
     @property
-    def incomplete_graphs(self) -> tuple[Path, ...]:
-        return tuple(self._incomplete_puzzle_solutiohns)
+    def incomplete_graphs(self) -> tuple[Path | zipfile.Path, ...]:
+        return tuple(self._incomplete_puzzle_solutions.values())
 
     @property
-    def sandbox_graphs(self) -> tuple[Path, ...]:
-        return tuple(self._sandbox_graphs)
+    def sandbox_graphs(self) -> tuple[Path | zipfile.Path, ...]:
+        return tuple(self._sandbox_graphs.values())
 
     def complete_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
         self._completed_puzzles.append(puzzle)
         puzzle_pth = zipfile.Path(self._src, f"{puzzle.name}.pzl")
         write_graph_from_level(solution, puzzle, puzzle_pth)
         self._puzzle_solutions[puzzle.name] = puzzle_pth
+
+    def save_incomplete(self, puzzle: Puzzle, working: GraphController) -> None:
+        pass
+
 
     def completed(self, puzzle: Puzzle) -> bool:
         return puzzle.name in self._puzzle_solutions
