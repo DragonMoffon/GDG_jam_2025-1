@@ -9,6 +9,7 @@
 - Categories for block spawning dropdown
 - Make test runner more clear
 - Show short description at top of editor (closeable/popup?)
+- Make joints obvious
 
 ### UI
 - Make text/image modals
@@ -31,6 +32,7 @@
 - Support images in descriptions
 - Documentation tab
   - In service of this, I think every block should have a description -- generated from docstring?
+- Progress bar; x/total completed, percentage, literal bar
 
 ### Lore
 - Lore bible
