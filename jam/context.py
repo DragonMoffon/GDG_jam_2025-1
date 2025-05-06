@@ -1,8 +1,12 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from importlib.resources import path
+from time import time_ns as get_time
+from os import mkdir
 
 import zipfile
+from tomllib import load as load_toml
+from tomlkit import dumps as dumps_toml
 
 from pathlib import Path
 
@@ -67,26 +71,55 @@ class SaveData:
     def save_incomplete(self, puzzle: Puzzle, working: GraphController) -> None:
         pass
 
-
     def completed(self, puzzle: Puzzle) -> bool:
         return puzzle.name in self._puzzle_solutions
+    
+    def close_save(self):
+        pass
 
 
-def read_savedata(pth: Path) -> SaveData:
-    source = zipfile.ZipFile(pth, "a")
-    name = pth.stem
-    save_data = SaveData(source, name)
+class SaveInfo:
 
-    return save_data
+    def __init__(self, pth: Path, cfg: dict[str, Any] | None = None) -> None:
+        self._path: Path = pth
+        if cfg is None:
+            with zipfile.ZipFile(self._path, 'r') as zip:
+                with zip.open('save.cfg', 'r') as fp:
+                    cfg = load_toml(fp)
+        self._name: str = cfg['Info']['name']
+        self._creation_time: int = cfg['Info']['creation_time']
+        self._last_launch_time: int = cfg['Info']['last_open_time']
 
+        self._complete_puzzles: dict[str, str] = cfg['Complete']
+        self._incomplete_puzzles: dict[str, str] = cfg['Incomplete']
+        self._sandbox_graphs: dict[str, str] = cfg['Sandbox']
 
-def new_savedata(name: str, origin: Path) -> SaveData:
-    source = zipfile.ZipFile(origin / f"{name}.svd", "x")
-    source.write(origin / "save.cfg", f"save_{name}.cfg")
-    source.close()
-    source = zipfile.ZipFile(origin / f"{name}.svd", "a")
-    return SaveData(source, name)
+    @property
+    def name(self) -> str: return self._name
+    
+    @property
+    def creation_time(self) -> int: return self._creation_time
 
+    @property
+    def last_launch_time(self) -> int: return self._last_launch_time
+
+    @classmethod
+    def create_new_save(cls, name: str, root: Path) -> SaveInfo:
+        pth = root / f"{name}.svd"
+        with open(root / 'save.cfg', 'rb') as fp:
+            cfg = load_toml(fp)
+        cfg['Info']['name'] = name
+        cfg['Info']['creation_time'] = get_time()
+        cfg['Info']['last_open_time'] = get_time()
+        with zipfile.ZipFile(pth, 'x') as zip:
+            zip.writestr('save.cfg', dumps_toml(cfg))
+        return cls(pth, cfg)
+    
+    def open_save(self) -> SaveData:
+        with zipfile.ZipFile(self._path, 'r') as zip:
+            pth = self._path.parent / 'save'
+            mkdir(pth)
+            zip.extractall(pth)
 
 class Context:
 
@@ -94,9 +127,9 @@ class Context:
 
         with path(save_path, "save.cfg") as save_config:
             self._save_path: Path = Path(save_config).parent
-        self._saves: dict[str, SaveData] = {}
+        self._saves: dict[str, SaveInfo] = {}
         for save in self._save_path.glob("*.svd"):
-            save_data = read_savedata(save)
+            save_data = SaveInfo(save)
             self._saves[save_data.name] = save_data
 
         self._current_save: SaveData | None = None
@@ -110,15 +143,17 @@ class Context:
         self._level_select: LevelSelect | None = None
 
     def close(self) -> None:
-        for save in self._saves.values():
-            save.write()
+        self._current_save.close_save()
+        # for save in self._saves.values():
+        #     save.write()
 
     def get_save_names(self) -> tuple[str, ...]:
         return tuple(name for name in self._saves)
 
     def new_save(self) -> None:
         name = str(len(self._saves))
-        self._saves[name] = self._current_save = new_savedata(name, self._save_path)
+        self._saves[name] = SaveInfo.create_new_save(name, self._save_path)
+        self.choose_save(name)
 
     def choose_first_save(self) -> None:
         if not self._saves:
@@ -127,7 +162,8 @@ class Context:
         self.choose_save("0")
 
     def choose_save(self, name: str) -> None:
-        self._current_save = self._saves[name]
+        self._current_save = self._saves[name].open_save()
+        # self._current_save = self._saves[name]
 
     def set_frames(
         self,
