@@ -1,13 +1,14 @@
 [Config]
 name = "ac"
 title = "Aircon Power"
+short_description = "Restore the AC by outputting the right amount of power."
 description = """Now that the thermostat is back online,
 the environmental control system logic needs to be fixed.
 If it gets above 22C in here, we need to turn the power on,
 but we also need to cap out at 100 power after 30C or we're
 going to blow a fuse.
 """
-
+ambience = "environment"
 available = [ 
     "Int", "Float", "Add", "Subtract", "Multiply", "Divide", "Minimum", "Maximum", "Round"
 ]

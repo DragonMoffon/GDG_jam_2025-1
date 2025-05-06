@@ -1,6 +1,7 @@
 [Config]
 name = "f_to_k" # Internal name for reference in 
 title = "Convert Temperature"
+short_description = "Get the thermostat back online by converting F to C and K."
 description = """
 The temperature nodes in the station got reset to factory settings,
 and their output needs to be converted back to celsius and kelvin.
@@ -9,6 +10,7 @@ fahrenheit is 5/9th the size of celsius,
 and 32 fahrenheit is 0 celsius.
 0 celsius is 273.15 kelvin.
 """
+ambience = "environment"
 available = [ 
     "Int", "Float", "Add", "Subtract", "Multiply", "Divide"
 ]

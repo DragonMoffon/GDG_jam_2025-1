@@ -1,12 +1,13 @@
 [Config]
 name = "connect_mainbus"
 title = "Reconnect the Station"
+short_description = "Connect the power and data lines back up."
 description = """
 The main power and data busses of the powerstation are down.
 You must reconnect them for station repairs to begin.
 """
 available = []
-
+ambience = "machinery"
 prerequisite_count = 0
 prerequisite_levels = []
 

@@ -9,6 +9,7 @@ from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
 from resources import style
+from resources.audio import Sound
 import resources.graphs as graph_path
 
 from jam.node import graph
@@ -844,6 +845,9 @@ class EditorFrame(Frame):
         self._active_editor = self._editors[name]
         self._active_editor.cursor_offset = self.cliping_mask.position
         self._active_editor.set_mode_none()
+
+        if puzzle := context.get_open_puzzle():
+            Sound.play_by_name(puzzle.ambience, style, "ambience2", True)
 
     def open_editor(self, puzzle: Puzzle | None = None, graph_src: Path | None = None):
         if puzzle is None and graph_src is None and "Sandbox" in self._editors:

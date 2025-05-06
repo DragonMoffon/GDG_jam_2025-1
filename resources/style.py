@@ -78,6 +78,12 @@ class Audio:
     ambient_wind: Sound
     crash: Sound
 
+    ambience_environment: Sound
+    ambience_fan: Sound
+    ambience_network: Sound
+    ambience_machinery: Sound
+    ambience_data: Sound
+    ambience_navigation: Sound
 
 @dataclass
 class Textures:
@@ -153,6 +159,7 @@ class Text:
 class Style:
 
     def __init__(self, source: Path):
+        self.source = source # save this for later
         with open(source / "style.cfg", "rb") as fp:
             self._raw = tomllib.load(fp)
 

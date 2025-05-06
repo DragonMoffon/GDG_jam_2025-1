@@ -1,11 +1,13 @@
 [Config]
 name = "signal_validation"
 title = "Signal Validation"
+short_description = "Sus out valid signals from invalid ones."
 description = """Only some of the signals were getting are valid,
 but we need to check which ones.
 Valid signals are 8-bit numbers; they all start with a 1 in the most
 significant position, and have 5 'on' bits total."""
 
+ambience = "network"
 prerequisite_count = 0
 prerequisite_levels = ["connect_mainbus"]
 

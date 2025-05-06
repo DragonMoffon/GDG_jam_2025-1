@@ -6,6 +6,8 @@ from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 from arcade.clock import GLOBAL_CLOCK
 
+from resources.audio import AUDIO
+
 from .core import (
     Element,
     get_shadow_shader,
@@ -277,6 +279,7 @@ class FrameController:
         self._animation_mode = FrameAnimationMode.HIDE
         self._animation_time = GLOBAL_CLOCK.time
         style.audio.slide_in.play()
+        AUDIO.stop("ambience2")
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> bool | None:
         if button == inputs.PRIMARY_CLICK and pressed:

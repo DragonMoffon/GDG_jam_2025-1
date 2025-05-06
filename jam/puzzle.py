@@ -15,7 +15,9 @@ class Puzzle:
         self,
         name: str,
         title: str,
+        short_description: str,
         description: str,
+        ambience: Path | None,
         available: tuple[BlockType, ...] | None,
         prerequisite_count: int,
         prerequisite_levels: list[str],
@@ -26,7 +28,9 @@ class Puzzle:
     ) -> None:
         self.name: str = name
         self.title: str = title
+        self.short_description: str = short_description
         self.description: str = description
+        self.ambience: str | None = ambience
         self.available: tuple[BlockType, ...] | None = available
         self.prerequisite_count: int = prerequisite_count
         self.prerequisite_levels: list[str] = prerequisite_levels
@@ -41,6 +45,12 @@ def load_puzzle(path: Path) -> Puzzle:
         raw_data = load_toml(fp)
 
     config_data = raw_data["Config"]
+
+    if "ambience" in config_data:
+        ambience = "ambience_" + config_data["ambience"]
+    else:
+        ambience = None
+
     if "available" in config_data:
         available = tuple(
             BlockType.__definitions__[typ] for typ in config_data["available"]
@@ -79,7 +89,9 @@ def load_puzzle(path: Path) -> Puzzle:
     return Puzzle(
         config_data["name"],
         config_data["title"],
+        config_data["short_description"],
         config_data["description"],
+        ambience,
         available,
         config_data.get("prerequisite_count", 0),
         config_data.get("prerequisite_levels", []),
