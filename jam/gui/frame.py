@@ -298,13 +298,13 @@ class FrameController:
                 return
 
         if self._selected_frame is not None:
-            self._selected_frame.on_input(input, modifiers, pressed)
+            self._selected_frame.on_input(button, modifiers, pressed)
 
         if (
             self._next_frame is not None
             and self._animation_mode == FrameAnimationMode.SHOW
         ):
-            self._next_frame.on_input(input, modifiers, pressed)
+            self._next_frame.on_input(button, modifiers, pressed)
 
     def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> None:
         if self._selected_frame is not None:

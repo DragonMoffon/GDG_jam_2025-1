@@ -82,6 +82,7 @@ class Audio:
 @dataclass
 class Textures:
     logo_big: ImageData
+    icon: ImageData
 
 
 @dataclass
@@ -174,7 +175,10 @@ class Style:
         )
 
         image_data = self._raw["Textures"]
-        self.textures = Textures(load_texture(source / image_data["logo_big"]))
+        self.textures = Textures(
+            load_texture(source / image_data["logo_big"]),
+            load_texture(source / image_data["icon"]),
+        )
 
         background_data = self._raw["Menu"]["Background"]
         self.menu = Menu(

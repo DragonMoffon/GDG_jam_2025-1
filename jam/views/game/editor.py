@@ -473,7 +473,7 @@ class Editor:
         self, button: Button, modifiers: int, pressed: bool
     ) -> None:
         cursor = self.get_base_cursor_pos()
-        if not pressed:
+        if not pressed and button == inputs.PRIMARY_CLICK:
             hovered_block = None
             for block in self._controller.blocks:
                 if block == self._selected_block:
@@ -593,7 +593,6 @@ class Editor:
             self._save_popup.decr_cursor()
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
-
         match self._mode:
             case EditorMode.NONE:
                 self.none_on_input(button, modifiers, pressed)
