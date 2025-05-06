@@ -215,9 +215,7 @@ def __max(
     a: FloatValue | IntValue, b: FloatValue | IntValue
 ) -> dict[str, IntValue | FloatValue]:
     if a.type is int and b.type is int:
-        _a = IntValue.__acast__(a)
-        _b = IntValue.__acast__(b)
-        return {"result": IntValue(max(_a.value, _b.value))}
+        return {"result": IntValue(max(a.value, b.value))}
     _a = FloatValue.__acast__(a)
     _b = FloatValue.__acast__(b)
     return {"result": FloatValue(max(_a.value, _b.value))}
@@ -226,8 +224,8 @@ def __max(
 MaxBlock = BlockType(
     "Maximum",
     __max,
-    {"a": FloatValue | IntValue, "b": FloatValue | IntValue},
-    {"result": FloatValue | IntValue},
+    {"a": FloatValue, "b": FloatValue},
+    {"result": FloatValue},
 )
 
 
@@ -235,9 +233,7 @@ def __min(
     a: FloatValue | IntValue, b: FloatValue | IntValue
 ) -> dict[str, IntValue | FloatValue]:
     if a.type is int and b.type is int:
-        _a = IntValue.__acast__(a)
-        _b = IntValue.__acast__(b)
-        return {"result": IntValue(min(_a.value, _b.value))}
+        return {"result": IntValue(min(a.value, b.value))}
     _a = FloatValue.__acast__(a)
     _b = FloatValue.__acast__(b)
     return {"result": FloatValue(min(_a.value, _b.value))}
@@ -246,8 +242,8 @@ def __min(
 MinBlock = BlockType(
     "Minimum",
     __min,
-    {"a": FloatValue | IntValue, "b": FloatValue | IntValue},
-    {"result": FloatValue | IntValue},
+    {"a": FloatValue, "b": FloatValue},
+    {"result": FloatValue},
 )
 
 

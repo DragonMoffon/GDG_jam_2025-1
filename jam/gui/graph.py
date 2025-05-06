@@ -422,6 +422,14 @@ class BoolPanel(Element):
     def height(self) -> float:
         return self._sprite.width
 
+    @property
+    def left(self) -> float:
+        return self._sprite.x
+
+    @property
+    def bottom(self) -> float:
+        return self._sprite.y
+
 
 class ConnectionNodeElement(Element):
 
@@ -592,6 +600,14 @@ class TempValueElement(Element):
     @property
     def connection(self) -> Connection:
         return self._connection
+
+    @property
+    def left(self) -> float:
+        return self._panel.left
+
+    @property
+    def bottom(self) -> float:
+        return self._panel.bottom
 
     def update_end(self, point: tuple[float, float]) -> None:
         link = point[0] - formating.corner_radius, point[1]

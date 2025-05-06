@@ -1,12 +1,14 @@
 from uuid import UUID, uuid4
 from pathlib import Path
 from tomllib import load as load_toml
+from tomlkit import document, table, inline_table, aot, dump as dump_toml
 
 from jam.node.graph import (
     Graph,
     Block,
     Connection,
     BlockType,
+    OperationValue,
     TestCase,
     BLOCK_CAST,
     STR_CAST,
@@ -60,21 +62,39 @@ class GraphController:
     def temporary(self) -> tuple[TempValueElement, ...]:
         return tuple(self._temp_elements.values())
 
+    def has_block(self, uid: UUID) -> bool:
+        return uid in self._block_elements
+
+    def has_connection(self, uid: UUID) -> bool:
+        return uid in self._connection_elements
+
+    def has_temp(self, uid: UUID) -> bool:
+        return uid in self._temp_elements
+
     def get_block(self, uid: UUID) -> BlockElement:
         if uid not in self._block_elements:
             raise KeyError(f"No block with uid {uid}")
         return self._block_elements[uid]
 
     def get_connection(self, uid: UUID) -> ConnectionElement:
-        if uid not in self._connection_elements.values():
+        if uid not in self._connection_elements:
             raise KeyError(f"No connection with uid {uid}")
 
         return self._connection_elements[uid]
 
-    def add_block(self, block: BlockElement) -> None:
-        self._graph.add_block(block._block)
+    def get_temp(self, uid: UUID) -> TempValueElement:
+        if uid not in self._temp_elements:
+            raise KeyError(f"No temp value with the uid {uid}")
+
+        return self._temp_elements[uid]
+
+    def add_block(self, block: BlockElement, add_temp: bool = True) -> None:
+        self._graph.add_block(block.block)
         self._gui.add_element(block)
         self._block_elements[block.uid] = block
+
+        if not add_temp:
+            return
 
         for inp, connection in block.block.inputs.items():
             if connection is not None:
@@ -141,7 +161,9 @@ class GraphController:
         self._connection_elements.pop(connection.uid)
         self._gui.remove_element(connection)
 
-    def create_temporary(self, block: BlockElement, inp: str) -> None:
+    def create_temporary(
+        self, block: BlockElement, inp: str, value: OperationValue | None = None
+    ) -> None:
         connection = block._input_connections[inp]
         if connection is not None:
             return
@@ -149,7 +171,9 @@ class GraphController:
         block_typ = block.block.type
         temp_type = BLOCK_CAST[block_typ.inputs[inp]._typ]
         temp_block = Block(temp_type, uid=None)
-        if inp in block_typ.defaults:
+        if value is not None:
+            temp_block.config["value"] = value
+        elif inp in block_typ.defaults:
             temp_block.config["value"] = block_typ.defaults[inp]
         temp_connection = Connection(temp_block.uid, "value", block.uid, inp)
         element = TempValueElement(temp_block, temp_connection)
@@ -211,7 +235,7 @@ def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
         graph_block = Block(block_type, uid, *config)
         element = BlockElement(graph_block)
         element.update_position(block.get("position", (0.0, 0.0)))
-        controller.add_block(element)
+        controller.add_block(element, add_temp=False)
 
     for connection in connection_table.get("Data", []):
         uid_str: str | None = connection.get("uid", None)
@@ -239,6 +263,12 @@ def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
         )
         element = ConnectionElement(graph_connection, start, end, links=links)
         controller.add_connection(element)
+
+    for block in controller.blocks:
+        for inp in block.block.type.inputs:
+            if block._input_connections[inp] is not None:
+                continue
+            controller.create_temporary(block, inp)
 
     return controller
 
@@ -307,4 +337,80 @@ def write_graph(controller: GraphController, path: Path) -> None:
 def write_graph_from_level(
     controller: GraphController, puzzle: Puzzle, path: Path
 ) -> None:
-    pass
+    toml = document()
+
+    graph = controller.graph
+
+    config_table = table()
+    block_table = table()
+    variables = aot()
+    blocks = aot()
+    connection_table = table()
+    connections = aot()
+
+    config_table["name"] = puzzle.title
+    toml.add("Config", config_table)
+    for block in graph.blocks:
+        subtable = table()
+        config = inline_table()
+
+        subtable["uid"] = block.uid.hex
+        subtable["type"] = block.type.name
+        config.update(  # type: ignore -- unknownMemberType
+            {name: typ.value for name, typ in block.config.items()}
+        )
+        subtable["config"] = config
+
+        if controller.has_block(block.uid):
+            element = controller.get_block(block.uid)
+            subtable["position"] = element.left, element.bottom
+        else:
+            element = controller.get_temp(block.uid)
+            subtable["position"] = element.left, element.bottom
+
+        blocks.append(subtable)  # type: ignore -- unknownMemberType
+
+        if block.type.exclusive:
+            type_table = table()
+            input_table = inline_table()
+            input_table.update(  # type: ignore -- unknownMemberType
+                {
+                    name: str(typ._typ.__name__)
+                    for name, typ in block.type.inputs.items()
+                }
+            )
+            output_table = inline_table()
+            output_table.update(  # type: ignore -- unknownMemberType
+                {
+                    name: str(typ._typ.__name__)
+                    for name, typ in block.type.outputs.items()
+                }
+            )
+            type_table["name"] = block.type.name
+            type_table["inputs"] = input_table
+            type_table["outputs"] = output_table
+            variables.append(type_table)  # type: ignore -- unknownMemberType
+
+    block_table["Variables"] = variables
+    block_table["Data"] = blocks
+    toml["Block"] = block_table
+
+    for connection in graph.connections:
+        subtable = table()
+        subtable["uid"] = connection.uid.hex
+        subtable["source"] = connection.source.hex
+        subtable["output"] = connection.output
+        subtable["target"] = connection.target.hex
+        subtable["input"] = connection.input
+
+        if controller.has_connection(connection.uid):
+            element = controller.get_connection(connection.uid)
+            if len(element._links) > 2:
+                subtable["links"] = element._links[1:-1]
+
+        connections.append(subtable)  # type: ignore -- unknownMemberType
+    connection_table["Data"] = connections
+    toml["Connection"] = connection_table
+
+    with path.open(mode="w", encoding="utf-8") as fp:
+        dump_toml(toml, fp)

@@ -861,7 +861,7 @@ class EditorFrame(Frame):
         self.select_editor(editor.name)
 
     def close_editor(self, name: str):
-        if name not in self._editors:
+        if name not in self._editors or name == "Sandbox":
             return
 
         closing_editor = self._editors.pop(name)
@@ -900,23 +900,22 @@ class EditorFrame(Frame):
         self._panel.visible = show
         self.cliping_mask.visible = show
 
-    def on_input(self, input: Button, modifiers: int, pressed: bool) -> None:
+    def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
         if pressed:
             tab = self._editor_tabs.get_hovered_tab(inputs.cursor)
             if tab is not None:
-                if input == inputs.PRIMARY_CLICK:
+                if button == inputs.PRIMARY_CLICK:
                     self._editor_tabs.select_tab(tab, True)
                     self.select_editor(tab.text)
                     return
-                elif input == inputs.SECONDARY_CLICK:
+                elif button == inputs.SECONDARY_CLICK:
                     if len(self._editors) == 1:
                         if "Sandbox" in self._editors:
                             return
                         self.open_editor()
-                    self._editor_tabs.rem_tab(tab)
                     self.close_editor(tab.text)
                     return
-        self._active_editor.on_input(input, modifiers, pressed)
+        self._active_editor.on_input(button, modifiers, pressed)
 
     def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> None:
         self._active_editor.on_axis_change(axis, value_1, value_2)

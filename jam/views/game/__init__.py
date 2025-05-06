@@ -157,15 +157,15 @@ class GameView(View):
         self._level_select.update_offset(self._background.layer_offsets[0])
         self._frame_controller.on_update(delta_time)
 
-    def on_input(self, input: Button, modifiers: int, pressed: bool) -> None:
+    def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
         if not self._frame_controller.selected_frame and pressed:
-            if input == inputs.PRIMARY_CLICK:
+            if button == inputs.PRIMARY_CLICK:
                 alert = self._level_select.get_hovered_alert(inputs.cursor)
                 if alert is not None:
                     context.open_editor_tab(alert.puzzle)
                     context.show_editor_frame()
 
-        self._frame_controller.on_input(input, modifiers, pressed)
+        self._frame_controller.on_input(button, modifiers, pressed)
 
     def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> None:
         self._frame_controller.on_axis_change(axis, value_1, value_2)

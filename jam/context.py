@@ -61,16 +61,16 @@ class SaveData:
 
     def complete_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
         self._completed_puzzles.append(puzzle)
-        puzzle_pth = zipfile.Path(self._src)
-        pth = write_graph_from_level(solution, puzzle, puzzle_pth)
-        self._puzzle_solutions[puzzle.name] = pth
+        puzzle_pth = zipfile.Path(self._src, f"{puzzle.name}.pzl")
+        write_graph_from_level(solution, puzzle, puzzle_pth)
+        self._puzzle_solutions[puzzle.name] = puzzle_pth
 
     def completed(self, puzzle: Puzzle) -> bool:
         return puzzle.name in self._puzzle_solutions
 
 
 def read_savedata(pth: Path) -> SaveData:
-    source = zipfile.ZipFile(pth)
+    source = zipfile.ZipFile(pth, "a")
     name = pth.stem
     save_data = SaveData(source, name)
 
@@ -79,7 +79,7 @@ def read_savedata(pth: Path) -> SaveData:
 
 def new_savedata(name: str, origin: Path) -> SaveData:
     source = zipfile.ZipFile(origin / f"{name}.svd", "x")
-    source.write(origin / "save.cfg")
+    source.write(origin / "save.cfg", f"save_{name}.cfg")
     source.close()
     source = zipfile.ZipFile(origin / f"{name}.svd", "a")
     return SaveData(source, name)
