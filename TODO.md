@@ -12,6 +12,7 @@
 - Make joints obvious
 - Blocks can switch between "forms" in the same family (e.g.: add/sub/mult/div)
 - Stretch goal: see generated code
+- Test runner should be pinned to the UI and minimizable
 
 ### UI
 - Make text/image modals
