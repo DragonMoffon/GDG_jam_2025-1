@@ -25,14 +25,18 @@ class MainMenuView(View):
         self._logo.color = (255, 255, 255, 0)
 
         self._gui = Gui(self.window.default_camera)
-        new_save = PopupAction("New Game", self.new_save)
-        cont_save = PopupAction("Continue", self.continue_save)
-        saves = (
-            PopupAction(f"Continue: {name}", self.pick_save, name)
-            for name in context.get_save_names()[::-1]
-        )
+
+        if context.get_save_names():
+            saves = (
+                PopupAction(f"Continue: {name}", self.pick_save, name)
+                for name in context.get_save_names()[::-1]
+            )
+            oppts = (PopupAction("New Game", self.new_save), *saves, PopupAction("Continue", self.continue_save))
+        else:
+            oppts = (PopupAction("Begin", self.new_save,),)
+    
         self._popup = SelectionPopup(
-            (new_save, *saves, cont_save), (self.center_x, self.center_y)
+            oppts, (self.center_x, self.center_y)
         )
         self._gui.add_element(self._popup)
         self._fade_out: bool = False

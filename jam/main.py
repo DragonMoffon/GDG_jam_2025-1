@@ -9,7 +9,6 @@ from .views.menu import MainMenuView
 def main() -> None:
     pyglet.image.Texture.default_min_filter = GL_LINEAR
     pyglet.image.Texture.default_mag_filter = GL_LINEAR
-    context.choose_first_save()
     win = Window()
     win.show_view(MainMenuView())
     win.run()
