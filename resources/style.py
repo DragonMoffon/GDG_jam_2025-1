@@ -85,6 +85,7 @@ class Audio:
     ambience_machinery: Sound
     ambience_data: Sound
     ambience_navigation: Sound
+    ambience_power: Sound
 
 @dataclass
 class Textures:
