@@ -292,6 +292,7 @@ def value_func(cast: type[OperationValue]) -> BlockOperation:
     def __value(value: OperationValue) -> dict[str, OperationValue]:
         return {"value": cast.__acast__(value)}
 
+    __value.__doc__ = f"""Create a {cast._typ.__name__}."""
     return __value
 
 
