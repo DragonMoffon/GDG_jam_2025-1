@@ -136,4 +136,6 @@ class InfoFrame(Frame):
     def on_select(self) -> None:
         self.label.text = INFO_TEXT
         if puz := context.get_open_puzzle():
-            self.label.text += "\n------\n\n[CURRENT TASK]\n\n" + puz.description
+            self.label.text = "[CURRENT TASK]\n\n" + puz.description
+        else:
+            self.label.text = INFO_TEXT
