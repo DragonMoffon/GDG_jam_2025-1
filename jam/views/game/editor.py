@@ -809,11 +809,12 @@ class Editor:
 
     def create_new_block(
         self, typ: graph.BlockType, position: tuple[float, float]
-    ) -> None:
+    ) -> gui.BlockElement:
         block = graph.Block(typ)
         element = gui.BlockElement(block)
         element.update_position(position)
         self._controller.add_block(element)
+        return element
 
 
 class EditorFrame(Frame):
