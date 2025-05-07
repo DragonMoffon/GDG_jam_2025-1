@@ -161,13 +161,10 @@ CastStrBLock = BlockType(
 )
 
 
-# mod
-
-
 def __mod(
     value: FloatValue | IntValue, mod: FloatValue | IntValue
 ) -> dict[str, IntValue | FloatValue]:
-    """Get the modulo (the remainder of a division) of a % b."""
+    """Get the modulo (the remainder of a division) of `a` % `b`."""
     if value.type is int and mod.type is int:
         return {"result": IntValue(value.value % mod.value)}
     a_ = FloatValue.__acast__(value)
@@ -416,7 +413,7 @@ FormatBlock = BlockType(
 
 
 def __eq(a: OperationValue, b: OperationValue) -> dict[str, BoolValue]:
-    """Does a equal b?"""
+    """Does `a` equal `b`?"""
     return {"result": BoolValue(a.value == b.value)}
 
 
@@ -426,7 +423,7 @@ EqBlock = BlockType(
 
 
 def __neq(a: OperationValue, b: OperationValue) -> dict[str, BoolValue]:
-    """Does a not equal b?"""
+    """Does `a` not equal `b`?"""
     return {"result": BoolValue(a.value != b.value)}
 
 
@@ -436,7 +433,7 @@ NeqBlock = BlockType(
 
 
 def __lt(a: FloatValue, b: FloatValue) -> dict[str, BoolValue]:
-    """Is a less than b?"""
+    """Is `a` less than `b`?"""
     a_ = FloatValue.__acast__(a)
     b_ = FloatValue.__acast__(b)
     return {"result": BoolValue(a_.value < b_.value)}
@@ -448,7 +445,7 @@ LtBlock = BlockType(
 
 
 def __gt(a: FloatValue, b: FloatValue) -> dict[str, BoolValue]:
-    """Is a greater than b?"""
+    """Is `a` greater than `b`?"""
     a_ = FloatValue.__acast__(a)
     b_ = FloatValue.__acast__(b)
     return {"result": BoolValue(a_.value > b_.value)}
@@ -460,7 +457,7 @@ GtBlock = BlockType(
 
 
 def __leq(a: FloatValue, b: FloatValue) -> dict[str, BoolValue]:
-    """Is a less than or equal to b?"""
+    """Is `a` less than or equal to `b`?"""
     a_ = FloatValue.__acast__(a)
     b_ = FloatValue.__acast__(b)
     return {"result": BoolValue(a_.value <= b_.value)}
@@ -472,7 +469,7 @@ LeqBlock = BlockType(
 
 
 def __geq(a: FloatValue, b: FloatValue) -> dict[str, BoolValue]:
-    """Is a greater than or equal to b?"""
+    """Is `a` greater than or equal to `b`?"""
     a_ = FloatValue.__acast__(a)
     b_ = FloatValue.__acast__(b)
     return {"result": BoolValue(a_.value >= b_.value)}
@@ -484,7 +481,7 @@ GeqBlock = BlockType(
 
 
 def __not(value: OperationValue) -> dict[str, BoolValue]:
-    """Return not a."""
+    """Return not `a`."""
     a_ = BoolValue.__acast__(value)
     return {"result": BoolValue(not a_.value)}
 
@@ -493,7 +490,7 @@ NotBlock = BlockType("Not", __not, {"value": BoolValue}, {"result": BoolValue})
 
 
 def __and(a: BoolValue, b: BoolValue) -> dict[str, BoolValue]:
-    """Return a logically anded with b."""
+    """Return `a` logically anded with `b`."""
     a_ = BoolValue.__acast__(a)
     b_ = BoolValue.__acast__(b)
     return {"result": BoolValue(a_.value and b_.value)}
@@ -505,7 +502,7 @@ AndBlock = BlockType(
 
 
 def __or(a: BoolValue, b: BoolValue) -> dict[str, BoolValue]:
-    """Return a logically ored with b."""
+    """Return `a` logically ored with `b`."""
     a_ = BoolValue.__acast__(a)
     b_ = BoolValue.__acast__(b)
     return {"result": BoolValue(a_.value or b_.value)}
