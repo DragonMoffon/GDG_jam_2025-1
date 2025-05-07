@@ -11,6 +11,12 @@ ambience = "machinery"
 prerequisite_count = 0
 prerequisite_levels = []
 
+[Alert]
+pin = [390, 360] # Where on the station to pin
+loc = [660, 540] # location of actual button
+pin_orientation = 1 # 0 = left, 1 = top, 2 = right, 3 = bottom
+loc_orientation = 3 # 0 = left, 1 = top, 2 = right, 3 = bottom
+
 [Inputs]
 POWER_BUS_1 = 'float' # float, int, str, bool
 POWER_BUS_2 = 'float' # float, int, str, bool

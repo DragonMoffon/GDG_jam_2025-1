@@ -49,8 +49,3 @@ class Sound:
     def play(self, channel: str = "default", loop: bool = False) -> None:
         AUDIO.play(self._source, channel, loop)
 
-    @classmethod
-    def play_by_name(cls, name: str, style: Style, channel: str = "default", loop: bool = False) -> None:
-        if audio := getattr(style.audio, name, None):
-            audio = cast(Sound, audio)
-            audio.play(channel, loop)

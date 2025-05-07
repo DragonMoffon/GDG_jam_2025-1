@@ -142,6 +142,10 @@ class Editor:
     def name(self) -> str:
         return self._graph.name
 
+    @property
+    def puzzle(self) -> Puzzle | None:
+        return self._puzzle
+
     def set_mode_none(self) -> None:
         self._mode = EditorMode.NONE
 
@@ -852,9 +856,11 @@ class EditorFrame(Frame):
         self._active_editor.cursor_offset = self.cliping_mask.position
         self._active_editor.set_mode_none()
 
-        if puzzle := context.get_open_puzzle():
+        if puzzle := self._active_editor.puzzle:
             self.info_label.text = puzzle.short_description
-            Sound.play_by_name(puzzle.ambience, style, "ambience2", True)
+            if ambience := puzzle.ambience:
+                ambience.play("ambience2", True)
+
         if name == "Sandbox":
             self.info_label.text = "Mess around and find out."
 

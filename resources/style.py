@@ -2,11 +2,11 @@ from importlib.resources import path
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, Self
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import tomllib
 from arcade import load_font
 from arcade.types import RGBA255
-from pyglet.image import ImageData, load as load_texture
+from pyglet.image import AbstractImage, load as load_texture
 
 import resources.styles as styles
 
@@ -14,9 +14,19 @@ from .audio import Sound
 
 __all__ = ("STYLE",)
 
+@dataclass
+class StyleTable:
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+    
+    @classmethod
+    def create(cls, data: dict[str, Any], source: Path) -> Self:
+        raise NotImplementedError()
+
 
 @dataclass
-class Colors:
+class Colors(StyleTable):
     shadow: RGBA255
     base: RGBA255
     background: RGBA255
@@ -27,7 +37,7 @@ class Colors:
 
 
 @dataclass
-class Format:
+class Format(StyleTable):
     point_radius: float
     corner_radius: float
     select_radius: float
@@ -45,7 +55,7 @@ class FloatMotionMode(IntEnum):
 
 
 @dataclass
-class Floating:
+class Floating(StyleTable):
     src: Path
     offset: tuple[float, float]
     foci: tuple[float, float]
@@ -70,33 +80,37 @@ class Floating:
 
 
 @dataclass
-class Audio:
+class Ambience(StyleTable):
+    wind: Sound
+    environment: Sound
+    fan: Sound
+    network: Sound
+    machinery: Sound
+    data: Sound
+    navigation: Sound
+    power: Sound
+
+@dataclass
+class Audio(StyleTable):
     slide_in: Sound
     slide_out: Sound
     connection: Sound
     block: Sound
     modal: Sound
-    ambient_wind: Sound
     crash: Sound
     notification: Sound
     confirm: Sound
-
-    ambience_environment: Sound
-    ambience_fan: Sound
-    ambience_network: Sound
-    ambience_machinery: Sound
-    ambience_data: Sound
-    ambience_navigation: Sound
-    ambience_power: Sound
-
-@dataclass
-class Textures:
-    logo_big: ImageData
-    icon: ImageData
+    ambience: Ambience
 
 
 @dataclass
-class Background:
+class Textures(StyleTable):
+    logo_big: AbstractImage
+    icon: AbstractImage
+
+
+@dataclass
+class Background(StyleTable):
     colour: tuple[int, int, int, int]
     base: Path
     base_offset: tuple[float, float]
@@ -104,12 +118,12 @@ class Background:
 
 
 @dataclass
-class Menu:
+class Menu(StyleTable):
     background: Background
 
 
 @dataclass
-class Panels:
+class Panels(StyleTable):
     settings_tag: Path
     editor_tag: Path
     comms_tag: Path
@@ -118,81 +132,74 @@ class Panels:
 
 
 @dataclass
-class Editor:
+class Editor(StyleTable):
     blink_speed: float
     background: Path
 
-    puzzle_alert: ImageData
+    puzzle_alert: AbstractImage
 
-    node_inactive: ImageData
-    node_active: ImageData
-    branch_inactive: ImageData
-    branch_active: ImageData
-    variable: ImageData
-    defintiion: ImageData
-    dropdown: ImageData
-    check_inactive: ImageData
-    check_active: ImageData
+    node_inactive: AbstractImage
+    node_active: AbstractImage
+    branch_inactive: AbstractImage
+    branch_active: AbstractImage
+    variable: AbstractImage
+    defintiion: AbstractImage
+    dropdown: AbstractImage
+    check_inactive: AbstractImage
+    check_active: AbstractImage
 
-    run_one: ImageData
-    run_all: ImageData
-    nav_p: ImageData
-    nav_n: ImageData
+    run_one: AbstractImage
+    run_all: AbstractImage
+    nav_p: AbstractImage
+    nav_n: AbstractImage
 
 
 @dataclass
-class Game:
+class Game(StyleTable):
     background: Background
     panels: Panels
     editor: Editor
 
 
 @dataclass
-class TextFormat:
+class TextFormat(StyleTable):
     name: str
     path: str
     size: float
 
 
 @dataclass
-class Text:
+class Text(StyleTable):
     normal: TextFormat
     header: TextFormat
 
+@dataclass
+class Style(StyleTable):
+    source: Path
+    name: str
+    colors: Colors
+    text: Text
+    format: Format
+    audio: Audio
+    textures: Textures
+    menu: Menu
+    game: Game
 
-class Style:
+    @classmethod
+    def create(cls, data: dict[str, Any], source: Path) -> Self:
 
-    def __init__(self, source: Path):
-        self.source = source # save this for later
-        with open(source / "style.cfg", "rb") as fp:
-            self._raw = tomllib.load(fp)
-
-        self.name = self._raw["name"]
-
-        self.colors = Colors(**self._raw["Colors"])
-
-        self.text = Text(
-            normal=TextFormat(**self._raw["Text"]["Normal"]),
-            header=TextFormat(**self._raw["Text"]["Header"]),
+        text = Text(
+            normal=TextFormat(**data["Text"]["Normal"]),
+            header=TextFormat(**data["Text"]["Header"])
         )
-        load_font(source / self.text.normal.path)
-        load_font(source / self.text.header.path)
+        load_font(source / text.normal.path)
+        load_font(source / text.header.path)
 
-        self.format = Format(**self._raw["Format"])
+        audio_data = data["Audio"]
+        ambience_data = audio_data.pop("Ambience")
 
-        audio_data = self._raw["Audio"]
-        self.audio = Audio(
-            **{name: Sound(source / pth) for name, pth in audio_data.items()}
-        )
-
-        image_data = self._raw["Textures"]
-        self.textures = Textures(
-            load_texture(source / image_data["logo_big"]),
-            load_texture(source / image_data["icon"]),
-        )
-
-        background_data = self._raw["Menu"]["Background"]
-        self.menu = Menu(
+        background_data = data["Menu"]["Background"]
+        menu = Menu(
             Background(
                 colour=tuple(background_data["color"]),
                 base=source / background_data["base"],
@@ -204,10 +211,10 @@ class Style:
             )
         )
 
-        background_data = self._raw["Game"]["Background"]
-        panel_data = self._raw["Game"]["Panels"]
-        editor_data = self._raw["Game"]["Editor"]
-        self.game = Game(
+        background_data = data["Game"]["Background"]
+        panel_data = data["Game"]["Panels"]
+        editor_data = data["Game"]["Editor"]
+        game = Game(
             Background(
                 colour=tuple(background_data["color"]),
                 base=source / background_data["base"],
@@ -244,6 +251,33 @@ class Style:
             ),
         )
 
+        return cls(
+            source,
+            data.get("name", "style"),
+            Colors(**data["Colors"]),
+            text,
+            Format(**data["Format"]),
+            Audio(
+                **{name: Sound(source / pth) for name, pth in audio_data.items()},
+                ambience=Ambience(
+                    **{name: Sound(source / pth) for name, pth in ambience_data.items()}
+                )
+            ),
+            Textures(
+                logo_big=load_texture(source / data["Textures"]["logo_big"]),
+                icon=load_texture(source / data["Textures"]["icon"])
+            ),
+            menu,
+            game
+        )
 
-with path(styles, "base") as pth:
-    STYLE = Style(pth)
+
+def get_style(name: str) -> Style:
+    with path(styles, name) as pth:
+        if pth.exists():
+            cfg = pth / 'style.cfg'
+            with open(cfg, 'rb') as fp:
+                return Style.create(tomllib.load(fp), pth)
+    raise FileNotFoundError(f"No style named {name} found")
+
+STYLE = get_style("base")

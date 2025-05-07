@@ -5,21 +5,23 @@ from pyglet.sprite import Sprite
 from resources import style
 
 from .core import Element, BASE_PRIMARY, BASE_SPACING
-from jam.puzzle import Puzzle
+from jam.puzzle import Puzzle, AlertOrientation
 
 
 
 class AlertElement(Element):
 
-    def __init__(self, pin: tuple[float, float], location: tuple[float, float], direction: int, puzzle: Puzzle):
+    def __init__(self, puzzle: Puzzle):
         Element.__init__(self)
-        self._pin = pin
+        self._pin = puzzle.alert.pin
+        self._pin_orientation = puzzle.alert.pin_orientation
+        self._loc = puzzle.alert.loc
+        self._loc_orientation = puzzle.alert.loc_orientation
+
         self._pin_offset = (0.0, 0.0)
-        self._location = location
-        self._direction = direction
         self._puzzle = puzzle
 
-        self._icon = Sprite(style.game.editor.puzzle_alert, location[0], location[1], group=BASE_PRIMARY)
+        self._icon = Sprite(style.game.editor.puzzle_alert, self._loc[0], self._loc[1], group=BASE_PRIMARY)
         self._body = RoundedRectangle(
             self._icon.x,
             self._icon.y,
@@ -64,7 +66,7 @@ class AlertElement(Element):
         return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
     
     def update_position(self, point: tuple[float, float]) -> None:
-        self._icon.position = point
+        self._icon.position = point[0], point[1], 0
         self._select.position = point[0] - style.format.select_radius, point[1] - style.format.select_radius
         self._place_lines()
 
@@ -74,41 +76,44 @@ class AlertElement(Element):
     
     def _place_lines(self):
         pin = self._pin[0] + self._pin_offset[0], self._pin[1] + self._pin_offset[1]
+        loc = self._loc
         
-        match self._direction:
-            case 0:
+        match self._pin_orientation:
+            case AlertOrientation.LEFT:
+                px = pin[0] - style.format.corner_radius
+                py = pin[1]
+            case AlertOrientation.TOP:
+                px = pin[0]
+                py = pin[1] + style.format.corner_radius
+            case AlertOrientation.RIGHT:
                 px = pin[0] + style.format.corner_radius
                 py = pin[1]
-
-                lx = self._icon.x
-                ly = self._icon.y + self._icon.height / 2.0
+            case AlertOrientation.BOTTOM:
+                px = pin[0]
+                py = pin[1] - style.format.corner_radius
+        
+        match self._loc_orientation:
+            case AlertOrientation.LEFT:
+                lx = loc[0]
+                ly = loc[1] + self._icon.height / 2.0
 
                 lx2 = lx - style.format.corner_radius
                 ly2 = ly
-            case 1:
-                px = pin[0]
-                py = pin[1] - style.format.corner_radius
-
-                lx = self._icon.x + self._icon.width / 2.0
-                ly = self._icon.y + self._icon.height
+            case AlertOrientation.TOP:
+                lx = loc[0] + self._icon.width / 2.0
+                ly = loc[1] + self._icon.height
 
                 lx2 = lx
                 ly2 = ly + style.format.corner_radius
-            case 2:
-                px = pin[0] - style.format.corner_radius
-                py = pin[1]
-
-                lx = self._icon.x + self._icon.width
-                ly = self._icon.y + self._icon.height / 2.0
+            case AlertOrientation.RIGHT:
+                lx = loc[0] + self._icon.width
+                ly = loc[1] + self._icon.height / 2.0
 
                 lx2 = lx + style.format.corner_radius
                 ly2 = ly
-            case _:
-                px = pin[0]
-                py = pin[1] + style.format.corner_radius
-
-                lx = self._icon.x + self._icon.width / 2.0
-                ly = self._icon.y
+            case AlertOrientation.BOTTOM:
+                lx = loc[0] + self._icon.width / 2.0
+                ly = loc[1]
 
                 lx2 = lx
                 ly2 = ly - style.format.corner_radius

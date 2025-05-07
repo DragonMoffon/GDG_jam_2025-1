@@ -14,6 +14,12 @@ ambience = "machinery"
 prerequisite_count = 0
 prerequisite_levels = ["connect_mainbus"]
 
+[Alert]
+pin = [530, 410] # Where on the station to pin
+loc = [700, 520] # location of actual button
+pin_orientation = 0 # 0 = left, 1 = top, 2 = right, 3 = bottom
+loc_orientation = 2 # 0 = left, 1 = top, 2 = right, 3 = bottom
+
 [Inputs]
 stage = 'int' # float, int, str, bool
 [Outputs]

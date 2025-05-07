@@ -54,8 +54,7 @@ class LevelSelect:
         for puzzle in available:
             if puzzle.name in self._alerts:
                 continue
-            pin, loc, face = puzzles.get_pin(puzzle)
-            alert = AlertElement(pin, loc, face, puzzle)
+            alert = AlertElement(puzzle)
             self._gui.add_element(alert)
             self._alerts[puzzle.name] = alert
             style.audio.notification.play()
@@ -112,7 +111,7 @@ class GameView(View):
         self._level_select: LevelSelect = LevelSelect(self._gui)
         self._level_check_time: float = self.window.time
 
-        style.audio.ambient_wind.play("ambience1", True)
+        style.audio.ambience.wind.play("ambience1", True)
 
     def on_show_view(self) -> None:
         self._level_check_time = self.window.time

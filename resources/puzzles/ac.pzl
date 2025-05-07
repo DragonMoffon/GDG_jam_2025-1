@@ -16,6 +16,12 @@ available = [
 prerequisite_count = 0
 prerequisite_levels = ["f_to_k"]
 
+[Alert]
+pin = [145, 475] # Where on the station to pin
+loc = [80, 590] # location of actual button
+pin_orientation = 0 # 0 = left, 1 = top, 2 = right, 3 = bottom
+loc_orientation = 2 # 0 = left, 1 = top, 2 = right, 3 = bottom
+
 [Inputs]
 temp = 'float' # float, int, str, bool
 [Outputs]

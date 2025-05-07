@@ -1,44 +1,45 @@
 from __future__ import annotations
 from pathlib import Path
+from enum import IntEnum
 from importlib.resources import path
 from tomllib import load as load_toml
+from dataclasses import dataclass
 
 from jam.node.graph import BlockType, TestCase, STR_CAST, _variable
 import jam.node.blocks
 
 import resources.puzzles as pzls
+from resources import style
+from resources.audio import Sound
 
+class AlertOrientation(IntEnum):
+    LEFT = 0
+    TOP = 1
+    RIGHT = 2
+    BOTTOM = 3
 
+@dataclass
+class PuzzleAlert:
+    pin: tuple[float, float] = (0.0, 0.0)
+    loc: tuple[float, float] = (0.0, 0.0)
+    pin_orientation: AlertOrientation = AlertOrientation.LEFT
+    loc_orientation: AlertOrientation = AlertOrientation.RIGHT
+
+@dataclass
 class Puzzle:
-
-    def __init__(
-        self,
-        name: str,
-        title: str,
-        short_description: str,
-        description: str,
-        ambience: Path | None,
-        available: tuple[BlockType, ...] | None,
-        prerequisite_count: int,
-        prerequisite_levels: list[str],
-        input_type: BlockType,
-        output_type: BlockType,
-        source_graph: Path | None,
-        tests: list[TestCase],
-    ) -> None:
-        self.name: str = name
-        self.title: str = title
-        self.short_description: str = short_description
-        self.description: str = description
-        self.ambience: str | None = ambience
-        self.available: tuple[BlockType, ...] | None = available
-        self.prerequisite_count: int = prerequisite_count
-        self.prerequisite_levels: list[str] = prerequisite_levels
-        self.input_type: BlockType = input_type
-        self.output_type: BlockType = output_type
-        self.source_graph: Path | None = source_graph
-        self.tests: list[TestCase] = tests
-
+    name: str
+    title: str
+    short_description: str
+    description: str
+    alert: PuzzleAlert
+    ambience: Sound | None
+    available: tuple[BlockType, ...] | None
+    prerequisite_count: int
+    prerequisite_levels: tuple[str, ...]
+    input_type: BlockType
+    output_type: BlockType
+    source_graph: Path | None
+    tests: tuple[TestCase, ...]
 
 def load_puzzle(path: Path) -> Puzzle:
     with open(path, "rb") as fp:
@@ -47,7 +48,7 @@ def load_puzzle(path: Path) -> Puzzle:
     config_data = raw_data["Config"]
 
     if "ambience" in config_data:
-        ambience = "ambience_" + config_data["ambience"]
+        ambience = style.audio.ambience[config_data['ambience']]
     else:
         ambience = None
 
@@ -86,32 +87,34 @@ def load_puzzle(path: Path) -> Puzzle:
         }
         tests.append(TestCase(case_inputs, case_outputs))
 
-    return Puzzle(
-        config_data["name"],
-        config_data["title"],
-        config_data["short_description"],
-        config_data["description"],
-        ambience,
-        available,
-        config_data.get("prerequisite_count", 0),
-        config_data.get("prerequisite_levels", []),
-        input_type,
-        output_type,
-        graph,
-        tests,
+    alert_data = raw_data['Alert']
+    alert = PuzzleAlert(
+        tuple(alert_data['pin']),
+        tuple(alert_data['loc']),
+        AlertOrientation(alert_data['pin_orientation']),
+        AlertOrientation(alert_data['loc_orientation'])
     )
 
-
-def write_puzzle(path: Path, puzzle: Puzzle) -> None:
-    pass
+    return Puzzle(
+        name=config_data["name"],
+        title=config_data["title"],
+        short_description=config_data["short_description"],
+        description=config_data["description"],
+        alert=alert,
+        ambience=ambience,
+        available=available,
+        prerequisite_count=config_data.get("prerequisite_count", 0),
+        prerequisite_levels=config_data.get("prerequisite_levels", []),
+        input_type=input_type,
+        output_type=output_type,
+        source_graph=graph,
+        tests=tuple(tests),
+    )
 
 
 class PuzzleCollection:
 
     def __init__(self, pth: Path) -> None:
-        with open(pth, "rb") as fp:
-            raw_data = load_toml(fp)
-
         self._puzzles: dict[str, Puzzle] = {}
         self._pins: dict[str, tuple[tuple[float, float], tuple[float, float], int]] = {}
 
@@ -122,13 +125,7 @@ class PuzzleCollection:
             except Exception as e:
                 print(f"{puzzle_path}: {e}")
 
-        for data in raw_data.get("Puzzle", []):
-            target = data["puzzle"]
-            if target not in self._puzzles:
-                continue
-            self._pins[target] = (data["pin"], data["loc"], data["face"])
-
-    def get_available_puzzles(self, count: int, completed: set[str]) -> tuple[Puzzle]:
+    def get_available_puzzles(self, count: int, completed: set[str]) -> tuple[Puzzle, ...]:
         available: list[Puzzle] = []
         for puzzle in self._puzzles.values():
             if count < puzzle.prerequisite_count:
@@ -142,11 +139,6 @@ class PuzzleCollection:
 
     def get_puzzle(self, name: str) -> Puzzle:
         return self._puzzles[name]
-
-    def get_pin(
-        self, puzzle: Puzzle
-    ) -> tuple[tuple[float, float], tuple[float, float], int]:
-        return self._pins[puzzle.name]
 
 
 with path(pzls, "puzzles.cfg") as pth:

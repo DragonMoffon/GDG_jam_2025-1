@@ -40,6 +40,8 @@ class SaveData:
         self._incomplete: dict[str, str] = info.incompleted_puzzles
         self._sandbox: dict[str, str] = info.sandbox_graphs
 
+        self.update_cfg()
+
     @property
     def name(self) -> str: return self._name
     

@@ -28,7 +28,7 @@ class GraphController:
         name: str = "graph",
         available: tuple[BlockType, ...] | None = None,
         sandbox: bool = False,
-        cases: list[TestCase] | None = None,
+        cases: tuple[TestCase, ...] | None = None,
         input_block: UUID | None = None,
         output_block: UUID | None = None,
     ):

@@ -346,7 +346,7 @@ class Graph:
         name: str = "graph",
         available: tuple[BlockType, ...] | None = None,
         sandbox: bool = False,
-        cases: list[TestCase] | None = None,
+        cases: tuple[TestCase, ...] | None = None,
         input_block: UUID | None = None,
         output_block: UUID | None = None,
         *,
@@ -363,7 +363,7 @@ class Graph:
             else tuple(BlockType.__definitions__.values())
         )
         self.sandbox: bool = sandbox
-        self.cases: list[TestCase] = cases or []
+        self.cases: tuple[TestCase, ...] = cases or ()
         self.input_uid: UUID | None = input_block
         self.output_uid: UUID | None = output_block
 

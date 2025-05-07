@@ -53,7 +53,7 @@ class MainMenuView(View):
         self._fade_out = True
         self._timer = self.window.time
         context.new_save()
-        style.audio.crash.play()
+        style.audio.crash.play("intro")
 
     def continue_save(self) -> None:
         self._fade_out = True
