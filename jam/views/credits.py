@@ -25,7 +25,7 @@ class CreditsView(View):
         self.back: View = back
 
         self._background = ParallaxBackground(style.menu.background)
-        self._camera = Camera2D(projection=self.window.rect)
+        self._camera = Camera2D(projection=self.window.rect, position=(0.0, 0.0))
         self._text = FLabel(
             get_credits(),
             x=self.center_x,
@@ -35,8 +35,8 @@ class CreditsView(View):
             anchor_x="center",
             anchor_y="center",
             align="center",
-            font_name=style.text.normal.name,
-            font_size=style.text.normal.size,
+            font_name=style.text.header.name,
+            font_size=style.text.header.size,
         )
 
     def on_draw(self) -> None:
@@ -52,7 +52,7 @@ class CreditsView(View):
         self._background.cursor_motion(x, y, dx, dy)
 
         h = self._text.content_height * (y / self.height - 0.5)
-        self._camera.position = (0.0, h)
+        self._camera.position = (0, int(h))
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
         if pressed:
