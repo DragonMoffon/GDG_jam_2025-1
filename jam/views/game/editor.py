@@ -236,7 +236,6 @@ class Editor:
 
     def set_mode_drag_block(self, block: gui.BlockElement) -> None:
         self._mode = EditorMode.DRAG_BLOCK
-        style.audio.drag.play("ui_loop", True)
 
         if self._hovered_block is not None:
             self._hovered_block.deselect()
@@ -250,7 +249,6 @@ class Editor:
     def set_mode_drag_connection(
         self, noodle: gui.ConnectionElement, link: int
     ) -> None:
-        style.audio.stretch.play("ui_loop", True)
         self._mode = EditorMode.DRAG_CONNECTION
         self._selected_noodle = noodle
         self._link = link
@@ -311,7 +309,6 @@ class Editor:
 
     def set_mode_add_connection(self, source: gui.BlockElement, output: str) -> None:
         self._mode = EditorMode.ADD_CONNECTION
-        style.audio.stretch.play("ui_loop", True)
 
         connection = graph.Connection(source.uid, output, None, None)
         start = source.get_output(output).link_pos
