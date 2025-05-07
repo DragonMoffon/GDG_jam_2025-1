@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
+from pathlib import Path
 from importlib.resources import path
 from time import time_ns as get_time
 from datetime import datetime
@@ -10,13 +11,20 @@ import zipfile
 from tomllib import load as load_toml
 from tomlkit import dumps as dumps_toml
 
-from pathlib import Path
-
 from jam.puzzle import Puzzle, puzzles
 from jam.controller import GraphController, write_graph_from_level, write_graph
 
 from resources import style
-import resources.saves as save_path
+
+try:
+    import resources.saves as save_path
+except ModuleNotFoundError:
+    import resources as rcs
+
+    with path(rcs, "saves") as pth:
+        pth.mkdir(exist_ok=True)
+
+    import resources.saves as save_path
 
 if TYPE_CHECKING:
     from jam.gui.frame import FrameController
@@ -46,41 +54,44 @@ class SaveData:
         self.update_cfg()
 
     @property
-    def name(self) -> str: return self._name
-    
-    @property
-    def creation_time(self) -> int: return self._creation_time
+    def name(self) -> str:
+        return self._name
 
     @property
-    def last_open_time(self) -> int: return self._last_open_time
+    def creation_time(self) -> int:
+        return self._creation_time
+
+    @property
+    def last_open_time(self) -> int:
+        return self._last_open_time
 
     @property
     def completed(self) -> tuple[str, ...]:
         return tuple(self._complete)
-    
+
     def has_completed(self, name: str) -> bool:
         return name in self._complete
 
     @property
-    def incompleted(self) -> tuple[str,  ...]:
+    def incompleted(self) -> tuple[str, ...]:
         return tuple(self._incomplete)
-    
+
     @property
     def sandbox(self) -> tuple[str, ...]:
         return tuple(self._sandbox)
-    
+
     @property
     def number_completed(self) -> int:
         return len(self._complete)
-    
+
     @property
     def number_attempted(self) -> int:
         return len(self._complete) + len(self._incomplete)
 
     def save_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
         if puzzle.name in self._complete:
-            return # TODO: discuss what to do when saving an already solved puzzle?? (turn into sandbox but _how_?)
-        target = f'{puzzle.name}.blk'
+            return  # TODO: discuss what to do when saving an already solved puzzle?? (turn into sandbox but _how_?)
+        target = f"{puzzle.name}.blk"
         pth = self._root / target
         self._incomplete[puzzle.name] = target
         write_graph_from_level(solution, puzzle, pth)
@@ -88,15 +99,15 @@ class SaveData:
 
     def save_sandbox(self, graph: GraphController, name: str | None = None) -> None:
         if name is None:
-            name = f'sandbox_{len(self._sandbox)}'
-        target = f'{name}.blk'
+            name = f"sandbox_{len(self._sandbox)}"
+        target = f"{name}.blk"
         pth = self._root / target
         self._sandbox[name] = target
         write_graph(graph, pth)
         self.update_cfg()
 
     def complete_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
-        target = f'{puzzle.name}.blk'
+        target = f"{puzzle.name}.blk"
         pth = self._root / target
         if puzzle.name in self._incomplete:
             self._incomplete.pop(puzzle.name)
@@ -106,32 +117,34 @@ class SaveData:
         self.update_cfg()
 
     def _update_cfg(self) -> str:
-        return dumps_toml({
-            'Info': {
-                'name': self.name,
-                'creation_time': self.creation_time,
-                'last_open_time': self.last_open_time,
-                'tabs': self._tabs
-            },
-            'Complete': self._complete,
-            'Incomplete': self._incomplete,
-            'Sandbox': self._sandbox
-        })
-    
+        return dumps_toml(
+            {
+                "Info": {
+                    "name": self.name,
+                    "creation_time": self.creation_time,
+                    "last_open_time": self.last_open_time,
+                    "tabs": self._tabs,
+                },
+                "Complete": self._complete,
+                "Incomplete": self._incomplete,
+                "Sandbox": self._sandbox,
+            }
+        )
+
     def update_cfg(self) -> None:
-        with open(self._root / 'save.cfg', 'w') as fp:
+        with open(self._root / "save.cfg", "w") as fp:
             fp.write(self._update_cfg())
-    
+
     def update_save(self) -> None:
-        with zipfile.ZipFile(self._target, 'w') as zip:
-            zip.writestr('save.cfg', self._update_cfg())
+        with zipfile.ZipFile(self._target, "w") as zip:
+            zip.writestr("save.cfg", self._update_cfg())
             for item in self._complete.values():
                 zip.write(self._root / item, item)
             for item in self._incomplete.values():
                 zip.write(self._root / item, item)
             for item in self._sandbox.values():
                 zip.write(self._root / item, item)
-    
+
     def close_save(self) -> None:
         self.update_save()
         rmtree(self._root)
@@ -142,74 +155,79 @@ class SaveInfo:
     def __init__(self, pth: Path, cfg: dict[str, Any] | None = None) -> None:
         self._path: Path = pth
         if cfg is None:
-            with zipfile.ZipFile(self._path, 'r') as zip:
-                with zip.open('save.cfg', 'r') as fp:
+            with zipfile.ZipFile(self._path, "r") as zip:
+                with zip.open("save.cfg", "r") as fp:
                     cfg = load_toml(fp)
-        self._name: str = cfg['Info']['name']
-        self._creation_time: int = cfg['Info']['creation_time']
-        self._last_open_time: int = cfg['Info']['last_open_time']
+        self._name: str = cfg["Info"]["name"]
+        self._creation_time: int = cfg["Info"]["creation_time"]
+        self._last_open_time: int = cfg["Info"]["last_open_time"]
 
-        self._complete_puzzles: dict[str, str] = cfg['Complete']
-        self._incomplete_puzzles: dict[str, str] = cfg['Incomplete']
-        self._sandbox_graphs: dict[str, str] = cfg['Sandbox']
+        self._complete_puzzles: dict[str, str] = cfg["Complete"]
+        self._incomplete_puzzles: dict[str, str] = cfg["Incomplete"]
+        self._sandbox_graphs: dict[str, str] = cfg["Sandbox"]
 
-        self._tabs: list[str] = cfg['Info']['tabs']
-
-    @property
-    def name(self) -> str: return self._name
+        self._tabs: list[str] = cfg["Info"]["tabs"]
 
     @property
-    def path(self) -> Path: return self._path
-    
-    @property
-    def creation_time(self) -> int: return self._creation_time
+    def name(self) -> str:
+        return self._name
 
     @property
-    def last_open_time(self) -> int: return self._last_open_time
+    def path(self) -> Path:
+        return self._path
 
     @property
-    def tabs(self) -> list[str]: return self._tabs.copy()
+    def creation_time(self) -> int:
+        return self._creation_time
+
+    @property
+    def last_open_time(self) -> int:
+        return self._last_open_time
+
+    @property
+    def tabs(self) -> list[str]:
+        return self._tabs.copy()
 
     @property
     def completed(self) -> tuple[str, ...]:
         return tuple(self._complete_puzzles)
-    
+
     @property
     def completed_puzzles(self) -> dict[str, str]:
         return self._complete_puzzles.copy()
-    
+
     def get_completed(self, name: str) -> str:
         return self._complete_puzzles[name]
-    
+
     def has_completed(self, name: str) -> bool:
         return name in self._complete_puzzles
 
     @property
-    def incompleted(self) -> tuple[str,  ...]:
+    def incompleted(self) -> tuple[str, ...]:
         return tuple(self._incomplete_puzzles)
-    
+
     @property
     def incompleted_puzzles(self) -> dict[str, str]:
         return self._incomplete_puzzles.copy()
-    
+
     def get_incompleted(self, name: str) -> str:
         return self._incomplete_puzzles[name]
-    
+
     @property
     def sandbox(self) -> tuple[str, ...]:
         return tuple(self._sandbox_graphs)
-    
+
     @property
     def sandbox_graphs(self) -> dict[str, str]:
         return self._sandbox_graphs.copy()
-    
+
     def get_sandbox(self, name: str) -> str:
         return self._sandbox_graphs[name]
 
     @property
     def number_completed(self) -> int:
         return len(self._complete_puzzles)
-    
+
     @property
     def number_attempted(self) -> int:
         return len(self._complete_puzzles) + len(self._incomplete_puzzles)
@@ -218,32 +236,36 @@ class SaveInfo:
     def create_new_save(cls, name: str, root: Path) -> SaveInfo:
         pth = root / f"{name}.svd"
         cfg: dict[str, Any] = {
-            'Info': {},
-            'Complete': {},
-            'Incomplete': {},
-            'Sandbox': {}
+            "Info": {},
+            "Complete": {},
+            "Incomplete": {},
+            "Sandbox": {},
         }
-        cfg['Info']['name'] = name
-        cfg['Info']['creation_time'] = get_time()
-        cfg['Info']['last_open_time'] = get_time()
-        cfg['Info']['tabs'] = []
-        with zipfile.ZipFile(pth, 'x') as zip:
-            zip.writestr('save.cfg', dumps_toml(cfg))
+        cfg["Info"]["name"] = name
+        cfg["Info"]["creation_time"] = get_time()
+        cfg["Info"]["last_open_time"] = get_time()
+        cfg["Info"]["tabs"] = []
+        with zipfile.ZipFile(pth, "x") as zip:
+            zip.writestr("save.cfg", dumps_toml(cfg))
         return cls(pth, cfg)
-    
+
     def open_save(self) -> SaveData:
-        pth = self._path.parent / '.save'
+        pth = self._path.parent / ".save"
         # Protect against the game not cleaning up the save folder.
         # It sucks we have to do this, but there is no deleting from a zip folder so yippeeeee
         if pth.exists():
-            with open(pth / 'save.cfg', 'rb') as fp:
+            with open(pth / "save.cfg", "rb") as fp:
                 cfg = load_toml(fp)
-            pth.rename(self._path.parent / f"crash-{cfg['Info']['name']}_{cfg['Info']['last_open_time']}")
+            pth.rename(
+                self._path.parent
+                / f"crash-{cfg['Info']['name']}_{cfg['Info']['last_open_time']}"
+            )
 
-        with zipfile.ZipFile(self._path, 'r') as zip:
+        with zipfile.ZipFile(self._path, "r") as zip:
             mkdir(pth)
             zip.extractall(pth)
         return SaveData(pth, self)
+
 
 class Context:
 
@@ -379,7 +401,11 @@ class Context:
             self._current_save.number_completed,
             set(self._current_save.completed),
         )
-        return tuple(puzzle for puzzle in available if not self._current_save.has_completed(puzzle.name))
+        return tuple(
+            puzzle
+            for puzzle in available
+            if not self._current_save.has_completed(puzzle.name)
+        )
 
     def get_open_puzzle(self) -> Puzzle | None:
         if self._editor_frame is None:
