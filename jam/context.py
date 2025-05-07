@@ -75,7 +75,7 @@ class SaveData:
     def save_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
         if puzzle.name in self._complete:
             return # TODO: discuss what to do when saving an already solved puzzle?? (turn into sandbox but _how_?)
-        target = f'{puzzle.name}.pzl'
+        target = f'{puzzle.name}.blk'
         pth = self._root / target
         self._incomplete[puzzle.name] = target
         write_graph_from_level(solution, puzzle, pth)
@@ -84,14 +84,14 @@ class SaveData:
     def save_sandbox(self, graph: GraphController, name: str | None = None) -> None:
         if name is None:
             name = f'sandbox_{len(self._sandbox)}'
-        target = f'{name}.pzl'
+        target = f'{name}.blk'
         pth = self._root / target
         self._sandbox[name] = target
         write_graph(graph, pth)
         self.update_cfg()
 
     def complete_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
-        target = f'{puzzle.name}.pzl'
+        target = f'{puzzle.name}.blk'
         pth = self._root / target
         if puzzle.name in self._incomplete:
             self._incomplete.pop(puzzle.name)
