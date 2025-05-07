@@ -7,6 +7,7 @@ from datetime import datetime
 from os import mkdir
 from shutil import rmtree
 
+import traceback
 import zipfile
 from tomllib import load as load_toml
 from tomlkit import dumps as dumps_toml
@@ -149,6 +150,13 @@ class SaveData:
         self.update_save()
         rmtree(self._root)
 
+    def log_fatal_exception(self, exception: Exception):
+        crash_time = datetime.now().strftime("%Y-%m-%d %H-%M")
+        self.update_cfg()
+        with open(self._root / "crash_log.txt", "w", encoding="utf-8") as fp:
+            fp.write("".join(traceback.format_exception(exception)))
+        self._root.rename(self._root.parent / f"crash-{crash_time}_{self._name}")
+
 
 class SaveInfo:
 
@@ -256,9 +264,10 @@ class SaveInfo:
         if pth.exists():
             with open(pth / "save.cfg", "rb") as fp:
                 cfg = load_toml(fp)
+            launch_time = datetime.fromtimestamp(cfg["Info"]["last_open_time"] * 1e-9)
             pth.rename(
                 self._path.parent
-                / f"crash-{cfg['Info']['name']}_{cfg['Info']['last_open_time']}"
+                / f"crash-{launch_time.strftime("%Y-%m-%d %H-%M")}_{cfg['Info']['name']}"
             )
 
         with zipfile.ZipFile(self._path, "r") as zip:
@@ -287,6 +296,10 @@ class Context:
         self._settings_frame: SettingsFrame | None = None
 
         self._level_select: LevelSelect | None = None
+
+    @property
+    def save(self) -> SaveData | None:
+        return self._current_save
 
     def close(self) -> None:
         if self._current_save is None:
@@ -318,7 +331,6 @@ class Context:
 
     def choose_save(self, name: str) -> None:
         self._current_save = self._saves[name].open_save()
-        # self._current_save = self._saves[name]
 
     def set_frames(
         self,

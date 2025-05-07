@@ -7,9 +7,14 @@ from .views.menu import MainMenuView
 
 
 def main() -> None:
-    pyglet.image.Texture.default_min_filter = GL_LINEAR
-    pyglet.image.Texture.default_mag_filter = GL_LINEAR
-    win = Window()
-    win.show_view(MainMenuView())
-    win.run()
+    try:
+        pyglet.image.Texture.default_min_filter = GL_LINEAR
+        pyglet.image.Texture.default_mag_filter = GL_LINEAR
+        win = Window()
+        win.show_view(MainMenuView())
+        win.run()
+    except Exception as e:
+        if context.save is not None:
+            context.save.log_fatal_exception(e)
+        raise e from e
     context.close()
