@@ -14,6 +14,7 @@ from pathlib import Path
 from jam.puzzle import Puzzle, puzzles
 from jam.controller import GraphController, write_graph_from_level
 
+from resources import style
 import resources.saves as save_path
 
 if TYPE_CHECKING:
@@ -332,6 +333,7 @@ class Context:
         self._current_save.complete_puzzle(puzzle, solution)
         self.close_editor_tab(puzzle.title)
         self.hide_frame()
+        style.audio.confirm.play()
         if self._level_select is not None:
             self._level_select.clear_puzzle(puzzle)
 

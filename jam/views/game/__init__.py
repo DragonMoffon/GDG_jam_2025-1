@@ -58,6 +58,7 @@ class LevelSelect:
             alert = AlertElement(pin, loc, face, puzzle)
             self._gui.add_element(alert)
             self._alerts[puzzle.name] = alert
+            style.audio.notification.play()
 
 
 class GameView(View):
@@ -151,7 +152,7 @@ class GameView(View):
     def on_update(self, delta_time: float) -> None:
         if self.window.time >= self._level_check_time:
             self._level_select.find_new_puzzles()
-            self._level_check_time += 2.0  # wait 5 seconds
+            self._level_check_time += 2.0  # wait 2 seconds
 
         self._background.update()
         self._level_select.update_offset(self._background.layer_offsets[0])

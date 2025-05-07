@@ -78,6 +78,8 @@ class Audio:
     modal: Sound
     ambient_wind: Sound
     crash: Sound
+    notification: Sound
+    confirm: Sound
 
     ambience_environment: Sound
     ambience_fan: Sound
