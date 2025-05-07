@@ -100,6 +100,12 @@ class Audio(StyleTable):
     crash: Sound
     notification: Sound
     confirm: Sound
+    drag: Sound
+    drop: Sound
+    stretch: Sound
+    connect: Sound
+    pickup: Sound
+    disconnect: Sound
     ambience: Ambience
 
 

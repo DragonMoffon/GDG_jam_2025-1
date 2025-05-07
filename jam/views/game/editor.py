@@ -10,7 +10,7 @@ from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
 from resources import style
-from resources.audio import Sound
+from resources.audio import AUDIO
 import resources.graphs as graph_path
 
 from jam.node import graph
@@ -148,6 +148,7 @@ class Editor:
 
     def set_mode_none(self) -> None:
         self._mode = EditorMode.NONE
+        AUDIO.stop("ui_loop")
 
         if self._hovered_block is not None:
             self._hovered_block.deselect()
@@ -236,6 +237,7 @@ class Editor:
 
     def set_mode_drag_block(self, block: gui.BlockElement) -> None:
         self._mode = EditorMode.DRAG_BLOCK
+        style.audio.drag.play("ui_loop", True)
 
         if self._hovered_block is not None:
             self._hovered_block.deselect()
@@ -249,6 +251,7 @@ class Editor:
     def set_mode_drag_connection(
         self, noodle: gui.ConnectionElement, link: int
     ) -> None:
+        style.audio.stretch.play("ui_loop", True)
         self._mode = EditorMode.DRAG_CONNECTION
         self._selected_noodle = noodle
         self._link = link
@@ -309,6 +312,7 @@ class Editor:
 
     def set_mode_add_connection(self, source: gui.BlockElement, output: str) -> None:
         self._mode = EditorMode.ADD_CONNECTION
+        style.audio.stretch.play("ui_loop", True)
 
         connection = graph.Connection(source.uid, output, None, None)
         start = source.get_output(output).link_pos
@@ -441,6 +445,7 @@ class Editor:
                     or clicked_block.uid == self._graph.output_uid
                 ):
                     return
+                style.audio.pickup.play("ui")
                 self._controller.remove_block(clicked_block)
                 return
 
@@ -449,6 +454,7 @@ class Editor:
                 if dist <= 16.0:
                     clicked_noodle.remove_link(link)
                     return
+                style.audio.disconnect.play("ui")
                 self._controller.remove_connection(clicked_noodle)
                 return
 
@@ -465,6 +471,7 @@ class Editor:
         self, button: Button, modifiers: int, pressed: bool
     ) -> None:
         if button == inputs.PRIMARY_CLICK and not pressed:
+            style.audio.drop.play("ui")
             self.set_mode_none()
             return
 
@@ -508,7 +515,7 @@ class Editor:
 
             self._controller.add_connection(self._incomplete_connection)
             self._incomplete_connection = None
-            style.audio.connection.play()
+            style.audio.connect.play("ui")
             self.set_mode_none()
             return
 
@@ -528,7 +535,7 @@ class Editor:
             action = self._block_popup.get_hovered_item(cursor)
             if action is not None:
                 self._block_popup.actions[action]()
-            style.audio.block.play()
+            style.audio.drop.play()
 
             self.set_mode_none()
 
