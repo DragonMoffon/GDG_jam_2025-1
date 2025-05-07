@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from importlib.resources import path
 from time import time_ns as get_time
+from datetime import datetime
 from os import mkdir
 from shutil import rmtree
 
@@ -39,6 +40,8 @@ class SaveData:
         self._complete: dict[str, str] = info.completed_puzzles
         self._incomplete: dict[str, str] = info.incompleted_puzzles
         self._sandbox: dict[str, str] = info.sandbox_graphs
+
+        self._tabs: list[str] = info.tabs
 
         self.update_cfg()
 
@@ -107,7 +110,8 @@ class SaveData:
             'Info': {
                 'name': self.name,
                 'creation_time': self.creation_time,
-                'last_open_time': self.last_open_time
+                'last_open_time': self.last_open_time,
+                'tabs': self._tabs
             },
             'Complete': self._complete,
             'Incomplete': self._incomplete,
@@ -149,6 +153,8 @@ class SaveInfo:
         self._incomplete_puzzles: dict[str, str] = cfg['Incomplete']
         self._sandbox_graphs: dict[str, str] = cfg['Sandbox']
 
+        self._tabs: list[str] = cfg['Info']['tabs']
+
     @property
     def name(self) -> str: return self._name
 
@@ -160,6 +166,9 @@ class SaveInfo:
 
     @property
     def last_open_time(self) -> int: return self._last_open_time
+
+    @property
+    def tabs(self) -> list[str]: return self._tabs.copy()
 
     @property
     def completed(self) -> tuple[str, ...]:
@@ -208,11 +217,16 @@ class SaveInfo:
     @classmethod
     def create_new_save(cls, name: str, root: Path) -> SaveInfo:
         pth = root / f"{name}.svd"
-        with open(root / 'save.cfg', 'rb') as fp:
-            cfg = load_toml(fp)
+        cfg: dict[str, Any] = {
+            'Info': {},
+            'Complete': {},
+            'Incomplete': {},
+            'Sandbox': {}
+        }
         cfg['Info']['name'] = name
         cfg['Info']['creation_time'] = get_time()
         cfg['Info']['last_open_time'] = get_time()
+        cfg['Info']['tabs'] = []
         with zipfile.ZipFile(pth, 'x') as zip:
             zip.writestr('save.cfg', dumps_toml(cfg))
         return cls(pth, cfg)
@@ -264,7 +278,7 @@ class Context:
         return tuple(name for name in self._saves)
 
     def new_save(self) -> None:
-        name = str(len(self._saves))
+        name = datetime.now().strftime("%Y-%m-%d %H-%m")
         self._saves[name] = SaveInfo.create_new_save(name, self._save_path)
         self.choose_save(name)
 
@@ -350,7 +364,7 @@ class Context:
 
     def complete_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
         if self._current_save is None:
-            return
+            return None
         self._current_save.complete_puzzle(puzzle, solution)
         self.close_editor_tab(puzzle.title)
         self.hide_frame()
@@ -369,7 +383,7 @@ class Context:
 
     def get_open_puzzle(self) -> Puzzle | None:
         if self._editor_frame is None:
-            return
+            return None
 
         # TODO: AHHHHH
         return self._editor_frame._active_editor._puzzle

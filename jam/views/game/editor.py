@@ -863,15 +863,18 @@ class EditorFrame(Frame):
             self.info_label.text = puzzle.short_description
             if ambience := puzzle.ambience:
                 ambience.play("ambience2", True)
-
-        if name == "Sandbox":
+        else:
             self.info_label.text = "Mess around and find out."
+            style.audio.ambience.data.play('ambience2', True)
+
+            
 
     def open_editor(self, puzzle: Puzzle | None = None, graph_src: Path | None = None):
-        if puzzle is None and graph_src is None and "Sandbox" in self._editors:
-            self.select_editor("Sandbox")
-            return
-        if puzzle.name in self._editors:
+        if puzzle is None:
+            if graph_src is None and "Sandbox" in self._editors:
+                self.select_editor("Sandbox")
+                return
+        elif puzzle.name in self._editors:
             self.select_editor(puzzle.name)
             return
         editor = Editor(self.clip_rect, puzzle, graph_src)
@@ -888,8 +891,7 @@ class EditorFrame(Frame):
         closing_editor = self._editors.pop(name)
         self._editor_tabs.rem_tab(self._editor_tabs.get_tab(name))
         if self._active_editor.name == name:
-            self._active_editor = tuple(self._editors.values())[0]
-            self._active_editor.set_mode_none()
+            self.select_editor(tuple(self._editors)[0])
 
         # TODO: decide what to do with closing editor
 
@@ -967,6 +969,15 @@ class EditorFrame(Frame):
 
     def on_update(self, delta_time: float):
         self._active_editor.update(delta_time)
+
+    def on_select(self) -> None:
+        if puzzle := self._active_editor.puzzle:
+            self.info_label.text = puzzle.short_description
+            if ambience := puzzle.ambience:
+                ambience.play("ambience2", True)
+        else:
+            self.info_label.text = "Mess around and find out."
+            style.audio.ambience.data.play('ambience2', True)
 
     def on_hide(self) -> None:
         self._active_editor.set_mode_none()

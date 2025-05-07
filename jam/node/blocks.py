@@ -516,3 +516,10 @@ def __or(a: BoolValue, b: BoolValue) -> dict[str, BoolValue]:
 
 
 OrBlock = BlockType("Or", __or, {"a": BoolValue, "b": BoolValue}, {"result": BoolValue})
+
+
+def __if(if_true: OperationValue, if_false: OperationValue, choice: BoolValue) -> dict[str, OperationValue]:
+    """Choose between two values based on a boolean choice."""
+    return {"result": if_true if choice.value else if_false}
+
+IfBlock = BlockType("Choice", __if, {'if_true': FloatValue, 'if_false': FloatValue, 'choice': BoolValue}, {'result': FloatValue})

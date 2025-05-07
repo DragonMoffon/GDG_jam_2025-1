@@ -1,12 +1,10 @@
 from uuid import UUID
 from enum import Enum
 
-from pyglet.graphics import Batch, Group
+from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 from arcade.clock import GLOBAL_CLOCK
-
-from resources.audio import AUDIO
 
 from .core import (
     Element,
@@ -16,7 +14,7 @@ from .core import (
     OVERLAY_HIGHLIGHT,
 )
 from jam.input import inputs, Button, Axis
-from resources import style
+from resources import style, audio
 
 
 class Frame(Element):
@@ -279,7 +277,7 @@ class FrameController:
         self._animation_mode = FrameAnimationMode.HIDE
         self._animation_time = GLOBAL_CLOCK.time
         style.audio.slide_in.play()
-        AUDIO.stop("ambience2")
+        audio.stop("ambience2")
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> bool | None:
         if button == inputs.PRIMARY_CLICK and pressed:
