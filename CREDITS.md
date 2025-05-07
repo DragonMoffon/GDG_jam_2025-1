@@ -36,6 +36,6 @@ Alpha Testing by **Arceus3251**
 - janbezouska
     - *Factory Fluorescent light buzz*
 - danooct1
-    - Boot Sequence and Hard Drive Running Loop
+    - *Boot Sequence and Hard Drive Running Loop*
 - blaukreuz
     - *Utility room front*

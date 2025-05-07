@@ -14,12 +14,13 @@ from .audio import Sound
 
 __all__ = ("STYLE",)
 
+
 @dataclass
 class StyleTable:
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
-    
+
     @classmethod
     def create(cls, data: dict[str, Any], source: Path) -> Self:
         raise NotImplementedError()
@@ -90,6 +91,7 @@ class Ambience(StyleTable):
     navigation: Sound
     power: Sound
 
+
 @dataclass
 class Audio(StyleTable):
     slide_in: Sound
@@ -101,9 +103,7 @@ class Audio(StyleTable):
     boot: Sound
     notification: Sound
     confirm: Sound
-    drag: Sound
     drop: Sound
-    stretch: Sound
     connect: Sound
     pickup: Sound
     disconnect: Sound
@@ -180,6 +180,7 @@ class Text(StyleTable):
     normal: TextFormat
     header: TextFormat
 
+
 @dataclass
 class Style(StyleTable):
     source: Path
@@ -197,7 +198,7 @@ class Style(StyleTable):
 
         text = Text(
             normal=TextFormat(**data["Text"]["Normal"]),
-            header=TextFormat(**data["Text"]["Header"])
+            header=TextFormat(**data["Text"]["Header"]),
         )
         load_font(source / text.normal.path)
         load_font(source / text.header.path)
@@ -268,23 +269,24 @@ class Style(StyleTable):
                 **{name: Sound(source / pth) for name, pth in audio_data.items()},
                 ambience=Ambience(
                     **{name: Sound(source / pth) for name, pth in ambience_data.items()}
-                )
+                ),
             ),
             Textures(
                 logo_big=load_texture(source / data["Textures"]["logo_big"]),
-                icon=load_texture(source / data["Textures"]["icon"])
+                icon=load_texture(source / data["Textures"]["icon"]),
             ),
             menu,
-            game
+            game,
         )
 
 
 def get_style(name: str) -> Style:
     with path(styles, name) as pth:
         if pth.exists():
-            cfg = pth / 'style.cfg'
-            with open(cfg, 'rb') as fp:
+            cfg = pth / "style.cfg"
+            with open(cfg, "rb") as fp:
                 return Style.create(tomllib.load(fp), pth)
     raise FileNotFoundError(f"No style named {name} found")
+
 
 STYLE = get_style("base")
