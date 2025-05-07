@@ -9,8 +9,7 @@ from arcade import Rect, LBWH, Vec2, Vec3, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
-from resources import style
-from resources.audio import AUDIO
+from resources import style, audio
 import resources.graphs as graph_path
 
 from jam.node import graph
@@ -148,7 +147,7 @@ class Editor:
 
     def set_mode_none(self) -> None:
         self._mode = EditorMode.NONE
-        AUDIO.stop("ui_loop")
+        audio.stop("ui_loop")
 
         if self._hovered_block is not None:
             self._hovered_block.deselect()
