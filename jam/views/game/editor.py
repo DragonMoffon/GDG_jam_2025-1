@@ -4,6 +4,7 @@ from importlib.resources import path
 
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
+from pyglet.text import Label
 from arcade import Rect, LBWH, Vec2, Vec3, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
@@ -833,6 +834,11 @@ class EditorFrame(Frame):
         self._editor_tabs.add_tab(tab)
         tab.select()
 
+        self.info_label = Label("Mess around and find out.", 5, size[1] - 50,
+                                font_name = style.text.header.name, font_size = 12,
+                                color = style.colors.bright,
+                                anchor_y = "top")
+
         Frame.__init__(
             self, "EDITOR", tag_offset, position, size, show_body, show_shadow
         )
@@ -847,7 +853,10 @@ class EditorFrame(Frame):
         self._active_editor.set_mode_none()
 
         if puzzle := context.get_open_puzzle():
+            self.info_label.text = puzzle.short_description
             Sound.play_by_name(puzzle.ambience, style, "ambience2", True)
+        if name == "Sandbox":
+            self.info_label.text = "Mess around and find out."
 
     def open_editor(self, puzzle: Puzzle | None = None, graph_src: Path | None = None):
         if puzzle is None and graph_src is None and "Sandbox" in self._editors:
@@ -945,6 +954,7 @@ class EditorFrame(Frame):
         with self.cliping_mask.target:
             with self._clip_projector.activate():
                 self._active_editor.draw()
+                self.info_label.draw()
 
     def on_update(self, delta_time: float):
         self._active_editor.update(delta_time)

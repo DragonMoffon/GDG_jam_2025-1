@@ -22,6 +22,7 @@ class Colors:
     background: RGBA255
     dark: RGBA255
     accent: RGBA255
+    bright: RGBA255
     highlight: RGBA255
 
 
