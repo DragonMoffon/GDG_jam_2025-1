@@ -290,13 +290,13 @@ DecrBlock = BlockType("Decrement", __decr, {"value": IntValue}, {"result": IntVa
 # -- String Manipulation --
 
 
-def __len(a: StrValue) -> dict[str, IntValue]:
+def __len(string: StrValue) -> dict[str, IntValue]:
     """Get the length of a string."""
-    a_ = StrValue.__acast__(a)
+    a_ = StrValue.__acast__(string)
     return {"result": IntValue(len(a_.value))}
 
 
-LenBlock = BlockType("Length", __len, {"a": StrValue}, {"result": IntValue})
+LenBlock = BlockType("Length", __len, {"string": StrValue}, {"result": IntValue})
 
 
 def __concat(a: StrValue, b: StrValue) -> dict[str, StrValue]:
@@ -311,64 +311,89 @@ ConcatBlock = BlockType(
 )
 
 
-def __replace(a: StrValue, old: StrValue, new: StrValue) -> dict[str, StrValue]:
+def __replace(string: StrValue, old: StrValue, new: StrValue) -> dict[str, StrValue]:
     """Replace all instances of `old` with `new`."""
-    a_ = StrValue.__acast__(a)
+    string_ = StrValue.__acast__(string)
     old_ = StrValue.__acast__(old)
     new_ = StrValue.__acast__(new)
-    return {"result": StrValue(a_.value.replace(old_, new_))}
+    return {"result": StrValue(string_.value.replace(old_, new_))}
 
 
 RepBlock = BlockType(
     "Replace",
     __replace,
-    {"a": StrValue, "old": StrValue, "new": StrValue},
+    {"string": StrValue, "old": StrValue, "new": StrValue},
     {"result": StrValue},
 )
 
-def __getchar(a: StrValue, idx: IntValue) -> dict[str, StrValue]:
+def __getchar(string: StrValue, idx: IntValue) -> dict[str, StrValue]:
     """Get a single character of a string by index."""
-    a_ = StrValue.__acast__(a)
+    string_ = StrValue.__acast__(string)
     idx_ = IntValue.__acast__(idx)
-    return {"result": StrValue(a_.value[idx_])}
+    return {"result": StrValue(string_.value[idx_.value])}
 
 
 GetCharBlock = BlockType(
     "Get Char",
     __getchar,
-    {"a": StrValue, "start": IntValue, "end": IntValue},
-    {"result": StrValue},
-    defaults={"start": IntValue(0), "end": IntValue(-1)},
+    {"string": StrValue, "index": IntValue},
+    {"result": StrValue}
+)
+
+def __ord(char: StrValue) -> dict[str, IntValue]:
+    """Get the ASCII code of a single character. If given a string, returns the first character in the string's code."""
+    char_ = StrValue.__acast__(char)
+    return {"code": IntValue(ord(char_.value[0]))}
+
+
+OrdBlock = BlockType(
+    "Ord",
+    __ord,
+    {"char": StrValue},
+    {"code": IntValue}
+)
+
+def __char(code: IntValue) -> dict[str, StrValue]:
+    """Get a character from an ASCII code."""
+    code_ = IntValue.__acast__(code)
+    return {"char": StrValue(chr(code_.value))}
+
+
+CharBlock = BlockType(
+    "Char",
+    __char,
+    {"code": IntValue},
+    {"char": StrValue}
 )
 
 
-def __substr(a: StrValue, start: IntValue, end: IntValue) -> dict[str, StrValue]:
+def __substr(string: StrValue, start: IntValue, end: IntValue) -> dict[str, StrValue]:
     """Get a substring of a string from start to end index."""
-    a_ = StrValue.__acast__(a)
+    string_ = StrValue.__acast__(string)
     start_ = IntValue.__acast__(start)
     end_ = IntValue.__acast__(end)
-    return {"result": StrValue(a_.value[start_:end_])}
+    return {"result": StrValue(string_.value[start_:end_])}
 
 
 SubstringBlock = BlockType(
     "Substring",
     __substr,
-    {"a": StrValue, "start": IntValue, "end": IntValue},
+    {"string": StrValue, "start": IntValue, "end": IntValue},
     {"result": StrValue},
     defaults={"start": IntValue(0), "end": IntValue(-1)},
 )
 
 
 # -- killing Digi --
-def _match(value: StrValue, pattern: StrValue) -> dict[str, BoolValue]:
+def _match(string: StrValue, pattern: StrValue) -> dict[str, BoolValue]:
     """Return whether or not a string matches a given RegEx pattern."""
-    value_ = StrValue.__acast__(value)
+    value_ = StrValue.__acast__(string)
     pattern_ = StrValue.__acast__(pattern)
     return {"result": BoolValue(re.match(pattern_, value_) is not None)}
 
 
 MatchBlock = BlockType(
-    "Match", _match, {"a": StrValue, "pattern": StrValue}, {"result": BoolValue}
+    "Match", _match, {"string": StrValue, "pattern": StrValue}, {"result": BoolValue}
 )
 
 
