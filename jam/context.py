@@ -278,7 +278,7 @@ class Context:
         return tuple(name for name in self._saves)
 
     def new_save(self) -> None:
-        name = datetime.now().strftime("%Y-%m-%d %H-%m")
+        name = datetime.now().strftime("%Y-%m-%d %H-%M")
         self._saves[name] = SaveInfo.create_new_save(name, self._save_path)
         self.choose_save(name)
 
