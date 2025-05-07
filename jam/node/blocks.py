@@ -123,37 +123,37 @@ PiBlock = BlockType("Pi", __pi, {}, {"pi": FloatValue})
 # cast
 def __to_float(value: OperationValue) -> dict[str, FloatValue]:
     """Convert a value into a float."""
-    return {"result": FloatValue.__cast__(value)}
+    return {"result": FloatValue.__cast__(value)}  # type: ignore -- point of a cast -.-
 
 
 CastFloatBLock = BlockType(
-    "Float Cast", __to_float, {"value": StrValue}, {"result": FloatValue}
+    "Float Cast", __to_float, {"value": FloatValue}, {"result": FloatValue}
 )
 
 
 def __to_int(value: OperationValue) -> dict[str, IntValue]:
     """Convert a value into an integer."""
-    return {"result": IntValue.__cast__(value)}
+    return {"result": IntValue.__cast__(value)}  # type: ignore -- point of a cast -.-
 
 
 CastIntBLock = BlockType(
-    "Int Cast", __to_int, {"value": StrValue}, {"result": IntValue}
+    "Int Cast", __to_int, {"value": IntValue}, {"result": IntValue}
 )
 
 
 def __to_bool(value: OperationValue) -> dict[str, BoolValue]:
     """Convert a value into a boolean."""
-    return {"result": BoolValue.__cast__(value)}
+    return {"result": BoolValue.__cast__(value)}  # type: ignore -- point of a cast -.-
 
 
 CastBoolBLock = BlockType(
-    "Boolean Cast", __to_bool, {"value": StrValue}, {"result": BoolValue}
+    "Boolean Cast", __to_bool, {"value": BoolValue}, {"result": BoolValue}
 )
 
 
 def __to_str(value: OperationValue) -> dict[str, StrValue]:
     """Convert a value into a string."""
-    return {"result": StrValue.__cast__(value)}
+    return {"result": StrValue.__cast__(value)}  # type: ignore -- point of a cast -.-
 
 
 CastStrBLock = BlockType(
@@ -166,7 +166,7 @@ def __mod(
 ) -> dict[str, IntValue | FloatValue]:
     """Get the modulo (the remainder of a division) of `a` % `b`."""
     if value.type is int and mod.type is int:
-        return {"result": IntValue(value.value % mod.value)}
+        return {"result": IntValue(int(value.value % mod.value))}
     a_ = FloatValue.__acast__(value)
     b_ = FloatValue.__acast__(mod)
 
@@ -181,7 +181,7 @@ ModBlock = BlockType(
 def __abs(value: FloatValue | IntValue) -> dict[str, IntValue | FloatValue]:
     """Get the absolute value of a number."""
     if value.type is int:
-        return {"result": IntValue(abs(value.value))}
+        return {"result": IntValue(int(abs(value.value)))}
     _a = FloatValue.__acast__(value)
     return {"result": FloatValue(abs(_a.value))}
 
@@ -201,7 +201,6 @@ RoundBlock = BlockType(
     __round,
     {"value": FloatValue, "precision": IntValue},
     {"result": FloatValue},
-    defaults={"precision": 0},
 )
 
 
@@ -237,7 +236,7 @@ def __max(
 ) -> dict[str, IntValue | FloatValue]:
     """Return the maximum of two values."""
     if a.type is int and b.type is int:
-        return {"result": IntValue(max(a.value, b.value))}
+        return {"result": IntValue(int(max(a.value, b.value)))}
     _a = FloatValue.__acast__(a)
     _b = FloatValue.__acast__(b)
     return {"result": FloatValue(max(_a.value, _b.value))}
@@ -256,7 +255,7 @@ def __min(
 ) -> dict[str, IntValue | FloatValue]:
     """Return the minimum of two values."""
     if a.type is int and b.type is int:
-        return {"result": IntValue(min(a.value, b.value))}
+        return {"result": IntValue(int(min(a.value, b.value)))}
     _a = FloatValue.__acast__(a)
     _b = FloatValue.__acast__(b)
     return {"result": FloatValue(min(_a.value, _b.value))}
@@ -311,7 +310,7 @@ def __concat(a: StrValue, b: StrValue) -> dict[str, StrValue]:
 
 
 ConcatBlock = BlockType(
-    "Concat", __len, {"a": StrValue, "b": StrValue}, {"result": StrValue}
+    "Concat", __concat, {"a": StrValue, "b": StrValue}, {"result": StrValue}
 )
 
 
@@ -320,7 +319,7 @@ def __replace(string: StrValue, old: StrValue, new: StrValue) -> dict[str, StrVa
     string_ = StrValue.__acast__(string)
     old_ = StrValue.__acast__(old)
     new_ = StrValue.__acast__(new)
-    return {"result": StrValue(string_.value.replace(old_, new_))}
+    return {"result": StrValue(string_.value.replace(old_.value, new_.value))}
 
 
 RepBlock = BlockType(
@@ -393,7 +392,7 @@ def _match(string: StrValue, pattern: StrValue) -> dict[str, BoolValue]:
     """Return whether or not a string matches a given RegEx pattern."""
     value_ = StrValue.__acast__(string)
     pattern_ = StrValue.__acast__(pattern)
-    return {"result": BoolValue(re.match(pattern_, value_) is not None)}
+    return {"result": BoolValue(re.match(pattern_.value, value_.value) is not None)}
 
 
 MatchBlock = BlockType(
@@ -412,8 +411,8 @@ def _format(
 FormatBlock = BlockType(
     "Format",
     _format,
-    {"value": StrValue | IntValue | FloatValue | BoolValue, "format": StrValue},
-    {"result": BoolValue},
+    {"value": StrValue, "format": StrValue},
+    {"result": StrValue},
 )
 
 # -- Boolean Logic
@@ -489,7 +488,7 @@ GeqBlock = BlockType(
 
 def __not(value: OperationValue) -> dict[str, BoolValue]:
     """Return not `a`."""
-    a_ = BoolValue.__acast__(value)
+    a_ = BoolValue.__acast__(value) # type: ignore -- point of a cast -.-
     return {"result": BoolValue(not a_.value)}
 
 
@@ -523,3 +522,61 @@ def __if(if_true: OperationValue, if_false: OperationValue, choice: BoolValue) -
     return {"result": if_true if choice.value else if_false}
 
 IfBlock = BlockType("Choice", __if, {'if_true': FloatValue, 'if_false': FloatValue, 'choice': BoolValue}, {'result': FloatValue})
+
+def __flag(value: IntValue) -> dict[str, BoolValue]:
+    a_ = IntValue.__acast__(value)
+    return {
+        'bit_7': BoolValue(bool(a_.value & 0b10000000)),
+        'bit_6': BoolValue(bool(a_.value & 0b01000000)),
+        'bit_5': BoolValue(bool(a_.value & 0b00100000)),
+        'bit_4': BoolValue(bool(a_.value & 0b00010000)),
+        'bit_3': BoolValue(bool(a_.value & 0b00001000)),
+        'bit_2': BoolValue(bool(a_.value & 0b00000100)),
+        'bit_1': BoolValue(bool(a_.value & 0b00000010)),
+        'bit_0': BoolValue(bool(a_.value & 0b00000001)),
+    }
+
+FlagBlock = BlockType(
+    "Flag",
+    __flag,
+    {'value': IntValue},
+    {
+        'bit_7': BoolValue,
+        'bit_6': BoolValue,
+        'bit_5': BoolValue,
+        'bit_4': BoolValue,
+        'bit_3': BoolValue,
+        'bit_2': BoolValue,
+        'bit_1': BoolValue,
+        'bit_0': BoolValue, 
+    }
+)
+
+def __combine(bit_7: BoolValue, bit_6: BoolValue, bit_5: BoolValue, bit_4: BoolValue, bit_3: BoolValue, bit_2: BoolValue, bit_1: BoolValue, bit_0: BoolValue) -> dict[str, IntValue]:
+    value = (
+        BoolValue.__acast__(bit_7).value << 7 +
+        BoolValue.__acast__(bit_6).value << 6 +
+        BoolValue.__acast__(bit_5).value << 5 +
+        BoolValue.__acast__(bit_4).value << 4 +
+        BoolValue.__acast__(bit_3).value << 3 +
+        BoolValue.__acast__(bit_2).value << 2 +
+        BoolValue.__acast__(bit_1).value << 1 +
+        BoolValue.__acast__(bit_0).value
+    )
+    return {'result': IntValue(value)}
+
+CombineBlock = BlockType(
+    "Combine",
+    __combine,
+    {
+        'bit_7': BoolValue,
+        'bit_6': BoolValue,
+        'bit_5': BoolValue,
+        'bit_4': BoolValue,
+        'bit_3': BoolValue,
+        'bit_2': BoolValue,
+        'bit_1': BoolValue,
+        'bit_0': BoolValue, 
+    },
+    {'result': IntValue}
+)

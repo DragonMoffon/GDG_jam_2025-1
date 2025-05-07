@@ -10,6 +10,15 @@ significant position, and have 5 'on' bits total."""
 ambience = "network"
 prerequisite_count = 2
 prerequisite_levels = ["connect_mainbus"]
+available = [
+    "Add", "Subtract", "Multiply", "Divide",
+    "Modulo", "Absolute", "Round", "Floor", "Ceiling",
+    "Maximum", "Minimum", "Increment", "Decrement",
+    "Equal", "Not Equal", "Less", "Greater",
+    "Less Or Equal", "Greater Or Equal", "Not",
+    "And", "Or", "Choice", "Flag", "Combine",
+    "Int", "Float", "Boolean", "Int Cast", "Float Cast", "Boolean Cast"
+]
 
 [Alert]
 pin = [350, 230] # Where on the station to pin

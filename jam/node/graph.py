@@ -4,7 +4,7 @@ from pathlib import Path
 from tomllib import load
 from uuid import UUID, uuid4
 from dataclasses import dataclass
-from typing import Self, TypeVar, Any, Generic, Protocol, Mapping
+from typing import Self, TypeVar, Any, Generic, Protocol, Mapping, Callable
 
 from tomlkit import document, table, aot, inline_table, dump  # type: ignore -- unknownMemberType
 
@@ -55,7 +55,7 @@ class Value(Generic[T_co]):
 
 
 class IntValue(Value[int]):
-    __auto_castable__ = {float}
+    __auto_castable__ = set()
     _typ = int
 
     def __init__(self, value: int | None = None) -> None:
@@ -115,18 +115,25 @@ STR_CAST: dict[str, type[OperationValue]] = {
     "str": StrValue,
 }
 
-
-class BlockOperation(Protocol):
-    def __call__(
-        self,
-        **kwds: OperationValue,
-    ) -> (
+OperationReturn = (
         Mapping[str, OperationValue]
         | Mapping[str, FloatValue]
+        | Mapping[str, FloatValue | IntValue]
+        | Mapping[str, FloatValue | IntValue | BoolValue]
+        | Mapping[str, FloatValue | IntValue | StrValue]
+        | Mapping[str, FloatValue | BoolValue]
+        | Mapping[str, FloatValue | BoolValue | StrValue]
+        | Mapping[str, FloatValue | StrValue]
         | Mapping[str, IntValue]
+        | Mapping[str, IntValue | BoolValue]
+        | Mapping[str, IntValue | BoolValue | StrValue]
+        | Mapping[str, IntValue | StrValue]
         | Mapping[str, BoolValue]
+        | Mapping[str, BoolValue | StrValue]
         | Mapping[str, StrValue]
-    ): ...
+)
+
+BlockOperation = Callable[..., OperationReturn]
 
 
 class TestCase:
@@ -247,6 +254,7 @@ class Block:
                 )
             result = self.type.operation(**self.config, **kwds)
         except (TypeError, AttributeError, ValueError, KeyError) as e:
+            print(f"{self} failed due to: {e}")
             exception = e
             result: Mapping[str, OperationValue] = {}
         return BlockComputation(kwds, self.config.copy(), result, exception)
@@ -500,7 +508,7 @@ class Graph:
 
                 result: BlockComputation = block.compute(**inputs)
                 computations[block.uid] = result
-                if result.exception is not None and block != target:
+                if result.exception is not None:
                     # early exit if we hit an exception (and so can't find target value)
                     computations[target.uid] = BlockComputation(
                         {}, target.config.copy(), {}, result.exception
