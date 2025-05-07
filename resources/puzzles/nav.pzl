@@ -18,7 +18,7 @@ available = [
     "Int", "Float", "Add", "Subtract", "Multiply", "Divide", "Minimum", "Maximum", "Round", "Sin", "Cos", "Tan", "Pi"
 ]
 
-prerequisite_count = 0
+prerequisite_count = 4
 prerequisite_levels = []
 
 

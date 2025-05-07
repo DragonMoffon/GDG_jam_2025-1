@@ -1,8 +1,10 @@
 [Config]
 name = ""
 title = ""
+short_description = ""
 description = ""
 available = []
+ambience = ""
 
 prerequisite_count = 1000
 prerequisite_levels = ["shaboingy"]
