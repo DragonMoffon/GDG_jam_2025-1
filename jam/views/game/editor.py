@@ -456,6 +456,19 @@ class Editor:
 
             # If no block and no noodle clicked then add new block
             self.set_mode_add_block()
+        elif button == inputs.ALT_CLICK:
+            if clicked_block is not None:
+                block_type = clicked_block.block.type
+                block_pos = clicked_block.left, clicked_block.bottom
+                block = self.create_new_block(block_type, block_pos)
+                self.set_mode_drag_block(block)
+
+            if clicked_noodle is not None:
+                source = self._controller.get_block(clicked_noodle.connection.source)
+                output = clicked_noodle.connection.output
+                self.set_mode_add_connection(source, output)
+
+            return
         elif (
             button == inputs.SAVE_INPUT
             and modifiers & inputs.SAVE_MOD
@@ -474,15 +487,20 @@ class Editor:
     def drag_connection_on_input(
         self, button: Button, modifiers: int, pressed: bool
     ) -> None:
-        if button == inputs.PRIMARY_CLICK and not pressed:
+        if pressed:
+            return
+
+        if button == inputs.PRIMARY_CLICK or button == inputs.ALT_CLICK:
             self.set_mode_none()
             return
 
     def add_connection_on_input(
         self, button: Button, modifiers: int, pressed: bool
     ) -> None:
+        if pressed:
+            return
         cursor = self.get_base_cursor_pos()
-        if not pressed and button == inputs.PRIMARY_CLICK:
+        if button == inputs.PRIMARY_CLICK or button == inputs.ALT_CLICK:
             hovered_block = None
             for block in self._controller.blocks:
                 if block == self._selected_block:
@@ -841,10 +859,15 @@ class EditorFrame(Frame):
         self._editor_tabs.add_tab(tab)
         tab.select()
 
-        self.info_label = Label("Mess around and find out.", 5, size[1] - 50,
-                                font_name = style.text.header.name, font_size = 12,
-                                color = style.colors.bright,
-                                anchor_y = "top")
+        self.info_label = Label(
+            "Mess around and find out.",
+            5,
+            size[1] - 50,
+            font_name=style.text.header.name,
+            font_size=12,
+            color=style.colors.bright,
+            anchor_y="top",
+        )
 
         Frame.__init__(
             self, "EDITOR", tag_offset, position, size, show_body, show_shadow
@@ -865,9 +888,7 @@ class EditorFrame(Frame):
                 ambience.play("ambience2", True)
         else:
             self.info_label.text = "Mess around and find out."
-            style.audio.ambience.data.play('ambience2', True)
-
-            
+            style.audio.ambience.data.play("ambience2", True)
 
     def open_editor(self, puzzle: Puzzle | None = None, graph_src: Path | None = None):
         if puzzle is None:
@@ -977,7 +998,7 @@ class EditorFrame(Frame):
                 ambience.play("ambience2", True)
         else:
             self.info_label.text = "Mess around and find out."
-            style.audio.ambience.data.play('ambience2', True)
+            style.audio.ambience.data.play("ambience2", True)
 
     def on_hide(self) -> None:
         self._active_editor.set_mode_none()

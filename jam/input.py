@@ -294,7 +294,7 @@ class Keys(IntEnum):
 LETTER_KEY_SET = {Keys(n) for n in range(97, 123)}
 DIGIT_KEY_SET = {*(Keys(n) for n in range(48, 58)), Keys.MINUS}
 
-DIGIT_ARRAY = tuple((*(chr(n) for n in range(48, 58)), "-"))
+DIGIT_ARRAY = (*(chr(n) for n in range(48, 58)), "-")
 DIGIT_SET = set(DIGIT_ARRAY)
 
 DECIMAL_KEY_SET = DIGIT_KEY_SET.union([Keys.PERIOD])
@@ -852,6 +852,7 @@ class InputManager:
     TEST_INPUT = MultiInput(Keys.A, ControllerButtons.BOTTOM_FACE)
 
     PRIMARY_CLICK = MultiInput(MouseButtons.LEFT, ControllerButtons.BOTTOM_FACE)
+    ALT_CLICK = MultiInput(MouseButtons.MIDDLE, ControllerButtons.LEFT_STICK)
     SECONDARY_CLICK = MultiInput(MouseButtons.RIGHT, ControllerButtons.LEFT_FACE)
 
     SAVE_INPUT = MultiInput(Keys.S, ControllerButtons.GUIDE)
