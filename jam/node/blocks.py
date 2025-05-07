@@ -222,7 +222,14 @@ def __ceil(value: FloatValue | IntValue) -> dict[str, FloatValue]:
 
 CeilBlock = BlockType("Ceiling", __ceil, {"value": FloatValue}, {"result": FloatValue})
 
-# TODO: sign
+def __sign(value: FloatValue | IntValue) -> dict[str, FloatValue | IntValue]:
+    """Get the sign of the input value."""
+    if value.type is int:
+        return {"result": IntValue(int(copysign(1, value.value)))}
+    _value = FloatValue.__acast__(value)
+    return {"result": FloatValue(copysign(1.0, _value.value))}
+
+SignBLock = BlockType("Sign", __sign, {"value": FloatValue}, {'result': FloatValue})
 
 
 def __max(
