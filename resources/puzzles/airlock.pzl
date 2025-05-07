@@ -1,0 +1,41 @@
+[Config]
+name = "airlock"
+title = "Airlock Staging"
+short_description = "Fix the airlock doors by defining the stages."
+description = """In order to keep everyone safe, airlocks to the outside open in stages.
+Based on the currently active stage, define what doors should be open.
+Remember the stages are zero-indexed!
+
+At every even stage, no doors should be open. At the odd stages, doors open in the order ABBA.
+"""
+
+ambience = "machinery"
+
+prerequisite_count = 0
+prerequisite_levels = ["connect_mainbus"]
+
+[Inputs]
+stage = 'int' # float, int, str, bool
+[Outputs]
+door_a = 'bool' # float, int, str, bool
+door_b = 'bool' # float, int, str, bool
+
+[[Tests]]
+inputs = {"stage" = 0}
+outputs = {"door_a" = false, "door_b" = false}
+
+[[Tests]]
+inputs = {"stage" = 1}
+outputs = {"door_a" = true, "door_b" = false}
+
+[[Tests]]
+inputs = {"stage" = 3}
+outputs = {"door_a" = false, "door_b" = true}
+
+[[Tests]]
+inputs = {"stage" = 7}
+outputs = {"door_a" = true, "door_b" = false}
+
+[[Tests]]
+inputs = {"stage" = 21}
+outputs = {"door_a" = false, "door_b" = true}
