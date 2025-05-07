@@ -950,6 +950,7 @@ class ValueGroup(Element):
         values: dict[str, OperationValue],
         input_order: bool = True,
         success_marker: bool = False,
+        show_names: bool = True
     ):
         Element.__init__(self)
         self._values = values
@@ -963,7 +964,7 @@ class ValueGroup(Element):
         self._panel_width: float = 0.0
         for name, value in values.items():
             label = Label(
-                name,
+                name if show_names else "",
                 0.0,
                 0.0,
                 0.0,
@@ -1334,7 +1335,7 @@ class ResultsPanel(Element):
 
     def __init__(self, result: BlockComputation):
         Element.__init__(self)
-        self._data = ValueGroup(result.outputs, input_order=False)
+        self._data = ValueGroup(result.outputs, input_order=False, show_names=False)
         self._shadow = RoundedRectangle(
             0.0,
             0.0,
