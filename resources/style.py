@@ -98,6 +98,7 @@ class Audio(StyleTable):
     block: Sound
     modal: Sound
     crash: Sound
+    boot: Sound
     notification: Sound
     confirm: Sound
     drag: Sound

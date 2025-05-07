@@ -16,8 +16,8 @@ class MainMenuView(View):
     SLOW_FADE = 5.0
     SLOW_TRANSITION = 7.0
     SLOW_FLASH = 5.25
-    FAST_FADE = 1.0
-    FAST_TRANSITION = 1.5
+    FAST_FADE = 3
+    FAST_TRANSITION = 4
     FAST_FLASH = 0.0
 
     def __init__(self):
@@ -62,6 +62,7 @@ class MainMenuView(View):
         self._tranistion = self.FAST_TRANSITION
         self._flash = self.FAST_FLASH
         context.choose_first_save()
+        style.audio.boot.play("intro")
 
     def pick_save(self, name: str) -> None:
         self._fade_out = True
@@ -70,6 +71,7 @@ class MainMenuView(View):
         self._tranistion = self.FAST_TRANSITION
         self._flash = self.FAST_FLASH
         context.choose_save(name)
+        style.audio.boot.play("intro")
 
     def on_cursor_motion(self, x, y, dx, dy) -> None:
         l = self._popup.get_hovered_item((x, y))

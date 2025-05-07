@@ -114,7 +114,7 @@ class GameView(View):
         style.audio.ambience.wind.play("ambience1", True)
 
     def on_show_view(self) -> None:
-        self._level_check_time = self.window.time
+        self._level_check_time = self.window.time + 2
         context.set_frames(
             self._frame_controller,
             self._editor_frame,
