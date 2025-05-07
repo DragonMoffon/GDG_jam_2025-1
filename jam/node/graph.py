@@ -199,6 +199,7 @@ class BlockType:
 
         self.name: str = name
         self.operation: BlockOperation = operation
+        self.documentation = self.operation.__doc__
 
         self.inputs: dict[str, type[OperationValue]] = inputs or {}
         self.outputs: dict[str, type[OperationValue]] = outputs or {}

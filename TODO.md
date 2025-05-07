@@ -19,8 +19,6 @@
 
 ### Puzzles
 - Constants block: defineable in puzzle file
-- Definable ambience tracks
-- Short description field for use in editor
 - More easy puzzles
 
 ### Saves
@@ -28,7 +26,6 @@
 
 ### Main menu
 - Seperate block face and pin direction for puzzle icons
-- Correct timing in intro animation
 
 ### Info Panel
 - Tabs
@@ -46,7 +43,6 @@
 - We need more audio/sound design in general
 
 ### Bugs
-- Wind does not loop
 - It is not clear when you've beaten a level
 - People keep trying to "unplug" connections instead of right-clicking the line
 - Temp variables don't reappear if block deleted
