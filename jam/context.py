@@ -12,7 +12,7 @@ from tomlkit import dumps as dumps_toml
 from pathlib import Path
 
 from jam.puzzle import Puzzle, puzzles
-from jam.controller import GraphController, write_graph_from_level
+from jam.controller import GraphController, write_graph_from_level, write_graph
 
 from resources import style
 import resources.saves as save_path
@@ -72,14 +72,33 @@ class SaveData:
     def number_attempted(self) -> int:
         return len(self._complete) + len(self._incomplete)
 
-    def save_puzzle(self, puzzle: Puzzle, Solution: GraphController) -> None:
-        pass
+    def save_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
+        if puzzle.name in self._complete:
+            return # TODO: discuss what to do when saving an already solved puzzle?? (turn into sandbox but _how_?)
+        target = f'{puzzle.name}.pzl'
+        pth = self._root / target
+        self._incomplete[puzzle.name] = target
+        write_graph_from_level(solution, puzzle, pth)
+        self.update_cfg()
 
-    def save_sandbox(self, puzzle: Puzzle, Solution: GraphController) -> None:
-        pass
+    def save_sandbox(self, graph: GraphController, name: str | None = None) -> None:
+        if name is None:
+            name = f'sandbox_{len(self._sandbox)}'
+        target = f'{name}.pzl'
+        pth = self._root / target
+        self._sandbox[name] = target
+        write_graph(graph, pth)
+        self.update_cfg()
 
-    def complete_puzzle(self, puzzle: Puzzle, Solution: GraphController) -> None:
-        self._complete[puzzle.name] = 'TODO'
+    def complete_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
+        target = f'{puzzle.name}.pzl'
+        pth = self._root / target
+        if puzzle.name in self._incomplete:
+            self._incomplete.pop(puzzle.name)
+            pth.unlink()
+        self._complete[puzzle.name] = target
+        write_graph_from_level(solution, puzzle, pth)
+        self.update_cfg()
 
     def _update_cfg(self) -> str:
         return dumps_toml({
@@ -108,7 +127,7 @@ class SaveData:
                 zip.write(self._root / item, item)
     
     def close_save(self) -> None:
-        self._update_cfg()
+        self.update_save()
         rmtree(self._root)
 
 

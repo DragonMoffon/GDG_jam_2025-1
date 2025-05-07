@@ -331,7 +331,83 @@ def read_graph_from_level(puzzle: Puzzle, gui: Gui) -> GraphController:
 
 
 def write_graph(controller: GraphController, path: Path) -> None:
-    pass
+    toml = document()
+
+    graph = controller.graph
+
+    config_table = table()
+    block_table = table()
+    variables = aot()
+    blocks = aot()
+    connection_table = table()
+    connections = aot()
+
+    config_table["name"] = controller.graph.name
+    toml.add("Config", config_table)
+    for block in graph.blocks:
+        subtable = table()
+        config = inline_table()
+
+        subtable["uid"] = block.uid.hex
+        subtable["type"] = block.type.name
+        config.update(  # type: ignore -- unknownMemberType
+            {name: typ.value for name, typ in block.config.items()}
+        )
+        subtable["config"] = config
+
+        if controller.has_block(block.uid):
+            element = controller.get_block(block.uid)
+            subtable["position"] = element.left, element.bottom
+        else:
+            element = controller.get_temp(block.uid)
+            subtable["position"] = element.left, element.bottom
+
+        blocks.append(subtable)  # type: ignore -- unknownMemberType
+
+        if block.type.exclusive:
+            type_table = table()
+            input_table = inline_table()
+            input_table.update(  # type: ignore -- unknownMemberType
+                {
+                    name: str(typ._typ.__name__)
+                    for name, typ in block.type.inputs.items()
+                }
+            )
+            output_table = inline_table()
+            output_table.update(  # type: ignore -- unknownMemberType
+                {
+                    name: str(typ._typ.__name__)
+                    for name, typ in block.type.outputs.items()
+                }
+            )
+            type_table["name"] = block.type.name
+            type_table["inputs"] = input_table
+            type_table["outputs"] = output_table
+            variables.append(type_table)  # type: ignore -- unknownMemberType
+
+    block_table["Variables"] = variables
+    block_table["Data"] = blocks
+    toml["Block"] = block_table
+
+    for connection in graph.connections:
+        subtable = table()
+        subtable["uid"] = connection.uid.hex
+        subtable["source"] = connection.source.hex
+        subtable["output"] = connection.output
+        subtable["target"] = connection.target.hex
+        subtable["input"] = connection.input
+
+        if controller.has_connection(connection.uid):
+            element = controller.get_connection(connection.uid)
+            if len(element._links) > 2:
+                subtable["links"] = element._links[1:-1]
+
+        connections.append(subtable)  # type: ignore -- unknownMemberType
+    connection_table["Data"] = connections
+    toml["Connection"] = connection_table
+
+    with path.open(mode="w", encoding="utf-8") as fp:
+        dump_toml(toml, fp)
 
 
 def write_graph_from_level(

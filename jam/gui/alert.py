@@ -1,9 +1,6 @@
-from uuid import UUID
-
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle, Line
 from pyglet.sprite import Sprite
-from pyglet.text import Label
 
 from resources import style
 

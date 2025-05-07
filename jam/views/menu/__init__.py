@@ -27,10 +27,13 @@ class MainMenuView(View):
 
         self._gui = Gui(self.window.default_camera)
 
-        if context.get_save_names():
+        save_names = context.get_save_names()[::-1]
+        if len(save_names) == 1:
+            oppts = (PopupAction("New Game", self.new_save), PopupAction("Continue", self.continue_save))
+        elif save_names:
             saves = (
                 PopupAction(f"Continue: {name}", self.pick_save, name)
-                for name in context.get_save_names()[::-1]
+                for name in save_names
             )
             oppts = (PopupAction("New Game", self.new_save), *saves, PopupAction("Continue", self.continue_save))
         else:
