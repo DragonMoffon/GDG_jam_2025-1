@@ -14,7 +14,7 @@ class Audio:
     def __init__(self):
         self._players: dict[str, Player] = {}
 
-    def play(self, sound: Source, channel: str = "default", loop = False) -> None:
+    def play(self, sound: Source, channel: str = "default", loop: bool = False) -> None:
         if channel not in self._players:
             self._players[channel] = Player()
 
@@ -39,7 +39,7 @@ AUDIO = Audio()
 
 
 class Sound:
-    __cache__: dict[Path, Source] = {}
+    __cache__: dict[str, Source] = {}
 
     def __init__(self, pth: Path):
         if str(pth) not in Sound.__cache__:
