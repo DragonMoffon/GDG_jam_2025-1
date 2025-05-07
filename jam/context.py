@@ -71,17 +71,14 @@ class SaveData:
     def number_attempted(self) -> int:
         return len(self._complete) + len(self._incomplete)
 
-    def open_puzzle(self) -> None:
+    def save_puzzle(self, puzzle: Puzzle, Solution: GraphController) -> None:
         pass
 
-    def save_puzzle(self) -> None:
+    def save_sandbox(self, puzzle: Puzzle, Solution: GraphController) -> None:
         pass
 
-    def save_sandbox(self) -> None:
-        pass
-
-    def complete_puzzle(self) -> None:
-        pass
+    def complete_puzzle(self, puzzle: Puzzle, Solution: GraphController) -> None:
+        self._complete[puzzle.name] = 'TODO'
 
     def _update_cfg(self) -> str:
         return dumps_toml({
@@ -330,8 +327,6 @@ class Context:
         self._frame_controller.select_frame(self._settings_frame)
 
     def complete_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
-        return
-
         if self._current_save is None:
             return
         self._current_save.complete_puzzle(puzzle, solution)
