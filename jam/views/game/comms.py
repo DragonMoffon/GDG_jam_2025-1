@@ -67,16 +67,21 @@ class CommsFrame(Frame):
 
         for communication in comms.log:
             if communication.speaker:
+                # Speakers get their names smaller, italics, and above what they say.
                 pre_name_text_index = len(self.label.text)
                 self.label.text += f"\n{communication.speaker}\n"
                 post_name_text_index = len(self.label.text) - 1
                 self.label.document.set_style(pre_name_text_index, post_name_text_index, {"color": style.colors.accent, "font_name": style.text.normal.name, "font_size": style.text.normal.size - 2, "italic": True})
             else:
+                # Narrator just gets a space.
                 self.label.text += "\n"
             current_text_index = len(self.label.text)
-            self.label.text = self.label.text + communication.dialogue + "\n"
+
+            # Add the actual dialogue
+            self.label.text = self.label.text + "    " + communication.dialogue + "\n"
             end_text_index = len(self.label.text) - 1
             if communication.speaker is None:
+                # Narrators text is dimmer than normal.
                 self.label.document.set_style(current_text_index, end_text_index, {"color": style.colors.accent, "font_name": style.text.normal.name, "font_size": style.text.normal.size})
             else:
                 self.label.document.set_style(current_text_index, end_text_index, {"color": style.colors.bright, "font_name": style.text.normal.name, "font_size": style.text.normal.size})
