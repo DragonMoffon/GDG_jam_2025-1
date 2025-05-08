@@ -1,3 +1,5 @@
+from typing import Any
+
 from pyglet.customtypes import AnchorX, AnchorY, ContentVAlign
 from pyglet.text.document import FormattedDocument
 from pyglet.text import DocumentLabel
@@ -9,17 +11,28 @@ class FLabel(DocumentLabel):
     """Formatted Text label."""
 
     def __init__(
-            self, text: str = "",
-            x: float = 0.0, y: float = 0.0, z: float = 0.0,
-            width: int | None = None, height: int | None = None,
-            anchor_x: AnchorX = "left", anchor_y: AnchorY = "baseline", rotation: float = 0.0,
-            multiline: bool = False, dpi: int | None = None,
-            font_name: str | None = None, font_size: float | None = None,
-            weight: str = "normal", italic: bool | str = False, stretch: bool | str = False,
-            color: tuple[int, int, int, int] | tuple[int, int, int] = (255, 255, 255, 255),
-            align: ContentVAlign = "left",
-            batch: Batch | None = None, group: Group | None = None,
-            program: ShaderProgram | None = None,
+        self,
+        text: str = "",
+        x: float = 0.0,
+        y: float = 0.0,
+        z: float = 0.0,
+        width: int | None = None,
+        height: int | None = None,
+        anchor_x: AnchorX = "left",
+        anchor_y: AnchorY = "baseline",
+        rotation: float = 0.0,
+        multiline: bool = False,
+        dpi: int | None = None,
+        font_name: str | None = None,
+        font_size: float | None = None,
+        weight: str = "normal",
+        italic: bool | str = False,
+        stretch: bool | str = False,
+        color: tuple[int, int, int, int] | tuple[int, int, int] = (255, 255, 255, 255),
+        align: ContentVAlign = "left",
+        batch: Batch | None = None,
+        group: Group | None = None,
+        program: ShaderProgram | None = None,
     ) -> None:
         """Create a formated text label.
 
@@ -60,9 +73,9 @@ class FLabel(DocumentLabel):
                 The 'weight' of the font (boldness). See the :py:class:`~Weight`
                 enum for valid cross-platform weight names.
             italic:
-                Italic font style.
+                Italic font Style.
             stretch:
-                 Stretch font style.
+                 Stretch font Style.
             color:
                 Font color as RGBA or RGB components, each within
                 ``0 <= component <= 255``.
@@ -82,16 +95,44 @@ class FLabel(DocumentLabel):
 
         super().__init__(
             FormattedDocument(text),
-            x, y, z, width, height, anchor_x, anchor_y, rotation,
-            multiline, dpi, batch, group, program, init_document=False
+            x,
+            y,
+            z,
+            width,
+            height,
+            anchor_x,
+            anchor_y,
+            rotation,
+            multiline,
+            dpi,
+            batch,
+            group,
+            program,
+            init_document=False,
         )
 
-        self.document.set_style(0, len(self.document.text), {
-            "font_name": font_name,
-            "font_size": font_size,
-            "weight": weight,
-            "italic": italic,
-            "stretch": stretch,
-            "color": rgba,
-            "align": align,
-        })
+        self.document.set_style(
+            0,
+            len(self.document.text),
+            {
+                "font_name": font_name,
+                "font_size": font_size,
+                "weight": weight,
+                "italic": italic,
+                "stretch": stretch,
+                "color": rgba,
+                "align": align,
+            },
+        )
+
+    def set_style(self, start: int, end: int, name: str, value: Any) -> None:
+        """Set a document Style value by name over the whole document.
+
+        Args:
+            name:
+                Name of the Style to set.  See documentation for
+                `pyglet.text.layout` for known Style names.
+            value:
+                Value of the Style.
+        """
+        self.document.set_style(start, end, {name: value})

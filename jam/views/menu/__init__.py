@@ -1,7 +1,7 @@
 from arcade import draw_rect_filled
 from pyglet.sprite import Sprite
 
-from resources import style
+from resources import Style
 
 from jam.view import View
 from jam.graphics.background import ParallaxBackground
@@ -14,17 +14,11 @@ from jam.input import inputs, Button
 
 
 class MainMenuView(View):
-    SLOW_FADE = 5.0
-    SLOW_TRANSITION = 7.0
-    SLOW_FLASH = 5.25
-    FAST_FADE = 3
-    FAST_TRANSITION = 4
-    FAST_FLASH = 0.0
 
     def __init__(self):
         View.__init__(self)
-        self._background = ParallaxBackground(style.menu.background)
-        self._logo = Sprite(style.textures.logo_big)
+        self._background = ParallaxBackground(Style.Menu.Background)
+        self._logo = Sprite(Style.Textures.logo_big)
 
         self._gui = Gui(self.window.default_camera)
 
@@ -64,25 +58,25 @@ class MainMenuView(View):
         )
         self._gui.add_element(self._popup)
         self._fade_out: bool = False
-        self._speed: float = self.SLOW_FADE
-        self._tranistion: float = self.SLOW_TRANSITION
-        self._flash: float = self.SLOW_FLASH
+        self._speed: float = Style.Menu.new_fade
+        self._tranistion: float = Style.Menu.new_transition
+        self._flash: float = Style.Menu.new_logo
         self._timer: float = 0.0
 
     def new_save(self) -> None:
         self._fade_out = True
         self._timer = self.window.time
         context.new_save()
-        style.audio.crash.play("intro")
+        Style.Audio.crash.play("intro")
 
     def continue_save(self) -> None:
         self._fade_out = True
         self._timer = self.window.time
-        self._speed = self.FAST_FADE
-        self._tranistion = self.FAST_TRANSITION
-        self._flash = self.FAST_FLASH
+        self._speed = Style.Menu.continue_fade
+        self._tranistion = Style.Menu.continue_transition
+        self._flash = Style.Menu.continue_logo
         context.choose_first_save()
-        style.audio.boot.play("intro")
+        Style.Audio.boot.play("intro")
 
     def pick_save(self, name: str) -> None:
         self._fade_out = True
@@ -91,7 +85,7 @@ class MainMenuView(View):
         self._tranistion = self.FAST_TRANSITION
         self._flash = self.FAST_FLASH
         context.choose_save(name)
-        style.audio.boot.play("intro")
+        Style.Audio.boot.play("intro")
 
     def on_cursor_motion(self, x, y, dx, dy) -> None:
         l = self._popup.get_hovered_item((x, y))

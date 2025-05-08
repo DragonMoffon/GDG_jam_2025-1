@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 from pathlib import Path
 from importlib.resources import path
 from time import time_ns as get_time
@@ -15,7 +16,7 @@ from tomlkit import dumps as dumps_toml
 from jam.puzzle import Puzzle, puzzles
 from jam.controller import GraphController, write_graph_from_level, write_graph
 
-from resources import style
+from resources import Style
 
 try:
     import resources.saves as save_path
@@ -155,7 +156,9 @@ class SaveData:
         self.update_cfg()
         with open(self._root / "crash_log.txt", "w", encoding="utf-8") as fp:
             fp.write("".join(traceback.format_exception(exception)))
-        self._root.rename(self._root.parent / f"crash-{crash_time}_{self._name}")
+        self._root.rename(
+            self._root.parent / f"crash-{crash_time}_{self._name}_{uuid4().hex}"
+        )
 
 
 class SaveInfo:
@@ -267,7 +270,7 @@ class SaveInfo:
             launch_time = datetime.fromtimestamp(cfg["Info"]["last_open_time"] * 1e-9)
             pth.rename(
                 self._path.parent
-                / f"crash-{launch_time.strftime("%Y-%m-%d %H-%M")}_{cfg['Info']['name']}"
+                / f"crash-{launch_time.strftime("%Y-%m-%d %H-%M")}_{cfg['Info']['name']}_{uuid4().hex}"
             )
 
         with zipfile.ZipFile(self._path, "r") as zip:
@@ -402,7 +405,7 @@ class Context:
         self._current_save.complete_puzzle(puzzle, solution)
         self.close_editor_tab(puzzle.title)
         self.hide_frame()
-        style.audio.confirm.play()
+        Style.Audio.confirm.play()
         if self._level_select is not None:
             self._level_select.clear_puzzle(puzzle)
 

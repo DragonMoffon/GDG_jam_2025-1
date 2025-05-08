@@ -3,7 +3,7 @@ from math import cos, sin, tau
 from arcade.clock import GLOBAL_CLOCK
 from arcade.future.background import Background, BackgroundGroup
 
-from resources import style
+from resources import Style
 from resources.style import FloatMotionMode, Background as StyleBackground
 
 
@@ -11,7 +11,7 @@ class ParallaxBackground:
 
     def __init__(self, background: StyleBackground | None = None):
         if background is None:
-            background = style.menu.background
+            background = Style.menu.background
         self._data: StyleBackground = background
         self._base: Background = Background.from_file(
             background.base, background.base_offset

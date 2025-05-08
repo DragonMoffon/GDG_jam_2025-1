@@ -1,7 +1,7 @@
 from arcade import Window as ArcadeWindow
 from pyglet.input import get_controllers
 
-from resources import style
+from resources import Style
 
 from .input import inputs
 
@@ -14,7 +14,7 @@ class Window(ArcadeWindow):
 
     def __init__(self):
         ArcadeWindow.__init__(self, self.WIDTH, self.HEIGHT, self.NAME)
-        self.set_icon(style.textures.icon)
+        self.set_icon(Style.Textures.icon)
         inputs.setup_input_reponses()
 
         controllers = get_controllers()

@@ -9,8 +9,9 @@ from jam.node.graph import BlockType, TestCase, STR_CAST, _variable
 import jam.node.blocks
 
 import resources.puzzles as pzls
-from resources import style
+from resources import Style
 from resources.audio import Sound
+
 
 class AlertOrientation(IntEnum):
     LEFT = 0
@@ -18,12 +19,14 @@ class AlertOrientation(IntEnum):
     RIGHT = 2
     BOTTOM = 3
 
+
 @dataclass
 class PuzzleAlert:
     pin: tuple[float, float] = (0.0, 0.0)
     loc: tuple[float, float] = (0.0, 0.0)
     pin_orientation: AlertOrientation = AlertOrientation.LEFT
     loc_orientation: AlertOrientation = AlertOrientation.RIGHT
+
 
 @dataclass
 class Puzzle:
@@ -41,6 +44,7 @@ class Puzzle:
     source_graph: Path | None
     tests: tuple[TestCase, ...]
 
+
 def load_puzzle(path: Path) -> Puzzle:
     with open(path, "rb") as fp:
         raw_data = load_toml(fp)
@@ -48,7 +52,7 @@ def load_puzzle(path: Path) -> Puzzle:
     config_data = raw_data["Config"]
 
     if "ambience" in config_data:
-        ambience = style.audio.ambience[config_data['ambience']]
+        ambience = Style.Audio.Ambience[config_data["ambience"]]
     else:
         ambience = None
 
@@ -87,12 +91,12 @@ def load_puzzle(path: Path) -> Puzzle:
         }
         tests.append(TestCase(case_inputs, case_outputs))
 
-    alert_data = raw_data['Alert']
+    alert_data = raw_data["Alert"]
     alert = PuzzleAlert(
-        tuple(alert_data['pin']),
-        tuple(alert_data['loc']),
-        AlertOrientation(alert_data['pin_orientation']),
-        AlertOrientation(alert_data['loc_orientation'])
+        tuple(alert_data["pin"]),
+        tuple(alert_data["loc"]),
+        AlertOrientation(alert_data["pin_orientation"]),
+        AlertOrientation(alert_data["loc_orientation"]),
     )
 
     return Puzzle(
@@ -125,7 +129,9 @@ class PuzzleCollection:
             except Exception as e:
                 print(f"{puzzle_path}: {e}")
 
-    def get_available_puzzles(self, count: int, completed: set[str]) -> tuple[Puzzle, ...]:
+    def get_available_puzzles(
+        self, count: int, completed: set[str]
+    ) -> tuple[Puzzle, ...]:
         available: list[Puzzle] = []
         for puzzle in self._puzzles.values():
             if count < puzzle.prerequisite_count:

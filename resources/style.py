@@ -2,7 +2,7 @@ from importlib.resources import path
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, Self
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, fields
 import tomllib
 from arcade import load_font
 from arcade.types import RGBA255
@@ -23,7 +23,10 @@ class StyleTable:
 
     @classmethod
     def create(cls, data: dict[str, Any], source: Path) -> Self:
-        raise NotImplementedError()
+        for field in fields(cls):
+            if isinstance(field.type, type) and issubclass(field.type, StyleTable):
+                data[field.name] = field.type.create(data.get(field.name, {}), source)
+        return cls(**data)
 
 
 @dataclass
@@ -81,6 +84,26 @@ class Floating(StyleTable):
 
 
 @dataclass
+class Background(StyleTable):
+    color: tuple[int, int, int, int]
+    base: Path
+    base_offset: tuple[float, float]
+    layers: tuple[Floating, ...]
+
+    @classmethod
+    def create(cls, data: dict[str, Any], source: Path) -> Self:
+        return cls(
+            tuple(data["color"]),
+            source / data["base"],
+            tuple(data["base_offset"]),
+            tuple(
+                Floating.create(floating, source)
+                for floating in data.get("Floating", ())
+            ),
+        )
+
+
+@dataclass
 class Ambience(StyleTable):
     wind: Sound
     environment: Sound
@@ -90,6 +113,10 @@ class Ambience(StyleTable):
     data: Sound
     navigation: Sound
     power: Sound
+
+    @classmethod
+    def create(cls, data: dict[str, str], source: Path) -> Self:
+        return cls(**{name: Sound(source / pth) for name, pth in data.items()})
 
 
 @dataclass
@@ -107,7 +134,15 @@ class Audio(StyleTable):
     connect: Sound
     pickup: Sound
     disconnect: Sound
-    ambience: Ambience
+    Ambience: Ambience
+
+    @classmethod
+    def create(cls, data: dict[str, Any], source: Path) -> Self:
+        ambience = Ambience.create(data.pop("Ambience"), source)
+        return cls(
+            Ambience=ambience,
+            **{name: Sound(source / pth) for name, pth in data.items()},
+        )
 
 
 @dataclass
@@ -115,18 +150,20 @@ class Textures(StyleTable):
     logo_big: AbstractImage
     icon: AbstractImage
 
-
-@dataclass
-class Background(StyleTable):
-    colour: tuple[int, int, int, int]
-    base: Path
-    base_offset: tuple[float, float]
-    layers: tuple[Floating, ...]
+    @classmethod
+    def create(cls, data: dict[str, str], source: Path) -> Self:
+        return cls(**{name: load_texture(source / pth) for name, pth in data.items()})
 
 
 @dataclass
 class Menu(StyleTable):
-    background: Background
+    new_fade: float
+    new_transition: float
+    new_logo: float
+    continue_fade: float
+    continue_transition: float
+    continue_logo: float
+    Background: Background
 
 
 @dataclass
@@ -136,6 +173,13 @@ class Panels(StyleTable):
     comms_tag: Path
     info_tag: Path
     panel_speed: float
+
+    @classmethod
+    def create(cls, data: dict[str, str], source: Path) -> Self:
+        return cls(
+            panel_speed=data.pop("panel_speed"),
+            **{name: source / pth for name, pth in data.items()},
+        )
 
 
 @dataclass
@@ -150,7 +194,7 @@ class Editor(StyleTable):
     branch_inactive: AbstractImage
     branch_active: AbstractImage
     variable: AbstractImage
-    defintiion: AbstractImage
+    definition: AbstractImage
     dropdown: AbstractImage
     check_inactive: AbstractImage
     check_active: AbstractImage
@@ -160,123 +204,119 @@ class Editor(StyleTable):
     nav_p: AbstractImage
     nav_n: AbstractImage
 
+    @classmethod
+    def create(cls, data: dict[str, str], source: Path) -> Self:
+        return cls(
+            blink_speed=data.pop("blink_speed"),
+            background=source / data.pop("background"),
+            **{name: load_texture(source / pth) for name, pth in data.items()},
+        )
+
 
 @dataclass
 class Game(StyleTable):
-    background: Background
-    panels: Panels
-    editor: Editor
+    Background: Background
+    Panels: Panels
+    Editor: Editor
 
 
 @dataclass
-class TextFormat(StyleTable):
-    name: str
-    path: str
-    size: float
+class Font(StyleTable):
+    default: Path
+    bold: Path
+    bold_italic: Path
+    light: Path
+    light_italic: Path
+    italic: Path
+
+    @classmethod
+    def create(cls, data: dict[str, Any], source: Path) -> Self:
+        for pth in data.values():
+            load_font(source / pth)
+
+        default = data["default"]
+        return cls(
+            source / default,
+            source / data.get("bold", default),
+            source / data.get("bold_italic", default),
+            source / data.get("light", default),
+            source / data.get("light_italic", default),
+            source / data.get("italic", default),
+        )
+
+
+@dataclass
+class Fonts(StyleTable):
+    Monospace: Font
+    Regular: Font
+
+
+@dataclass
+class TextSizes(StyleTable):
+    header: int
+    header_1: int
+    header_2: int
+    header_3: int
+    header_4: int
+    header_5: int
+    header_6: int
+    normal: int
+    subtitle: int
+
+    @classmethod
+    def create(cls, data: dict[str, int], source: Path) -> Self:
+        header = data["header"]
+        normal = data["normal"]
+        return cls(
+            header,
+            data.get("header_1", header * 6),
+            data.get("header_2", header * 5),
+            data.get("header_3", header * 4),
+            data.get("header_4", header * 3),
+            data.get("header_5", header * 2),
+            data.get("header_6", header * 1),
+            normal,
+            data.get("subtitle", normal),
+        )
+
+
+@dataclass
+class TextNames(StyleTable):
+    monospace: str
+    regular: str
 
 
 @dataclass
 class Text(StyleTable):
-    normal: TextFormat
-    header: TextFormat
+    Fonts: Fonts
+    Names: TextNames
+    Sizes: TextSizes
 
 
 @dataclass
 class Style(StyleTable):
     source: Path
     name: str
-    colors: Colors
-    text: Text
-    format: Format
-    audio: Audio
-    textures: Textures
-    menu: Menu
-    game: Game
+    Colors: Colors
+    Text: Text
+    Format: Format
+    Audio: Audio
+    Textures: Textures
+    Menu: Menu
+    Game: Game
 
     @classmethod
     def create(cls, data: dict[str, Any], source: Path) -> Self:
-
-        text = Text(
-            normal=TextFormat(**data["Text"]["Normal"]),
-            header=TextFormat(**data["Text"]["Header"]),
-        )
-        load_font(source / text.normal.path)
-        load_font(source / text.header.path)
-
-        audio_data = data["Audio"]
-        ambience_data = audio_data.pop("Ambience")
-
-        background_data = data["Menu"]["Background"]
-        menu = Menu(
-            Background(
-                colour=tuple(background_data["color"]),
-                base=source / background_data["base"],
-                base_offset=background_data["base_offset"],
-                layers=tuple(
-                    Floating.create(data, source)
-                    for data in background_data["Floating"]
-                ),
-            )
-        )
-
-        background_data = data["Game"]["Background"]
-        panel_data = data["Game"]["Panels"]
-        editor_data = data["Game"]["Editor"]
-        game = Game(
-            Background(
-                colour=tuple(background_data["color"]),
-                base=source / background_data["base"],
-                base_offset=background_data["base_offset"],
-                layers=tuple(
-                    Floating.create(data, source)
-                    for data in background_data["Floating"]
-                ),
-            ),
-            Panels(
-                settings_tag=source / panel_data["settings_tag"],
-                editor_tag=source / panel_data["editor_tag"],
-                comms_tag=source / panel_data["comms_tag"],
-                info_tag=source / panel_data["info_tag"],
-                panel_speed=panel_data["panel_speed"],
-            ),
-            Editor(
-                editor_data["blink_speed"],
-                source / editor_data["background"],
-                load_texture(source / editor_data["puzzle_alert"]),
-                load_texture(source / editor_data["node_inactive"]),
-                load_texture(source / editor_data["node_active"]),
-                load_texture(source / editor_data["branch_inactive"]),
-                load_texture(source / editor_data["branch_active"]),
-                load_texture(source / editor_data["variable"]),
-                load_texture(source / editor_data["definition"]),
-                load_texture(source / editor_data["dropdown"]),
-                load_texture(source / editor_data["check_inactive"]),
-                load_texture(source / editor_data["check_active"]),
-                load_texture(source / editor_data["run_one"]),
-                load_texture(source / editor_data["run_all"]),
-                load_texture(source / editor_data["nav_p"]),
-                load_texture(source / editor_data["nav_n"]),
-            ),
-        )
-
         return cls(
             source,
-            data.get("name", "style"),
-            Colors(**data["Colors"]),
-            text,
-            Format(**data["Format"]),
-            Audio(
-                **{name: Sound(source / pth) for name, pth in audio_data.items()},
-                ambience=Ambience(
-                    **{name: Sound(source / pth) for name, pth in ambience_data.items()}
-                ),
-            ),
-            Textures(
-                logo_big=load_texture(source / data["Textures"]["logo_big"]),
-                icon=load_texture(source / data["Textures"]["icon"]),
-            ),
-            menu,
-            game,
+            data["name"],
+            Colors.create(data["Colors"], source),
+            Text.create(data["Text"], source),
+            Format.create(data["Format"], source),
+            Audio.create(data["Audio"], source),
+            Textures.create(data["Textures"], source),
+            Menu.create(data["Menu"], source),
+            Game.create(data["Game"], source),
         )
 
 

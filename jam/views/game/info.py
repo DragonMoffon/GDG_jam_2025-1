@@ -3,7 +3,7 @@ from arcade.camera.default import ViewportProjector
 from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 
-from resources import style
+from resources import Style
 
 from jam.context import context
 from jam.gui.frame import Frame
@@ -42,8 +42,8 @@ class InfoFrame(Frame):
         # -- CREATE CLIP MASK --
 
         # shrinks the clip by a padding value (jank uses block footer size)
-        clip_size = int(size[0] - style.format.footer_size), int(
-            size[1] - 2 * style.format.footer_size
+        clip_size = int(size[0] - Style.Format.footer_size), int(
+            size[1] - 2 * Style.Format.footer_size
         )
         # The viewport of the cliping mask.
         clip_rect = LBWH(0.0, 0.0, clip_size[0], clip_size[1])
@@ -58,8 +58,9 @@ class InfoFrame(Frame):
             INFO_TEXT,
             x=size[0] / 2,
             y=size[1] / 2,
-            color=style.colors.highlight,
-            font_name=style.text.normal.name,
+            color=Style.Colors.highlight,
+            font_name=Style.Text.Names.monospace,
+            font_size=Style.Text.Sizes.normal,
             align="center",
             anchor_x="center",
             anchor_y="center",
@@ -74,9 +75,9 @@ class InfoFrame(Frame):
                 RoundedRectangle(
                     0.0,
                     0.0,
-                    size[0] - style.format.footer_size,
-                    size[1] - 2 * style.format.footer_size,
-                    (style.format.corner_radius, style.format.corner_radius, 0.0, 0.0),
+                    size[0] - Style.Format.footer_size,
+                    size[1] - 2 * Style.Format.footer_size,
+                    (Style.Format.corner_radius, Style.Format.corner_radius, 0.0, 0.0),
                     (12, 12, 1, 1),
                     color=(255, 255, 255, 255),
                 ).draw()
@@ -103,7 +104,7 @@ class InfoFrame(Frame):
 
     def on_draw(self) -> None:
         with self.cliping_mask.target as fbo:
-            fbo.clear(color=style.colors.background)
+            fbo.clear(color=Style.Colors.background)
             with self.camera.activate():
                 self.frame_gui.draw()
                 self.label.draw()
@@ -115,8 +116,8 @@ class InfoFrame(Frame):
     def update_position(self, point: tuple[float, float]) -> None:
         Frame.update_position(self, point)
         self.cliping_mask.position = (
-            point[0] + style.format.footer_size,
-            point[1] + style.format.footer_size,
+            point[0] + Style.Format.footer_size,
+            point[1] + Style.Format.footer_size,
         )
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:

@@ -1,7 +1,7 @@
 from arcade import draw_rect_filled
 from pyglet.sprite import Sprite
 
-from resources import style
+from resources import Style
 
 from jam.view import View
 from jam.gui.frame import Frame, FrameController
@@ -57,16 +57,16 @@ class LevelSelect:
             alert = AlertElement(puzzle)
             self._gui.add_element(alert)
             self._alerts[puzzle.name] = alert
-            style.audio.notification.play()
+            Style.Audio.notification.play()
 
 
 class GameView(View):
 
     def __init__(self) -> None:
         View.__init__(self)
-        self.background_color = style.game.background.colour
-        self._background = ParallaxBackground(style.game.background)
-        self._logo = Sprite(style.textures.logo_big)
+        self.background_color = Style.Game.Background.color
+        self._background = ParallaxBackground(Style.Game.Background)
+        self._logo = Sprite(Style.Textures.logo_big)
         self._logo.color = (255, 255, 255, 0)
         self._gui = Gui(self.window.default_camera)
 
@@ -74,7 +74,7 @@ class GameView(View):
         self._gui.add_element(self._editor_frame)
 
         self._info_frame = InfoFrame(
-            self._editor_frame.tag_height + 2 * style.format.padding,
+            self._editor_frame.tag_height + 2 * Style.Format.padding,
             (self.width, 0.0),
             720,
         )
@@ -86,7 +86,7 @@ class GameView(View):
         comm_offset = (
             self._editor_frame.tag_height
             + self._info_frame.tag_height
-            + 3 * style.format.padding
+            + 3 * Style.Format.padding
         )
         self._comms_frame = CommsFrame(
             comm_offset,
@@ -111,7 +111,7 @@ class GameView(View):
         self._level_select: LevelSelect = LevelSelect(self._gui)
         self._level_check_time: float = self.window.time
 
-        style.audio.ambience.wind.play("ambience1", True)
+        Style.Audio.Ambience.wind.play("ambience1", True)
 
     def on_show_view(self) -> None:
         self._level_check_time = self.window.time + 2

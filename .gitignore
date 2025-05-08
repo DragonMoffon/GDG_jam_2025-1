@@ -55,3 +55,6 @@ cython_debug/
 # save files
 *.svd
 .save/
+
+# crash logs
+crash-*/

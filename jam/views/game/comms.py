@@ -3,7 +3,7 @@ from arcade.camera.default import ViewportProjector
 from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 
-from resources import style
+from resources import Style
 
 from jam.gui.frame import Frame
 
@@ -13,22 +13,24 @@ from jam.gui import core
 from jam.input import Axis, Button
 from jam.comms import comms
 
+
 class CommsFrame(Frame):
 
-    def __init__(self,
+    def __init__(
+        self,
         tag_offset: float,
         position: tuple[float, float],
         height: float,
         show_body: bool = False,
-        show_shadow: bool = True
+        show_shadow: bool = True,
     ):
         size = (450, height)
 
         # -- CREATE CLIP MASK --
 
         # shrinks the clip by a padding value (jank uses block footer size)
-        clip_size = int(size[0] - style.format.footer_size), int(
-            size[1] - 2 * style.format.footer_size
+        clip_size = int(size[0] - Style.Format.footer_size), int(
+            size[1] - 2 * Style.Format.footer_size
         )
         # The viewport of the cliping mask.
         clip_rect = LBWH(0.0, 0.0, clip_size[0], clip_size[1])
@@ -39,6 +41,17 @@ class CommsFrame(Frame):
         # A projector that acts like arcade's default. Use if you want things to not move within the clip.
         self._clip_projector = ViewportProjector(clip_rect)
 
+        self.label = Label(
+            "[COMMS OFFLINE]",
+            x=size[0] / 2,
+            y=size[1] / 2,
+            color=Style.Colors.highlight,
+            font_name=Style.Text.Names.monospace,
+            align="center",
+            anchor_x="center",
+            anchor_y="center",
+        )
+
         # activate the clip texture to draw into, use the basic clip projector,
         # then create and immediatly use a rounded rectangle.
         with self.cliping_mask.clip:
@@ -46,24 +59,45 @@ class CommsFrame(Frame):
                 RoundedRectangle(
                     0.0,
                     0.0,
-                    size[0] - style.format.footer_size,
-                    size[1] - 2 * style.format.footer_size,
-                    (style.format.corner_radius, style.format.corner_radius, 0.0, 0.0),
+                    size[0] - Style.Format.footer_size,
+                    size[1] - 2 * Style.Format.footer_size,
+                    (Style.Format.corner_radius, Style.Format.corner_radius, 0.0, 0.0),
                     (12, 12, 1, 1),
                     color=(255, 255, 255, 255),
                 ).draw()
 
         # This has to happen before init because the Frame called update_position which refers to the clipping mask
 
-        Frame.__init__(self, "COMMS", tag_offset, position, size, show_body, show_shadow, anchor_top=True)
+        Frame.__init__(
+            self,
+            "COMMS",
+            tag_offset,
+            position,
+            size,
+            show_body,
+            show_shadow,
+            anchor_top=True,
+        )
 
-        self.camera = Camera2D(clip_rect) # Camera2D with the viewport of the clip_rect to draw the gui.
-        self.frame_gui: core.Gui = core.Gui(self.camera) # The gui that gets clipped by the mask.
+        self.camera = Camera2D(
+            clip_rect
+        )  # Camera2D with the viewport of the clip_rect to draw the gui.
+        self.frame_gui: core.Gui = core.Gui(
+            self.camera
+        )  # The gui that gets clipped by the mask.
 
         # Comms time
-        self.label = FLabel("", 5, self.panel_height - 5, width = self.panel_width, multiline = True,
-                            font_name = style.text.normal.name, font_size = style.text.normal.size, color = style.colors.accent,
-                            anchor_y = "top")
+        self.label = FLabel(
+            "",
+            5,
+            self.panel_height - 5,
+            width=self.panel_width,
+            multiline=True,
+            font_name=Style.Text.Names.monospace,
+            font_size=Style.Text.Sizes.normal,
+            color=Style.Colors.accent,
+            anchor_y="top",
+        )
 
         for communication in comms.log:
             if communication.speaker:
@@ -71,7 +105,16 @@ class CommsFrame(Frame):
                 pre_name_text_index = len(self.label.text)
                 self.label.text += f"\n{communication.speaker}\n"
                 post_name_text_index = len(self.label.text) - 1
-                self.label.document.set_style(pre_name_text_index, post_name_text_index, {"color": style.colors.accent, "font_name": style.text.normal.name, "font_size": style.text.normal.size - 2, "italic": True})
+                self.label.document.set_style(
+                    pre_name_text_index,
+                    post_name_text_index,
+                    {
+                        "color": Style.Colors.accent,
+                        "font_name": Style.Text.Names.monospace,
+                        "font_size": Style.Text.Sizes.normal - 2,
+                        "italic": True,
+                    },
+                )
             else:
                 # Narrator just gets a space.
                 self.label.text += "\n"
@@ -81,14 +124,29 @@ class CommsFrame(Frame):
             self.label.text = self.label.text + "    " + communication.dialogue + "\n"
             end_text_index = len(self.label.text) - 1
             if communication.speaker is None:
-                # Narrators text is dimmer than normal.
-                self.label.document.set_style(current_text_index, end_text_index, {"color": style.colors.accent, "font_name": style.text.normal.name, "font_size": style.text.normal.size})
+                self.label.document.set_style(
+                    current_text_index,
+                    end_text_index,
+                    {
+                        "color": Style.Colors.accent,
+                        "font_name": Style.Text.Names.monospace,
+                        "font_size": Style.Text.Sizes.normal,
+                    },
+                )
             else:
-                self.label.document.set_style(current_text_index, end_text_index, {"color": style.colors.bright, "font_name": style.text.normal.name, "font_size": style.text.normal.size})
+                self.label.document.set_style(
+                    current_text_index,
+                    end_text_index,
+                    {
+                        "color": Style.Colors.bright,
+                        "font_name": Style.Text.Names.monospace,
+                        "font_size": Style.Text.Sizes.normal,
+                    },
+                )
 
     def on_draw(self) -> None:
         with self.cliping_mask.target as fbo:
-            fbo.clear(color=style.colors.background)
+            fbo.clear(color=Style.Colors.background)
             with self.camera.activate():
                 self.frame_gui.draw()
                 self.label.draw()
@@ -100,8 +158,8 @@ class CommsFrame(Frame):
     def update_position(self, point: tuple[float, float]) -> None:
         Frame.update_position(self, point)
         self.cliping_mask.position = (
-            point[0] + style.format.footer_size,
-            point[1] + style.format.footer_size,
+            point[0] + Style.Format.footer_size,
+            point[1] + Style.Format.footer_size,
         )
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
@@ -113,5 +171,7 @@ class CommsFrame(Frame):
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         pass
 
-    def on_cursor_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> None:
+    def on_cursor_scroll(
+        self, x: float, y: float, scroll_x: float, scroll_y: float
+    ) -> None:
         pass

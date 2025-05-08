@@ -1,12 +1,17 @@
 from pathlib import Path
+import re
 
 from arcade import Camera2D
-from resources import style
+from resources import Style
 
 from jam.graphics.format_label import FLabel
 from jam.graphics.background import ParallaxBackground
 from jam.view import View
 from jam.input import Button
+
+HEADER_EX = r"^(#{1,6})\s+(.+)$"
+STYLING = r"(\*{1,2}|_{1,2})(\S.*?\S|\S)\1"
+LIST_EX = r"^\s*[-+*]\s+(.+)$"
 
 
 def has_credits() -> bool:
@@ -24,20 +29,51 @@ class CreditsView(View):
         View.__init__(self)
         self.back: View = back
 
-        self._background = ParallaxBackground(style.menu.background)
+        self._background = ParallaxBackground(Style.Menu.Background)
         self._camera = Camera2D(projection=self.window.rect, position=(0.0, 0.0))
+
+        text = get_credits()
         self._text = FLabel(
-            get_credits(),
+            text,
             x=self.center_x,
             y=self.center_y,
             multiline=True,
             width=self.width * 2.0 / 3.0,
             anchor_x="center",
             anchor_y="center",
-            align="center",
-            font_name=style.text.header.name,
-            font_size=style.text.header.size,
+            font_name=Style.Text.Names.regular,
+            font_size=Style.Text.Sizes.normal,
         )
+
+        headers = re.finditer(HEADER_EX, text, flags=re.MULTILINE)
+        for header in tuple(headers)[::-1]:
+            title = header.group(2)
+            self._text.document.delete_text(header.start(1), header.end(2))
+            self._text.document.insert_text(
+                header.start(1),
+                title,
+                {"font_size": Style.Text.Sizes[f"header_{len(header.group(1))}"]},
+            )
+
+        stylings = re.finditer(STYLING, self._text.text)
+        # TODO: This doesn't work with nested formating
+        for styling in tuple(stylings)[::-1]:
+            txt = styling.group(2)
+            m = len(styling.group(1))
+            if m == 1:
+                self._text.document.delete_text(styling.start(1), styling.end(2) + 1)
+                self._text.document.insert_text(
+                    styling.start(1),
+                    txt,
+                    {"italic": True},
+                )
+            elif m == 2:
+                self._text.document.delete_text(styling.start(1), styling.end(2) + 2)
+                self._text.document.insert_text(
+                    styling.start(1),
+                    txt,
+                    {"weight": "bold"},
+                )
 
     def on_draw(self) -> None:
         self.clear()

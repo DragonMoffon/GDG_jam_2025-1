@@ -9,7 +9,7 @@ from arcade import Rect, LBWH, Vec2, Vec3, Camera2D
 from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
-from resources import style, audio
+from resources import Style, Audio
 import resources.graphs as graph_path
 
 from jam.node import graph
@@ -63,7 +63,7 @@ class Editor:
         self._base_camera = Camera2D(region)
         self._overlay_camera = Camera2D(region)
         self._background = background.background_from_file(  # type: ignore -- reportUnknownMemberType
-            style.game.editor.background, size=(int(region.size.x), int(region.size.y))  # type: ignore -- reportArgumentType
+            Style.Game.Editor.background, size=(int(region.size.x), int(region.size.y))  # type: ignore -- reportArgumentType
         )
         self._gui = core.Gui(self._base_camera, self._overlay_camera)
 
@@ -147,7 +147,7 @@ class Editor:
 
     def set_mode_none(self) -> None:
         self._mode = EditorMode.NONE
-        audio.stop("ui_loop")
+        Audio.stop("ui_loop")
 
         if self._hovered_block is not None:
             self._hovered_block.deselect()
@@ -228,8 +228,8 @@ class Editor:
         self._results = gui.ResultsPanel(rslt)
         self._results.update_position(
             (
-                output.left + output.width + style.format.corner_radius,
-                output.bottom + style.format.footer_size,
+                output.left + output.width + Style.Format.corner_radius,
+                output.bottom + Style.Format.footer_size,
             )
         )
         self._gui.add_element(self._results)
@@ -293,8 +293,8 @@ class Editor:
         top = layout_pos[1] > 0.5 * self._height
         right = layout_pos[0] > 0.5 * self._width
 
-        dx = style.format.padding if right else -style.format.padding
-        dy = style.format.padding if top else -style.format.padding
+        dx = Style.Format.padding if right else -Style.Format.padding
+        dy = Style.Format.padding if top else -Style.Format.padding
 
         self._block_popup = util.SelectionPopup(
             tuple(
@@ -441,7 +441,7 @@ class Editor:
                     or clicked_block.uid == self._graph.output_uid
                 ):
                     return
-                style.audio.pickup.play("ui")
+                Style.Audio.pickup.play("ui")
                 self._controller.remove_block(clicked_block)
                 return
 
@@ -450,7 +450,7 @@ class Editor:
                 if dist <= 16.0:
                     clicked_noodle.remove_link(link)
                     return
-                style.audio.disconnect.play("ui")
+                Style.Audio.disconnect.play("ui")
                 self._controller.remove_connection(clicked_noodle)
                 return
 
@@ -480,7 +480,7 @@ class Editor:
         self, button: Button, modifiers: int, pressed: bool
     ) -> None:
         if button == inputs.PRIMARY_CLICK and not pressed:
-            style.audio.drop.play("ui")
+            Style.Audio.drop.play("ui")
             self.set_mode_none()
             return
 
@@ -529,7 +529,7 @@ class Editor:
 
             self._controller.add_connection(self._incomplete_connection)
             self._incomplete_connection = None
-            style.audio.connect.play("ui")
+            Style.Audio.connect.play("ui")
             self.set_mode_none()
             return
 
@@ -549,7 +549,7 @@ class Editor:
             action = self._block_popup.get_hovered_item(cursor)
             if action is not None:
                 self._block_popup.actions[action]()
-            style.audio.drop.play()
+            Style.Audio.drop.play()
 
             self.set_mode_none()
 
@@ -701,8 +701,8 @@ class Editor:
             output = self._selected_block
             self._results.update_position(
                 (
-                    output.left + output.width + style.format.corner_radius,
-                    output.bottom + style.format.footer_size,
+                    output.left + output.width + Style.Format.corner_radius,
+                    output.bottom + Style.Format.footer_size,
                 )
             )
 
@@ -831,8 +831,8 @@ class EditorFrame(Frame):
 
         # TODO: add tabs
 
-        clip_size = int(size[0] - style.format.footer_size), int(
-            size[1] - 2 * style.format.footer_size
+        clip_size = int(size[0] - Style.Format.footer_size), int(
+            size[1] - 2 * Style.Format.footer_size
         )
         clip_rect = self.clip_rect = LBWH(0.0, 0.0, clip_size[0], clip_size[1])
         self.cliping_mask = ClippingMask(
@@ -844,9 +844,9 @@ class EditorFrame(Frame):
                 RoundedRectangle(
                     0.0,
                     0.0,
-                    size[0] - style.format.footer_size,
-                    size[1] - 2 * style.format.footer_size,
-                    (style.format.corner_radius, style.format.corner_radius, 0.0, 0.0),
+                    size[0] - Style.Format.footer_size,
+                    size[1] - 2 * Style.Format.footer_size,
+                    (Style.Format.corner_radius, Style.Format.corner_radius, 0.0, 0.0),
                     (12, 12, 1, 1),
                     color=(255, 255, 255, 255),
                 ).draw()
@@ -864,9 +864,9 @@ class EditorFrame(Frame):
             "Mess around and find out.",
             5,
             size[1] - 50,
-            font_name=style.text.header.name,
-            font_size=12,
-            color=style.colors.bright,
+            font_name=Style.Text.Names.monospace,
+            font_size=Style.Text.Sizes.subtitle,
+            color=Style.Colors.bright,
             anchor_y="top",
         )
 
@@ -889,7 +889,7 @@ class EditorFrame(Frame):
                 ambience.play("ambience2", True)
         else:
             self.info_label.text = "Mess around and find out."
-            style.audio.ambience.data.play("ambience2", True)
+            Style.Audio.Ambience.data.play("ambience2", True)
 
     def open_editor(self, puzzle: Puzzle | None = None, graph_src: Path | None = None):
         if puzzle is None:
@@ -925,13 +925,13 @@ class EditorFrame(Frame):
     def update_position(self, point: tuple[float, float]) -> None:
         Frame.update_position(self, point)
         self.cliping_mask.position = self._active_editor.cursor_offset = (
-            point[0] + style.format.footer_size,
-            point[1] + style.format.footer_size,
+            point[0] + Style.Format.footer_size,
+            point[1] + Style.Format.footer_size,
         )
         self._editor_tabs.update_position(
             (
-                point[0] + style.format.footer_size,
-                point[1] + style.format.footer_size + self.cliping_mask.size[1],
+                point[0] + Style.Format.footer_size,
+                point[1] + Style.Format.footer_size + self.cliping_mask.size[1],
             )
         )
 
@@ -999,7 +999,7 @@ class EditorFrame(Frame):
                 ambience.play("ambience2", True)
         else:
             self.info_label.text = "Mess around and find out."
-            style.audio.ambience.data.play("ambience2", True)
+            Style.Audio.Ambience.data.play("ambience2", True)
 
     def on_hide(self) -> None:
         self._active_editor.set_mode_none()
