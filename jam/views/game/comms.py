@@ -3,6 +3,7 @@ from arcade.camera.default import ViewportProjector
 from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 
+from jam.gui.comms import CommsLogElement
 from resources import Style
 
 from jam.gui.frame import Frame
@@ -87,70 +88,22 @@ class CommsFrame(Frame):
         )  # The gui that gets clipped by the mask.
 
         # Comms time
-        self.label = FLabel(
-            "",
-            5,
-            self.panel_height - 5,
-            width=self.panel_width,
-            multiline=True,
-            font_name=Style.Text.Names.monospace,
-            font_size=Style.Text.Sizes.normal,
-            color=Style.Colors.accent,
-            anchor_y="top",
-        )
+        self.width = clip_rect.width
+        self.height = clip_rect.height
+        self.log: CommsLogElement = None
+        self.update_comms()
 
-        for communication in comms.log:
-            pre_name_text_index = len(self.label.text)
-            if communication.speaker:
-                # Speakers get their names smaller, italics, and above what they say.
-                self.label.document.insert_text(
-                    pre_name_text_index,
-                    f"\n{communication.speaker}\n",
-                    {
-                        "color": Style.Colors.accent,
-                        "font_name": Style.Text.Names.monospace,
-                        "font_size": Style.Text.Sizes.normal - 2,
-                        "italic": True,
-                    },
-                )
-            else:
-                # Narrator just gets a space.
-                self.label.document.insert_text(
-                    pre_name_text_index,
-                    "\n"
-                )
-            current_text_index = len(self.label.text)
-
-            # Add the actual dialogue
-            if communication.speaker is None:
-                self.label.document.insert_text(
-                    current_text_index,
-                    "    " + communication.dialogue + "\n",
-                    {
-                        "color": Style.Colors.accent,
-                        "font_name": Style.Text.Names.monospace,
-                        "font_size": Style.Text.Sizes.normal,
-                        "italic": False,
-                    },
-                )
-            else:
-                self.label.document.insert_text(
-                    current_text_index,
-                    "    " + communication.dialogue + "\n",
-                    {
-                        "color": Style.Colors.bright,
-                        "font_name": Style.Text.Names.monospace,
-                        "font_size": Style.Text.Sizes.normal,
-                        "italic": False,
-                    },
-                )
+    def update_comms(self) -> None:
+        if self.log is not None:
+            self.frame_gui.remove_element(self.log)
+        self.log = CommsLogElement(comms, self.width - self._tag_panel.width)
+        self.log.update_position((Style.Format.footer_size, self.height - Style.Format.footer_size))
+        self.frame_gui.add_element(self.log)
 
     def on_draw(self) -> None:
         with self.cliping_mask.target as fbo:
             fbo.clear(color=Style.Colors.background)
-            with self.camera.activate():
-                self.frame_gui.draw()
-                self.label.draw()
+            self.frame_gui.draw()
 
     def connect_renderer(self, batch: core.Batch | None) -> None:
         Frame.connect_renderer(self, batch)
