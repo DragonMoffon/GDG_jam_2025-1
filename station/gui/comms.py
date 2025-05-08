@@ -5,7 +5,7 @@ from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 
 from .core import BASE_SHADOW, Element, Point, BASE_PRIMARY, BASE_HIGHLIGHT, get_shadow_shader
-from jam.comms import Communication, CommunicatonLog
+from station.comms import Communication, CommunicatonLog
 from resources import Style
 
 class LogElement(Element):

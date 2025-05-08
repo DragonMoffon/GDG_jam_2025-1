@@ -5,7 +5,7 @@ from pyglet.sprite import Sprite
 from resources import Style
 
 from .core import Element, BASE_PRIMARY, BASE_SPACING
-from jam.puzzle import Puzzle, AlertOrientation
+from station.puzzle import Puzzle, AlertOrientation
 
 
 class AlertElement(Element):

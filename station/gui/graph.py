@@ -6,9 +6,9 @@ from pyglet.sprite import Sprite
 from resources import Style
 
 
-# from jam.graphics.line import Line
+# from station.graphics.line import Line
 
-from jam.node.graph import Block, Connection, BlockComputation, OperationValue, TestCase
+from station.node.graph import Block, Connection, BlockComputation, OperationValue, TestCase
 
 from .core import (
     Element,

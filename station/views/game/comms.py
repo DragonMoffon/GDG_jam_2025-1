@@ -3,31 +3,19 @@ from arcade.camera.default import ViewportProjector
 from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 
+from station.gui.comms import CommsLogElement
 from resources import Style
 
-from jam.context import context
-from jam.gui.frame import Frame
+from station.gui.frame import Frame
 
-from jam.graphics.clip import ClippingMask
-from jam.gui import core
-from jam.input import inputs, Axis, Button
-
-INFO_TEXT = """
-[CATASTROPHIC FAILURE - SYSTEMS OFFLINE]
-
-A starship careens past the station, taking a chunk of the center ring
-with it and smashing into the main column.
-
-The computers didn't like that.
-Comms are offline. Lives are at stake. We need to get this place up and running fast.
-
-Go to each wing and repair the logic used to run the different aspects of the station.
-Each system has a code graph. Use the blocks provided and add new ones
-to make each system run according to spec.
-"""
+from station.graphics.clip import ClippingMask
+from station.graphics.format_label import FLabel
+from station.gui import core
+from station.input import Axis, Button
+from station.comms import comms
 
 
-class InfoFrame(Frame):
+class CommsFrame(Frame):
 
     def __init__(
         self,
@@ -55,17 +43,14 @@ class InfoFrame(Frame):
         self._clip_projector = ViewportProjector(clip_rect)
 
         self.label = Label(
-            INFO_TEXT,
+            "[COMMS OFFLINE]",
             x=size[0] / 2,
             y=size[1] / 2,
             color=Style.Colors.highlight,
             font_name=Style.Text.Names.monospace,
-            font_size=Style.Text.Sizes.normal,
             align="center",
             anchor_x="center",
             anchor_y="center",
-            multiline="True",
-            width=size[0] * 0.8,
         )
 
         # activate the clip texture to draw into, use the basic clip projector,
@@ -86,7 +71,7 @@ class InfoFrame(Frame):
 
         Frame.__init__(
             self,
-            "INFO",
+            "COMMS",
             tag_offset,
             position,
             size,
@@ -102,12 +87,23 @@ class InfoFrame(Frame):
             self.camera
         )  # The gui that gets clipped by the mask.
 
+        # Comms time
+        self.width = clip_rect.width
+        self.height = clip_rect.height
+        self.log: CommsLogElement = None
+        self.update_comms()
+
+    def update_comms(self) -> None:
+        if self.log is not None:
+            self.frame_gui.remove_element(self.log)
+        self.log = CommsLogElement(comms, self.width - self._tag_panel.width)
+        self.log.update_position((Style.Format.footer_size, self.height - Style.Format.footer_size))
+        self.frame_gui.add_element(self.log)
+
     def on_draw(self) -> None:
         with self.cliping_mask.target as fbo:
             fbo.clear(color=Style.Colors.background)
-            with self.camera.activate():
-                self.frame_gui.draw()
-                self.label.draw()
+            self.frame_gui.draw()
 
     def connect_renderer(self, batch: core.Batch | None) -> None:
         Frame.connect_renderer(self, batch)
@@ -133,10 +129,3 @@ class InfoFrame(Frame):
         self, x: float, y: float, scroll_x: float, scroll_y: float
     ) -> None:
         pass
-
-    def on_select(self) -> None:
-        self.label.text = INFO_TEXT
-        if puz := context.get_open_puzzle():
-            self.label.text = "[CURRENT TASK]\n\n" + puz.description
-        else:
-            self.label.text = INFO_TEXT

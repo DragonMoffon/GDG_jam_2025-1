@@ -5,8 +5,8 @@ from importlib.resources import path
 from tomllib import load as load_toml
 from dataclasses import dataclass
 
-from jam.node.graph import BlockType, TestCase, STR_CAST, _variable
-import jam.node.blocks  # noqa: F401 -- importing sets up the blocks
+from station.node.graph import BlockType, TestCase, STR_CAST, _variable
+import station.node.blocks  # noqa: F401 -- importing sets up the blocks
 
 import resources.puzzles as pzls
 from resources import Style

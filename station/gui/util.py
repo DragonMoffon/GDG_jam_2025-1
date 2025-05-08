@@ -9,7 +9,7 @@ from arcade.clock import GLOBAL_CLOCK
 
 from resources import Style
 
-from jam.graphics.format_label import FLabel
+from station.graphics.format_label import FLabel
 
 from .core import (
     Element,

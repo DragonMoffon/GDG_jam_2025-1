@@ -11,20 +11,20 @@ from arcade.future import background
 
 from resources import Style, Audio
 
-from jam.node import graph
-from jam.controller import (
+from station.node import graph
+from station.controller import (
     GraphController,
     read_graph,
     read_graph_from_level,
     write_graph,
     write_graph_from_level,
 )
-from jam.puzzle import Puzzle
-from jam.gui import core, util, graph as gui
-from jam.gui.frame import Frame
-from jam.graphics.clip import ClippingMask
-from jam.context import context
-from jam.input import (
+from station.puzzle import Puzzle
+from station.gui import core, util, graph as gui
+from station.gui.frame import Frame
+from station.graphics.clip import ClippingMask
+from station.context import context
+from station.input import (
     inputs,
     Button,
     Axis,

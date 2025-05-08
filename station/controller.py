@@ -3,7 +3,7 @@ from pathlib import Path
 from tomllib import load as load_toml
 from tomlkit import document, table, inline_table, aot, dump as dump_toml
 
-from jam.node.graph import (
+from station.node.graph import (
     Graph,
     Block,
     Connection,
@@ -14,10 +14,10 @@ from jam.node.graph import (
     STR_CAST,
     _variable,
 )
-from jam.node import blocks as block_impl
-from jam.puzzle import Puzzle
-from jam.gui.graph import BlockElement, ConnectionElement, TempValueElement
-from jam.gui.core import Gui
+from station.node import blocks as block_impl
+from station.puzzle import Puzzle
+from station.gui.graph import BlockElement, ConnectionElement, TempValueElement
+from station.gui.core import Gui
 
 
 class GraphController:

@@ -4,10 +4,10 @@ import re
 from arcade import Camera2D
 from resources import Style
 
-from jam.graphics.format_label import FLabel
-from jam.graphics.background import ParallaxBackground
-from jam.view import View
-from jam.input import Button
+from station.graphics.format_label import FLabel
+from station.graphics.background import ParallaxBackground
+from station.view import View
+from station.input import Button
 
 HEADER_EX = r"^(#{1,6})\s+(.+)$"
 STYLING = r"(\*{1,2}|_{1,2})(\S.*?\S|\S)\1"

@@ -13,7 +13,7 @@ from .core import (
     OVERLAY_PRIMARY,
     OVERLAY_HIGHLIGHT,
 )
-from jam.input import inputs, Button, Axis
+from station.input import inputs, Button, Axis
 from resources import Style, Audio
 
 

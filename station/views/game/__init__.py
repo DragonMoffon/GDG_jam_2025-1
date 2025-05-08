@@ -3,14 +3,14 @@ from pyglet.sprite import Sprite
 
 from resources import Style
 
-from jam.view import View
-from jam.gui.frame import Frame, FrameController
-from jam.gui.core import Gui
-from jam.gui.alert import AlertElement
-from jam.input import inputs, Button, Axis
-from jam.context import context
-from jam.puzzle import puzzles, Puzzle
-from jam.graphics.background import ParallaxBackground
+from station.view import View
+from station.gui.frame import Frame, FrameController
+from station.gui.core import Gui
+from station.gui.alert import AlertElement
+from station.input import inputs, Button, Axis
+from station.context import context
+from station.puzzle import puzzles, Puzzle
+from station.graphics.background import ParallaxBackground
 
 from .editor import EditorFrame
 from .settings import SettingsFrame

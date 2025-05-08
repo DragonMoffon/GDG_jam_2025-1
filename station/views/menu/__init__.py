@@ -3,14 +3,14 @@ from pyglet.sprite import Sprite
 
 from resources import Style
 
-from jam.view import View
-from jam.graphics.background import ParallaxBackground
-from jam.gui.core import Gui
-from jam.gui.util import PopupAction, SelectionPopup
-from jam.context import context
-from jam.views.game import GameView
-from jam.views.credits import has_credits, CreditsView
-from jam.input import inputs, Button
+from station.view import View
+from station.graphics.background import ParallaxBackground
+from station.gui.core import Gui
+from station.gui.util import PopupAction, SelectionPopup
+from station.context import context
+from station.views.game import GameView
+from station.views.credits import has_credits, CreditsView
+from station.input import inputs, Button
 
 
 class MainMenuView(View):

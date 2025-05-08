@@ -13,8 +13,8 @@ import zipfile
 from tomllib import load as load_toml
 from tomlkit import dumps as dumps_toml
 
-from jam.puzzle import Puzzle, puzzles
-from jam.controller import GraphController, write_graph_from_level, write_graph
+from station.puzzle import Puzzle, puzzles
+from station.controller import GraphController, write_graph_from_level, write_graph
 
 from resources import Style
 
@@ -25,12 +25,12 @@ except ModuleNotFoundError:
     import saves as save_path
 
 if TYPE_CHECKING:
-    from jam.gui.frame import FrameController
-    from jam.views.game import LevelSelect
-    from jam.views.game.comms import CommsFrame
-    from jam.views.game.settings import SettingsFrame
-    from jam.views.game.info import InfoFrame
-    from jam.views.game.editor import EditorFrame
+    from station.gui.frame import FrameController
+    from station.views.game import LevelSelect
+    from station.views.game.comms import CommsFrame
+    from station.views.game.settings import SettingsFrame
+    from station.views.game.info import InfoFrame
+    from station.views.game.editor import EditorFrame
 
 
 class SaveData:

@@ -1,4 +1,4 @@
-from jam.gui.frame import Frame
+from station.gui.frame import Frame
 
 from resources import Style
 
