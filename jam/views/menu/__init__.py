@@ -81,9 +81,9 @@ class MainMenuView(View):
     def pick_save(self, name: str) -> None:
         self._fade_out = True
         self._timer = self.window.time
-        self._speed = self.FAST_FADE
-        self._tranistion = self.FAST_TRANSITION
-        self._flash = self.FAST_FLASH
+        self._speed = Style.Menu.continue_fade
+        self._tranistion = Style.Menu.continue_transition
+        self._flash = Style.Menu.continue_logo
         context.choose_save(name)
         Style.Audio.boot.play("intro")
 

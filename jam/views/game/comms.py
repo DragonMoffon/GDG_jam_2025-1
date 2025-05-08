@@ -103,11 +103,9 @@ class CommsFrame(Frame):
             if communication.speaker:
                 # Speakers get their names smaller, italics, and above what they say.
                 pre_name_text_index = len(self.label.text)
-                self.label.text += f"\n{communication.speaker}\n"
-                post_name_text_index = len(self.label.text) - 1
-                self.label.document.set_style(
+                self.label.document.insert_text(
                     pre_name_text_index,
-                    post_name_text_index,
+                    f"\n{communication.speaker}\n",
                     {
                         "color": Style.Colors.accent,
                         "font_name": Style.Text.Names.monospace,
@@ -121,12 +119,10 @@ class CommsFrame(Frame):
             current_text_index = len(self.label.text)
 
             # Add the actual dialogue
-            self.label.text = self.label.text + "    " + communication.dialogue + "\n"
-            end_text_index = len(self.label.text) - 1
             if communication.speaker is None:
-                self.label.document.set_style(
+                self.label.document.insert_text(
                     current_text_index,
-                    end_text_index,
+                    self.label.text + "    " + communication.dialogue + "\n",
                     {
                         "color": Style.Colors.accent,
                         "font_name": Style.Text.Names.monospace,
@@ -134,9 +130,9 @@ class CommsFrame(Frame):
                     },
                 )
             else:
-                self.label.document.set_style(
+                self.label.document.insert_text(
                     current_text_index,
-                    end_text_index,
+                    self.label.text + "    " + communication.dialogue + "\n",
                     {
                         "color": Style.Colors.bright,
                         "font_name": Style.Text.Names.monospace,
