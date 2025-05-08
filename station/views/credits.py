@@ -2,11 +2,13 @@ from pathlib import Path
 import re
 
 from arcade import Camera2D
+from pyglet.shapes import Rectangle
 from pyglet.sprite import Sprite
 from resources import Style
 
 from station.graphics.format_label import FLabel
 from station.graphics.background import ParallaxBackground
+from station.gui.core import BASE_SHADOW, get_shadow_shader
 from station.view import View
 from station.input import Button
 
@@ -33,6 +35,8 @@ class CreditsView(View):
         self._background = ParallaxBackground(Style.Menu.Background)
         self._camera = Camera2D(projection=self.window.rect, position=(0.0, 0.0))
 
+        self._rect = Rectangle(self.center_x, 0, self.width / 2, self.height, Style.Colors.dark, group = BASE_SHADOW, program = get_shadow_shader())
+
         self._logo = Sprite(Style.Textures.credits_logo, 0, 0)
 
         text = get_credits()
@@ -41,7 +45,7 @@ class CreditsView(View):
             x=self.center_x,
             y=self.center_y,
             multiline=True,
-            width=self.width * 0.5,
+            width=self.width * 0.5 * 0.8,
             anchor_x="left",
             anchor_y="center",
             font_name=Style.Text.Names.regular,
@@ -85,6 +89,7 @@ class CreditsView(View):
         self.clear()
         self._background.draw()
         with self._camera.activate():
+            self._rect.draw()
             self._logo.draw()
             self._text.draw()
 
