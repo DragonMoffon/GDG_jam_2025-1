@@ -8,9 +8,10 @@ from resources import style
 from jam.gui.frame import Frame
 
 from jam.graphics.clip import ClippingMask
+from jam.graphics.format_label import FLabel
 from jam.gui import core
-from jam.input import inputs, Axis, Button
-
+from jam.input import Axis, Button
+from jam.comms import comms
 
 class CommsFrame(Frame):
 
@@ -38,8 +39,6 @@ class CommsFrame(Frame):
         # A projector that acts like arcade's default. Use if you want things to not move within the clip.
         self._clip_projector = ViewportProjector(clip_rect)
 
-        self.label = Label("[COMMS OFFLINE]", x = size[0] / 2, y = size[1] / 2, color = style.colors.highlight, font_name = style.text.normal.name, align = "center", anchor_x = "center", anchor_y = "center")
-
         # activate the clip texture to draw into, use the basic clip projector,
         # then create and immediatly use a rounded rectangle.
         with self.cliping_mask.clip:
@@ -60,6 +59,27 @@ class CommsFrame(Frame):
 
         self.camera = Camera2D(clip_rect) # Camera2D with the viewport of the clip_rect to draw the gui.
         self.frame_gui: core.Gui = core.Gui(self.camera) # The gui that gets clipped by the mask.
+
+        # Comms time
+        self.label = FLabel("", 5, self.panel_height - 5, width = self.panel_width, multiline = True,
+                            font_name = style.text.normal.name, font_size = style.text.normal.size, color = style.colors.accent,
+                            anchor_y = "top")
+
+        for communication in comms.log:
+            if communication.speaker:
+                pre_name_text_index = len(self.label.text)
+                self.label.text += f"\n{communication.speaker}\n"
+                post_name_text_index = len(self.label.text) - 1
+                self.label.document.set_style(pre_name_text_index, post_name_text_index, {"color": style.colors.accent, "font_name": style.text.normal.name, "font_size": style.text.normal.size - 2, "italic": True})
+            else:
+                self.label.text += "\n"
+            current_text_index = len(self.label.text)
+            self.label.text = self.label.text + communication.dialogue + "\n"
+            end_text_index = len(self.label.text) - 1
+            if communication.speaker is None:
+                self.label.document.set_style(current_text_index, end_text_index, {"color": style.colors.accent, "font_name": style.text.normal.name, "font_size": style.text.normal.size})
+            else:
+                self.label.document.set_style(current_text_index, end_text_index, {"color": style.colors.bright, "font_name": style.text.normal.name, "font_size": style.text.normal.size})
 
     def on_draw(self) -> None:
         with self.cliping_mask.target as fbo:
