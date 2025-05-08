@@ -96,12 +96,12 @@ class MainMenuView(View):
         self._background.cursor_motion(x, y, dx, dy)
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
+        if not pressed:
+            return
+
         if self._fade_out:
             # TODO: fade out audio?
             self.window.show_view(GameView())
-            return None
-
-        if not pressed:
             return
 
         if button == inputs.PRIMARY_CLICK:
