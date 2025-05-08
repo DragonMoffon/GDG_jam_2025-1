@@ -63,6 +63,8 @@ class MainMenuView(View):
         self._flash: float = Style.Menu.new_logo
         self._timer: float = 0.0
 
+        self._debug_crash: bool = False
+
     def new_save(self) -> None:
         self._fade_out = True
         self._timer = self.window.time
@@ -87,17 +89,27 @@ class MainMenuView(View):
         context.choose_save(name)
         Style.Audio.boot.play("intro")
 
-    def on_cursor_motion(self, x, y, dx, dy) -> None:
+    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         l = self._popup.get_hovered_item((x, y))
         if l is not None:
             self._popup.highlight_action(l)
         self._background.cursor_motion(x, y, dx, dy)
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
-        if button == inputs.PRIMARY_CLICK and pressed and not self._fade_out:
+        if self._fade_out:
+            # TODO: fade out audio?
+            self.window.show_view(GameView())
+            return None
+        
+        if not pressed:
+            return
+        
+        if button == inputs.PRIMARY_CLICK:
             l = self._popup.get_hovered_item(inputs.cursor)
             if l is not None:
                 self._popup.actions[l]()
+        elif button == inputs.DEGUG_INPUT:
+            self._debug_crash = True
 
     def on_draw(self) -> None:
         self.clear()
@@ -114,6 +126,8 @@ class MainMenuView(View):
                 self._logo.draw()
 
     def on_update(self, delta_time: float) -> None:
+        if self._debug_crash:
+            raise RuntimeError("Debug Input: Fatal Crash Before Save Chosen")
         self._background.update()
         if not self._fade_out:
             return

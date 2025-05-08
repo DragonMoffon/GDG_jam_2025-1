@@ -26,6 +26,7 @@ class AlertElement(Element):
             self._loc[1],
             group=BASE_PRIMARY,
         )
+        self._icon.color = Style.Colors.highlight
         self._body = RoundedRectangle(
             self._icon.x,
             self._icon.y,

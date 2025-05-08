@@ -14,7 +14,6 @@ def main() -> None:
         win.show_view(MainMenuView())
         win.run()
     except Exception as e:
-        if context.save is not None:
-            context.save.log_fatal_exception(e)
+        context.log_fatal_exception(e)
         raise e from e
     context.close()

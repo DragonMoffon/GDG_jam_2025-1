@@ -403,6 +403,7 @@ class InputManager:
         self._dpad_positions: tuple[float, float] = (0.0, 0.0)
 
         self._cursor_axis = ControllerAxes.LEFT_STICK
+        self._scroll_axis = ControllerAxes.RIGHT_STICK
 
         self._trigger_values: tuple[float, float] = (0.0, 0.0)
         self._trigger_levels: tuple[float, float] = (0.95, 0.95)
@@ -419,10 +420,7 @@ class InputManager:
         self._cursor_speed: float = 240.0
         self._cursor_deadzone: tuple[float, float] = (0.075, 0.075)
 
-    def __update__(self, delta_time: float):
-        if self._current_controller is None or not self._using_controller:
-            return
-
+    def _update_cursor(self, delta_time: float):
         match self._cursor_axis:
             case ControllerAxes.RIGHT_STICK:
                 vec = self._right_stick_positions
@@ -443,10 +441,9 @@ class InputManager:
 
         # normalise the vec to get the direction
         # Clamp vel to 1.0 since not all joysticks are perfectly circular
-        # Get the speed and account for dt. (cursor_speed * cursor_speed^(x-1) = cursor_speed^x)
 
         vec = vec[0] / vel, vec[1] / vel
-        vel = min(1.0, vel)
+        vel = min(1.0, vel) * 2.0
         speed = self._cursor_speed**vel * delta_time
 
         self._cursor_velocity = speed * vec[0], speed * vec[1]
@@ -466,6 +463,43 @@ class InputManager:
             self._cursor_velocity[0],
             self._cursor_velocity[1],
         )
+
+    def _update_scroll(self):
+        match self._scroll_axis:
+            case ControllerAxes.RIGHT_STICK:
+                vec = self._right_stick_positions
+            case ControllerAxes.LEFT_STICK:
+                vec = self._left_stick_positions
+            case ControllerAxes.DPAD:
+                vec = self._dpad_positions
+            case _:
+                vec = self._right_stick_positions
+
+        vec = (
+            0 if abs(vec[0]) < self._cursor_deadzone[0] else vec[0],
+            0 if abs(vec[1]) < self._cursor_deadzone[1] else vec[1],
+        )
+        vel = (vec[0] ** 2 + vec[1] ** 2) ** 0.5
+        if vel == 0.0:
+            return
+        vec = vec[0] / vel, vec[1] / vel
+        vel = min(1.0, vel)
+
+        self._window.dispatch_event(
+            "on_cursor_scroll",
+            self._cursor_position[0],
+            self._cursor_position[1],
+            vec[0] * vel,
+            vec[1] * vel,
+        )
+
+    def __update__(self, delta_time: float):
+        if self._current_controller is None or not self._using_controller:
+            return
+
+        self._update_cursor(delta_time)
+        self._update_scroll()
+        
 
     def setup_input_reponses(self) -> None:
         self._window = get_window()
@@ -849,7 +883,7 @@ class InputManager:
 
     # -- INPUTS --
 
-    TEST_INPUT = MultiInput(Keys.A, ControllerButtons.BOTTOM_FACE)
+    DEGUG_INPUT = MultiInput(Keys.C, ControllerButtons.START)
 
     PRIMARY_CLICK = MultiInput(MouseButtons.LEFT, ControllerButtons.BOTTOM_FACE)
     ALT_CLICK = MultiInput(MouseButtons.MIDDLE, ControllerButtons.LEFT_STICK)

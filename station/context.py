@@ -148,8 +148,8 @@ class SaveData:
         rmtree(self._root)
 
     def log_fatal_exception(self, exception: Exception):
-        crash_time = datetime.now().strftime("%Y-%m-%d %H-%M")
         self.update_cfg()
+        crash_time = datetime.now().strftime("%Y-%m-%d %H-%M")
         with open(self._root / "crash_log.txt", "w", encoding="utf-8") as fp:
             fp.write("".join(traceback.format_exception(exception)))
         self._root.rename(
@@ -278,7 +278,6 @@ class SaveInfo:
 class Context:
 
     def __init__(self) -> None:
-
         with path(save_path, "save.cfg") as save_config:
             self._save_path: Path = Path(save_config).parent
         self._saves: dict[str, SaveInfo] = {}
@@ -434,6 +433,15 @@ class Context:
 
         # TODO: AHHHHH
         return self._editor_frame._active_editor._puzzle
+    
+    def log_fatal_exception(self, exception: Exception) -> None:
+        if self._current_save is not None:
+            self._current_save.log_fatal_exception(exception)
+            return
+        crash_time = datetime.now().strftime("%Y-%m-%d %H-%M")
+        with open(self._save_path / f"crash-{crash_time}_{uuid4().hex}.txt", "w", encoding="utf-8") as fp:
+            fp.write("".join(traceback.format_exception(exception)))
+        
 
 
 context = Context()

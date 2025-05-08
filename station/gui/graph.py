@@ -387,7 +387,7 @@ class BoolPanel(Element):
             0.0,
             group=group,
         )
-        # self._sprite.color = colors.highlight
+        self._sprite.color = colors.highlight
         if active:
             self._sprite.image = Style.Game.Editor.check_active
 
@@ -444,6 +444,7 @@ class ConnectionNodeElement(Element):
         )
         self._sprite.width = 2 * formating.point_radius
         self._sprite.height = 2 * formating.point_radius
+        self._sprite.color = colors.highlight
 
         self._name: str = name
         self._label: Label | None = None
