@@ -16,8 +16,6 @@ from station.controller import (
     GraphController,
     read_graph,
     read_graph_from_level,
-    write_graph,
-    write_graph_from_level,
 )
 from station.puzzle import Puzzle
 from station.gui import core, util, graph as gui
@@ -84,7 +82,7 @@ class Editor:
             input_block = gui.BlockElement(graph.Block(input_type))
             input_block.update_position((50.0, 300.0))
             output_type = graph.BlockType(
-                "Output", graph._variable, {}, {}, {}, exclusive=True
+                "Output", graph._variable, {'str_1': graph.StrValue, 'str_2': graph.StrValue, 'bool_1': graph.BoolValue, 'bool_2': graph.BoolValue, 'int_1': graph.IntValue, 'int_2': graph.IntValue, 'float_1': graph.FloatValue, 'float_2': graph.FloatValue}, {}, {}, exclusive=True
             )
             output_block = gui.BlockElement(graph.Block(output_type))
             output_block.update_position((750.0, 300.0))
