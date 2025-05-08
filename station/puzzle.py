@@ -5,7 +5,7 @@ from importlib.resources import path
 from tomllib import load as load_toml
 from dataclasses import dataclass
 
-from station.node.graph import BlockType, TestCase, STR_CAST, _variable
+from station.node.graph import BlockType, TestCase, OperationValue, STR_CAST, TYPE_CAST, _variable
 import station.node.blocks  # noqa: F401 -- importing sets up the blocks
 
 import resources.puzzles as pzls
@@ -41,6 +41,8 @@ class Puzzle:
     prerequisite_levels: tuple[str, ...]
     input_type: BlockType
     output_type: BlockType
+    constant_type: BlockType | None
+    constant_values: dict[str, OperationValue]
     source_graph: Path | None
     tests: tuple[TestCase, ...]
 
@@ -65,6 +67,7 @@ def load_puzzle(path: Path) -> Puzzle:
 
     input_data = raw_data["Inputs"]
     output_data = raw_data["Outputs"]
+    const_data = raw_data.get("Constants", {})
 
     inputs = {name: STR_CAST[typ] for name, typ in input_data.items()}
     input_type = BlockType(
@@ -73,6 +76,16 @@ def load_puzzle(path: Path) -> Puzzle:
 
     outputs = {name: STR_CAST[typ] for name, typ in output_data.items()}
     output_type = BlockType("Output", _variable, inputs=outputs.copy(), exclusive=True)
+
+    if const_data:
+        const_types = {name: TYPE_CAST[type(value)] for name, value in const_data.items()}
+        const_values = {name: const_types[name](value) for name, value in const_data.items()}
+        const_type = BlockType(
+            "Constant", _variable, outputs=const_types.copy(), config=const_types.copy(), exclusive=True
+        )
+    else:
+        const_values = {}
+        const_type = None
 
     graph = config_data.get("base", None)
     if graph is not None:
@@ -111,6 +124,8 @@ def load_puzzle(path: Path) -> Puzzle:
         prerequisite_levels=config_data.get("prerequisite_levels", []),
         input_type=input_type,
         output_type=output_type,
+        constant_type=const_type,
+        constant_values=const_values,
         source_graph=graph,
         tests=tuple(tests),
     )

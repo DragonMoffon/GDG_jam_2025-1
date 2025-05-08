@@ -114,6 +114,12 @@ STR_CAST: dict[str, type[OperationValue]] = {
     "bool": BoolValue,
     "str": StrValue,
 }
+TYPE_CAST: dict[type, type[OperationValue]] = {
+    int: IntValue,
+    float: FloatValue,
+    bool: BoolValue,
+    str: StrValue
+}
 
 OperationReturn = (
         Mapping[str, OperationValue]

@@ -3,6 +3,8 @@ from pathlib import Path
 from tomllib import load as load_toml
 from tomlkit import document, table, inline_table, aot, dump as dump_toml
 
+from resources import Style
+
 from station.node.graph import (
     Graph,
     Block,
@@ -212,7 +214,7 @@ def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
         config = outputs.copy()
 
         name = variable["name"]
-        variable_types[name] = BlockType(name, _variable, inputs, outputs, config)
+        variable_types[name] = BlockType(name, _variable, inputs, outputs, config, exclusive=True)
 
     for block in block_table.get("Data", []):
         uid_str: str | None = block.get("uid", None)
@@ -295,6 +297,11 @@ def read_graph_from_level(puzzle: Puzzle, gui: Gui) -> GraphController:
 
         controller.add_block(input_element)
         controller.add_block(output_element)
+        if puzzle.constant_type is not None:
+            const_block = Block(puzzle.constant_type, uid=None, **puzzle.constant_values)
+            const_element = BlockElement(const_block)
+            const_element.update_position((input_element.left, input_element.bottom - const_element.height - Style.Format.footer_size))
+            controller.add_block(const_element)
 
         return controller
     controller = read_graph(path, gui)
