@@ -122,7 +122,7 @@ class CommsFrame(Frame):
             if communication.speaker is None:
                 self.label.document.insert_text(
                     current_text_index,
-                    self.label.text + "    " + communication.dialogue + "\n",
+                    "    " + communication.dialogue + "\n",
                     {
                         "color": Style.Colors.accent,
                         "font_name": Style.Text.Names.monospace,
@@ -132,7 +132,7 @@ class CommsFrame(Frame):
             else:
                 self.label.document.insert_text(
                     current_text_index,
-                    self.label.text + "    " + communication.dialogue + "\n",
+                    "    " + communication.dialogue + "\n",
                     {
                         "color": Style.Colors.bright,
                         "font_name": Style.Text.Names.monospace,
