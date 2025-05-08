@@ -8,7 +8,7 @@ from resources import Style
 
 from station.graphics.format_label import FLabel
 from station.graphics.background import ParallaxBackground
-from station.gui.core import BASE_SHADOW, get_shadow_shader
+from station.gui.core import get_shadow_shader
 from station.view import View
 from station.input import Button
 
@@ -35,7 +35,13 @@ class CreditsView(View):
         self._background = ParallaxBackground(Style.Menu.Background)
         self._camera = Camera2D(projection=self.window.rect, position=(0.0, 0.0))
 
-        self._rect = Rectangle(self.center_x, 0, self.width / 2, self.height, Style.Colors.dark, group = BASE_SHADOW, program = get_shadow_shader())
+        self._rect = Rectangle(
+            self.center_x,
+            0,
+            self.width * 0.4,
+            self.height,
+            Style.Colors.dark,
+        )
 
         self._logo = Sprite(Style.Textures.credits_logo, 0, 0)
 
@@ -45,7 +51,8 @@ class CreditsView(View):
             x=self.center_x,
             y=self.center_y,
             multiline=True,
-            width=self.width * 0.5 * 0.8,
+            width=self.width * 0.4,
+            color=Style.Colors.highlight,
             anchor_x="left",
             anchor_y="center",
             font_name=Style.Text.Names.regular,
@@ -88,8 +95,8 @@ class CreditsView(View):
     def on_draw(self) -> None:
         self.clear()
         self._background.draw()
+        self._rect.draw()
         with self._camera.activate():
-            self._rect.draw()
             self._logo.draw()
             self._text.draw()
 

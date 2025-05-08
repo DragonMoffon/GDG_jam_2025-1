@@ -100,10 +100,10 @@ class MainMenuView(View):
             # TODO: fade out audio?
             self.window.show_view(GameView())
             return None
-        
+
         if not pressed:
             return
-        
+
         if button == inputs.PRIMARY_CLICK:
             l = self._popup.get_hovered_item(inputs.cursor)
             if l is not None:

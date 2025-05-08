@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 from arcade import get_window
 from pyglet import gl as pygl
+from pyglet.graphics.shader import ShaderProgram
 from pyglet.graphics import Batch, Group
 from arcade import get_window
 from arcade.camera import Projector
@@ -105,7 +106,7 @@ fragment_source = """#version 150 core
 """
 
 
-def get_shadow_shader():
+def get_shadow_shader() -> ShaderProgram:
     if pygl.current_context is None:
         raise ValueError("gl context does not exsist yet")
     return pygl.current_context.create_program(
