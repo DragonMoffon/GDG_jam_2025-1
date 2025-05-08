@@ -4,6 +4,9 @@ Art by **DigiDuncan**
 Asset Remastering by **4Bakers**
 Alpha Testing by **Arceus3251**
 
+Special thanks to the **University of Auckland Game Developement Guild**, who hosted the game jam this game was originally created for.
+Special thanks to **Shattered Realms**, an amazing group of people.
+
 ## Attribution
 - WiesenWiesel
     - *Picking up small box with items inside*

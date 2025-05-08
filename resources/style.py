@@ -155,6 +155,7 @@ class Audio(StyleTable):
 
 @dataclass
 class Textures(StyleTable):
+    credits_logo: ImageData
     logo_big: ImageData
     icon: ImageData
 

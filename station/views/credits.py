@@ -2,6 +2,7 @@ from pathlib import Path
 import re
 
 from arcade import Camera2D
+from pyglet.sprite import Sprite
 from resources import Style
 
 from station.graphics.format_label import FLabel
@@ -32,6 +33,8 @@ class CreditsView(View):
         self._background = ParallaxBackground(Style.Menu.Background)
         self._camera = Camera2D(projection=self.window.rect, position=(0.0, 0.0))
 
+        self._logo = Sprite(Style.Textures.credits_logo, 0, 0)
+
         text = get_credits()
         self._text = FLabel(
             text,
@@ -44,6 +47,9 @@ class CreditsView(View):
             font_name=Style.Text.Names.regular,
             font_size=Style.Text.Sizes.normal,
         )
+
+        self._logo.x = self._text.x
+        self._logo.y = self._text.y + (self._text.content_height / 2) + 25
 
         headers = re.finditer(HEADER_EX, text, flags=re.MULTILINE)
         for header in tuple(headers)[::-1]:
@@ -79,6 +85,7 @@ class CreditsView(View):
         self.clear()
         self._background.draw()
         with self._camera.activate():
+            self._logo.draw()
             self._text.draw()
 
     def on_update(self, delta_time: float) -> None:
