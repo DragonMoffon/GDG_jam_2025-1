@@ -60,7 +60,7 @@ class Editor:
         # is below.
         if len(self._mode_stack) == 1:
             self.push_mode(mode)
-            return
+            return self._mode_stack[0]
         self._mode.exit()
         prev = self._mode_stack.pop(-1)
         self._mode_stack.append(mode)
