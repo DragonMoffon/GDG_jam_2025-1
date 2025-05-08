@@ -94,7 +94,7 @@ class MainMenuView(View):
         self._background.cursor_motion(x, y, dx, dy)
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
-        if button == inputs.PRIMARY_CLICK and pressed:
+        if button == inputs.PRIMARY_CLICK and pressed and not self._fade_out:
             l = self._popup.get_hovered_item(inputs.cursor)
             if l is not None:
                 self._popup.actions[l]()

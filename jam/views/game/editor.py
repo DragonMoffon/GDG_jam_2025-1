@@ -1003,3 +1003,4 @@ class EditorFrame(Frame):
 
     def on_hide(self) -> None:
         self._active_editor.set_mode_none()
+        Audio.stop("ambience2")
