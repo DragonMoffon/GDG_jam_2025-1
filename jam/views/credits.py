@@ -15,7 +15,7 @@ LIST_EX = r"^\s*[-+*]\s+(.+)$"
 
 
 def has_credits() -> bool:
-    return Path("CREDITS.md").exists
+    return Path("CREDITS.md").exists()
 
 
 def get_credits() -> str:

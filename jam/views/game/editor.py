@@ -10,7 +10,6 @@ from arcade.camera.default import ViewportProjector
 from arcade.future import background
 
 from resources import Style, Audio
-import resources.graphs as graph_path
 
 from jam.node import graph
 from jam.controller import (
@@ -329,6 +328,11 @@ class Editor:
     def set_mode_save_graph(self) -> None:
         self._mode = EditorMode.SAVE_GRAPH
 
+        if self._puzzle is not None:
+            context.save_puzzle(self._puzzle, self._controller)
+            self.set_mode_none()
+            return None
+
         self._save_popup = util.TextInputPopup(
             self._overlay_camera.position, STR_SET, STR_ARRAY
         )
@@ -472,7 +476,6 @@ class Editor:
         elif (
             button == inputs.SAVE_INPUT
             and modifiers & inputs.SAVE_MOD
-            and self._graph.sandbox
         ):
             self.set_mode_save_graph()
 
@@ -599,12 +602,8 @@ class Editor:
             self._save_popup.input_char(chr(Keys.UNDERSCORE))
         elif button == inputs.CONFIRM:
             # TODO: fix no path
-            self._graph._name = self._save_popup.text.replace("_", " ")
-            if self._puzzle is not None:
-                write_graph_from_level(self._controller, self._puzzle)
-            else:
-                with path(graph_path, f"{self._graph._name}.blk") as pth:
-                    write_graph(self._controller, pth)
+            name = self._save_popup.text.replace("_", " ")
+            context.save_sandbox(self._controller, name)
             self.set_mode_none()
         elif button == inputs.BACKSPACE:
             self._save_popup.remove_char()

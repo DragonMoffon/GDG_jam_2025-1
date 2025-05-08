@@ -1,12 +1,13 @@
 from importlib.resources import path
 from enum import IntEnum
 from pathlib import Path
+from zipfile import Path as ZipPath
 from typing import Any, Self
 from dataclasses import dataclass, fields
 import tomllib
-from arcade import load_font
 from arcade.types import RGBA255
-from pyglet.image import AbstractImage, load as load_texture
+from pyglet.font import add_file
+from pyglet.image import AbstractImage, ImageData, load as _load_texture
 
 import styles
 
@@ -14,6 +15,13 @@ from .audio import Sound
 
 __all__ = ("STYLE",)
 
+def load_font(pth: Path | ZipPath) -> None:
+    with pth.open('rb') as fp:
+        add_file(fp) # type: ignore -- IO[bytes] works as Binary
+
+def load_texture(pth: Path | ZipPath) -> AbstractImage:
+    with pth.open('rb') as fp:
+        return _load_texture(str(pth), fp) # type: ignore -- IO[bytes] works as Binary
 
 @dataclass
 class StyleTable:
@@ -147,8 +155,8 @@ class Audio(StyleTable):
 
 @dataclass
 class Textures(StyleTable):
-    logo_big: AbstractImage
-    icon: AbstractImage
+    logo_big: ImageData
+    icon: ImageData
 
     @classmethod
     def create(cls, data: dict[str, str], source: Path) -> Self:

@@ -19,14 +19,10 @@ from jam.controller import GraphController, write_graph_from_level, write_graph
 from resources import Style
 
 try:
-    import resources.saves as save_path
+    import saves as save_path
 except ModuleNotFoundError:
-    import resources as rcs
-
-    with path(rcs, "saves") as pth:
-        pth.mkdir(exist_ok=True)
-
-    import resources.saves as save_path
+    Path('saves').mkdir(exist_ok=True)
+    import saves as save_path
 
 if TYPE_CHECKING:
     from jam.gui.frame import FrameController
@@ -408,6 +404,16 @@ class Context:
         Style.Audio.confirm.play()
         if self._level_select is not None:
             self._level_select.clear_puzzle(puzzle)
+
+    def save_puzzle(self, puzzle: Puzzle, working: GraphController) -> None:
+        if self._current_save is None:
+            return None
+        self._current_save.save_puzzle(puzzle, working)
+    
+    def save_sandbox(self, graph: GraphController, name: str) -> None:
+        if self._current_save is None:
+            return None
+        self._current_save.save_sandbox(graph, name)
 
     def get_available_puzzles(self) -> tuple[Puzzle, ...]:
         if self._current_save is None:

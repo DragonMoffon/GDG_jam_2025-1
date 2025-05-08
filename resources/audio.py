@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from typing import cast, TYPE_CHECKING
 from pathlib import Path
+from zipfile import Path as ZipPath
 
 from pyglet.media import load as load_audio, Source
 from pyglet.media.player import Player
-
-if TYPE_CHECKING:
-    from resources.style import Style
 
 
 class Audio:
@@ -41,9 +38,10 @@ AUDIO = Audio()
 class Sound:
     __cache__: dict[str, Source] = {}
 
-    def __init__(self, pth: Path):
+    def __init__(self, pth: Path | ZipPath):
         if str(pth) not in Sound.__cache__:
-            Sound.__cache__[str(pth)] = load_audio(str(pth))
+            with pth.open('rb') as fp:
+                Sound.__cache__[str(pth)] = load_audio(str(pth), fp, False) # type: ignore -- IO[bytes] is BinaryIO thanks
         self._source: Source = Sound.__cache__[str(pth)]
 
     def play(self, channel: str = "default", loop: bool = False) -> None:
