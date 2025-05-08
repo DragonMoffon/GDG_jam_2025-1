@@ -7,6 +7,8 @@ from pyglet.graphics import Batch, Group
 from arcade import get_window
 from arcade.camera import Projector
 
+Point = tuple[float, float]
+
 
 class ProjectorGroup(Group):
 
