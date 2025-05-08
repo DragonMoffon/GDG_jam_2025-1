@@ -8,7 +8,7 @@ from arcade import load_font
 from arcade.types import RGBA255
 from pyglet.image import AbstractImage, load as load_texture
 
-import resources.styles as styles
+import styles
 
 from .audio import Sound
 

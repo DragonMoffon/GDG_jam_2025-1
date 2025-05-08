@@ -1,4 +1,5 @@
 # nuitka-project: --include-package-data=resources
+# nuitka-project: --include-package-data=styles
 # nuitka-project: --include-module=arcade.future
 # nuitka-project: --force-stderr-spec=err.txt
 # nuitka-project: --report=compilation-report.xml

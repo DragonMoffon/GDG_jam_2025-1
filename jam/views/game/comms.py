@@ -100,9 +100,9 @@ class CommsFrame(Frame):
         )
 
         for communication in comms.log:
+            pre_name_text_index = len(self.label.text)
             if communication.speaker:
                 # Speakers get their names smaller, italics, and above what they say.
-                pre_name_text_index = len(self.label.text)
                 self.label.document.insert_text(
                     pre_name_text_index,
                     f"\n{communication.speaker}\n",
@@ -115,7 +115,10 @@ class CommsFrame(Frame):
                 )
             else:
                 # Narrator just gets a space.
-                self.label.text += "\n"
+                self.label.document.insert_text(
+                    pre_name_text_index,
+                    "\n"
+                )
             current_text_index = len(self.label.text)
 
             # Add the actual dialogue
@@ -127,6 +130,7 @@ class CommsFrame(Frame):
                         "color": Style.Colors.accent,
                         "font_name": Style.Text.Names.monospace,
                         "font_size": Style.Text.Sizes.normal,
+                        "italic": False,
                     },
                 )
             else:
@@ -137,6 +141,7 @@ class CommsFrame(Frame):
                         "color": Style.Colors.bright,
                         "font_name": Style.Text.Names.monospace,
                         "font_size": Style.Text.Sizes.normal,
+                        "italic": False,
                     },
                 )
 
