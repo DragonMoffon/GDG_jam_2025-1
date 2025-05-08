@@ -34,6 +34,12 @@ bearing_b = 'float'
 pos_x = 'float'
 pos_y = 'float'
 
+[Constants]
+asteroid_a_x = 1000
+asteroid_a_y = 2300
+asteroid_b_x = 2540
+asteroid_b_y = 900
+
 [[Tests]]
 inputs = {"bearing_a" = 25.6, "bearing_b" = 150}
 outputs = {"pos_x" = 2393.5, "pos_y" = 3380}

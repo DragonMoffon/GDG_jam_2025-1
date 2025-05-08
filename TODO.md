@@ -1,6 +1,5 @@
 ## TODO
 ### Blocks
-- Flag block
 - Conditional blocks
 - Slim versions of constant blocks
 - Probe block
