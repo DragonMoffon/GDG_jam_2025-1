@@ -1,4 +1,5 @@
 from __future__ import annotations
+import sys
 from uuid import UUID, uuid4
 
 from arcade import get_window
@@ -44,11 +45,15 @@ OVERLAY_SPACING = Group(1, OVERLAY_GROUP)
 OVERLAY_PRIMARY = Group(2, OVERLAY_GROUP)
 OVERLAY_HIGHLIGHT = Group(3, OVERLAY_GROUP)
 
+if sys.platform == 'win32':
+    vec4_color = "color"
+else:
+    vec4_color = "colors"
 
-vertex_source = """#version 150 core
+vertex_source = f"""#version 150 core
     in vec2 position;
     in vec2 translation;
-    in vec4 colors;
+    in vec4 {vec4_color};
     in float zposition;
     in float rotation;
 
@@ -56,16 +61,16 @@ vertex_source = """#version 150 core
     out vec4 vertex_color;
 
     uniform WindowBlock
-    {
+    {{
         mat4 projection;
         mat4 view;
-    } window;
+    }} window;
 
     mat4 m_rotation = mat4(1.0);
     mat4 m_translate = mat4(1.0);
 
     void main()
-    {
+    {{
         m_translate[3][0] = translation.x;
         m_translate[3][1] = translation.y;
         m_rotation[0][0] =  cos(-radians(rotation));
@@ -74,8 +79,8 @@ vertex_source = """#version 150 core
         m_rotation[1][1] =  cos(-radians(rotation));
 
         gl_Position = window.projection * window.view * m_translate * m_rotation * vec4(position, zposition, 1.0);
-        vertex_color = colors;
-    }
+        vertex_color = {vec4_color};
+    }}
 """
 
 fragment_source = """#version 150 core
@@ -104,6 +109,7 @@ fragment_source = """#version 150 core
         }
     }
 """
+
 
 
 def get_shadow_shader() -> ShaderProgram:
