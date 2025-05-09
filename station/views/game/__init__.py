@@ -9,7 +9,7 @@ from station.gui.core import Gui
 from station.gui.alert import AlertElement
 from station.input import inputs, Button, Axis
 from station.context import context
-from station.puzzle import puzzles, Puzzle
+from station.puzzle import Puzzle
 from station.graphics.background import ParallaxBackground
 
 from .editor import EditorFrame

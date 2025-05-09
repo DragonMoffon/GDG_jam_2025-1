@@ -137,6 +137,7 @@ class Audio(StyleTable):
     crash: Sound
     boot: Sound
     notification: Sound
+    incoming_comm: Sound
     confirm: Sound
     drop: Sound
     connect: Sound

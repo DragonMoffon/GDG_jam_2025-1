@@ -6,11 +6,9 @@ from arcade import get_window
 from pyglet import gl as pygl
 from pyglet.graphics.shader import ShaderProgram
 from pyglet.graphics import Batch, Group
-from arcade import get_window
 from arcade.camera import Projector
 
 Point = tuple[float, float]
-
 
 class ProjectorGroup(Group):
 
@@ -164,7 +162,7 @@ class Gui:
     def renderer(self) -> Batch:
         return self._batch
 
-    def draw(self):
+    def draw(self) -> None:
         BASE_GROUP.projector = self._base_camera
         OVERLAY_GROUP.projector = self._overlay_camera
         self._batch.draw()

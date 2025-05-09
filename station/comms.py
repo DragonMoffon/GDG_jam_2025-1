@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from resources.style import STYLE
+
 @dataclass
 class Communication:
     dialogue: str
@@ -28,6 +30,7 @@ class CommunicatonLog:
     def say(self, s: str, speaker: str = None, mood: str = None) -> None:
         self.log.append(Communication(s, speaker, mood))
         self.notification = True
+        STYLE.Audio.incoming_comm.play("notification")
 
     def read(self) -> None:
         self.notification = False
