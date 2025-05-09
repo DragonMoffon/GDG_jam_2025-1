@@ -41,6 +41,7 @@ class CreditsView(View):
             self.width * 0.4,
             self.height,
             Style.Colors.dark,
+            program=get_shadow_shader(),
         )
 
         self._logo = Sprite(Style.Textures.credits_logo, 0, 0)

@@ -48,7 +48,7 @@ OVERLAY_HIGHLIGHT = Group(3, OVERLAY_GROUP)
 vertex_source = """#version 150 core
     in vec2 position;
     in vec2 translation;
-    in vec4 color;
+    in vec4 colors;
     in float zposition;
     in float rotation;
 
@@ -74,7 +74,7 @@ vertex_source = """#version 150 core
         m_rotation[1][1] =  cos(-radians(rotation));
 
         gl_Position = window.projection * window.view * m_translate * m_rotation * vec4(position, zposition, 1.0);
-        vertex_color = color;
+        vertex_color = colors;
     }
 """
 
