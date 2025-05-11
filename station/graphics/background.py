@@ -8,6 +8,7 @@ from resources.style import FloatMotionMode, Background as StyleBackground
 
 from station.graphics.backing import Backing
 
+
 class ParallaxBackground:
 
     def __init__(self, background: StyleBackground | None = None):
@@ -16,8 +17,7 @@ class ParallaxBackground:
         self._data: StyleBackground = background
         self._base: Backing = Backing(background.base, background.base_offset)
         self._layers: tuple[Backing, ...] = tuple(
-            Backing(floating.texture, floating.offset)
-            for floating in background.layers
+            Backing(floating.texture, floating.offset) for floating in background.layers
         )
 
         self.layer_offsets: list[tuple[float, float]] = [(0.0, 0.0)] * len(self._layers)
@@ -27,7 +27,7 @@ class ParallaxBackground:
         for backing in self._layers:
             backing.batch = batch
 
-    def disconnect_renderer(self):
+    def disconnect_renderer(self) -> None:
         self.connect_renderer(None)
 
     def cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
