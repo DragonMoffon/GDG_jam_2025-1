@@ -5,7 +5,7 @@ from station.gui.graph import BlockElement
 
 from station.input import inputs, Button
 
-from .base import Editor, EditorMode
+from .core import Editor, EditorMode
 from .commands import MoveELement
 
 
@@ -19,16 +19,22 @@ class DragBlockMode(EditorMode[Editor]):
 
     def enter(self) -> None:
         self._selected_block.select()
-        pos = self._selected_block.left, self._selected_block.bottom # self._element.position -- If I required elements to have a position property which I might
-        cursor = (0.0, 0.0) # self._editor.get_base_cursor() -- Unsure of exactly how I want the cursor to be handeled within the editor
+        pos = (
+            self._selected_block.left,
+            self._selected_block.bottom,
+        )  # self._element.position -- If I required elements to have a position property which I might
+        cursor = (
+            0.0,
+            0.0,
+        )  # self._editor.get_base_cursor() -- Unsure of exactly how I want the cursor to be handeled within the editor
         self._offset = cursor[0] - pos[0], cursor[1] - pos[1]
 
     def exit(self) -> None:
-        style.audio.drop.play('ui')
+        style.audio.drop.play("ui")
         self._selected_block.deselect()
         self._selected_block.remove_highlighting()
 
-        # You might instead create the move element at the start and pass 
+        # You might instead create the move element at the start and pass
         # in the old position and update the new position now, but i'm
         # unsure.
         point = self._selected_block.left, self._selected_block.bottom
@@ -40,7 +46,7 @@ class DragBlockMode(EditorMode[Editor]):
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
         if pressed:
-            return # We only care when primary is released.
+            return  # We only care when primary is released.
 
         if button == inputs.PRIMARY_CLICK:
             self._editor.pop_mode()

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .base import Editor, EditorMode
+from .core import Editor, EditorMode
 
 
 class SandboxEditor(Editor):

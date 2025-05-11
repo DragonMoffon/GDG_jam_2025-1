@@ -1,6 +1,6 @@
 from station.gui.core import Element, Point
 
-from .base import EditorCommand
+from .core import EditorCommand
 
 
 class MoveELement(EditorCommand):

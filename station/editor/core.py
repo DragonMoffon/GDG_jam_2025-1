@@ -1,6 +1,8 @@
 from __future__ import annotations
 from station.input import Button, Axis
 
+from station.controller import GraphController
+
 
 class EditorCommand:
     def execute(self): ...
@@ -25,7 +27,9 @@ class EditorMode[E: Editor]:
 
 class Editor:
 
-    def __init__(self, intial_mode: EditorMode[Editor]) -> None:
+    def __init__(
+        self, intial_mode: EditorMode[Editor], controller: GraphController
+    ) -> None:
         # -- Mode Attributes --
         self._mode_stack: list[EditorMode[Editor]] = [intial_mode]
         self._mode: EditorMode[Editor] = intial_mode
@@ -37,6 +41,9 @@ class Editor:
         self._max_command_stack: int = -1  # TODO
 
         # -- Editor Attributes --
+        self._controller: controller
+        self._gui: controller.gui
+        self._graph: controller.graph
 
     def push_mode(self, mode: EditorMode[Editor]) -> None:
         # Push a mode onto the stack so that
