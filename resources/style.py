@@ -2,6 +2,7 @@ from importlib.resources import path
 from enum import IntEnum
 from pathlib import Path
 from zipfile import Path as ZipPath
+import zipfile
 from typing import Any, Self
 from dataclasses import dataclass, fields
 import tomllib
@@ -15,11 +16,13 @@ from .audio import Sound
 
 __all__ = ("STYLE",)
 
-def load_font(pth: Path | ZipPath) -> None:
+StylePath = Path | ZipPath
+
+def load_font(pth: StylePath) -> None:
     with pth.open('rb') as fp:
         add_file(fp) # type: ignore -- IO[bytes] works as Binary
 
-def load_texture(pth: Path | ZipPath) -> AbstractImage:
+def load_texture(pth: StylePath) -> AbstractImage:
     with pth.open('rb') as fp:
         return _load_texture(str(pth), fp) # type: ignore -- IO[bytes] works as Binary
 
@@ -30,12 +33,29 @@ class StyleTable:
         return getattr(self, key)
 
     @classmethod
-    def create(cls, data: dict[str, Any], source: Path) -> Self:
+    def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         for field in fields(cls):
             if isinstance(field.type, type) and issubclass(field.type, StyleTable):
                 data[field.name] = field.type.create(data.get(field.name, {}), source)
         return cls(**data)
 
+@dataclass
+class Application(StyleTable):
+    window_width: int
+    window_height: int
+    min_width: int
+    min_height: int
+
+    window_name: str
+    window_icon: ImageData
+
+    @classmethod
+    def create(cls, data: dict[str, Any], source: StylePath) -> Self:
+        icon = load_texture(source / data.pop('window_icon'))
+        return cls(
+            **data,
+            window_icon=icon
+        )
 
 @dataclass
 class Colors(StyleTable):
@@ -78,7 +98,7 @@ class Floating(StyleTable):
     rate: float
 
     @classmethod
-    def create(cls, data: dict[str, Any], source: Path) -> Self:
+    def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         return cls(
             source / data["src"],
             data["offset"],
@@ -94,12 +114,12 @@ class Floating(StyleTable):
 @dataclass
 class Background(StyleTable):
     color: tuple[int, int, int, int]
-    base: Path
+    base: StylePath
     base_offset: tuple[float, float]
     layers: tuple[Floating, ...]
 
     @classmethod
-    def create(cls, data: dict[str, Any], source: Path) -> Self:
+    def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         return cls(
             tuple(data["color"]),
             source / data["base"],
@@ -123,7 +143,7 @@ class Ambience(StyleTable):
     power: Sound
 
     @classmethod
-    def create(cls, data: dict[str, str], source: Path) -> Self:
+    def create(cls, data: dict[str, str], source: StylePath) -> Self:
         return cls(**{name: Sound(source / pth) for name, pth in data.items()})
 
 
@@ -146,7 +166,7 @@ class Audio(StyleTable):
     ambience: Ambience
 
     @classmethod
-    def create(cls, data: dict[str, Any], source: Path) -> Self:
+    def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         ambience = Ambience.create(data.pop("ambience"), source)
         return cls(
             ambience=ambience,
@@ -158,10 +178,9 @@ class Audio(StyleTable):
 class Textures(StyleTable):
     credits_logo: ImageData
     logo_big: ImageData
-    icon: ImageData
 
     @classmethod
-    def create(cls, data: dict[str, str], source: Path) -> Self:
+    def create(cls, data: dict[str, str], source: StylePath) -> Self:
         return cls(**{name: load_texture(source / pth) for name, pth in data.items()})
 
 
@@ -185,7 +204,7 @@ class Panels(StyleTable):
     panel_speed: float
 
     @classmethod
-    def create(cls, data: dict[str, str], source: Path) -> Self:
+    def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         return cls(
             panel_speed=data.pop("panel_speed"),
             **{name: source / pth for name, pth in data.items()},
@@ -215,7 +234,7 @@ class Editor(StyleTable):
     nav_n: AbstractImage
 
     @classmethod
-    def create(cls, data: dict[str, str], source: Path) -> Self:
+    def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         return cls(
             blink_speed=data.pop("blink_speed"),
             background=source / data.pop("background"),
@@ -240,7 +259,7 @@ class Font(StyleTable):
     italic: Path
 
     @classmethod
-    def create(cls, data: dict[str, Any], source: Path) -> Self:
+    def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         for pth in data.values():
             load_font(source / pth)
 
@@ -274,7 +293,7 @@ class TextSizes(StyleTable):
     subtitle: int
 
     @classmethod
-    def create(cls, data: dict[str, int], source: Path) -> Self:
+    def create(cls, data: dict[str, int], source: StylePath) -> Self:
         header = data["header"]
         normal = data["normal"]
         return cls(
@@ -305,8 +324,9 @@ class Text(StyleTable):
 
 @dataclass
 class Style(StyleTable):
-    source: Path
+    source: StylePath
     name: str
+    application: Application
     colors: Colors
     text: Text
     format: Format
@@ -316,10 +336,11 @@ class Style(StyleTable):
     game: Game
 
     @classmethod
-    def create(cls, data: dict[str, Any], source: Path) -> Self:
+    def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         return cls(
             source,
             data["name"],
+            Application.create(data['application'], source),
             Colors.create(data["colors"], source),
             Text.create(data["text"], source),
             Format.create(data["format"], source),
@@ -336,6 +357,12 @@ def get_style(name: str) -> Style:
             cfg = pth / "style.cfg"
             with open(cfg, "rb") as fp:
                 return Style.create(tomllib.load(fp), pth)
+    with path(styles, f"{name}.stl") as pth:
+        if pth.exists():
+            zip = ZipPath(pth)
+            cfg = zip / "style.cfg"
+            with cfg.open('rb') as fp:
+                return Style.create(tomllib.load(fp), zip)
     raise FileNotFoundError(f"No style named {name} found")
 
 

@@ -7,14 +7,16 @@ from .input import inputs
 
 
 class Window(ArcadeWindow):
-    NAME = "station.blk"
-    WIDTH = 1280
-    HEIGHT = 720
-    SIZE = (WIDTH, HEIGHT)
-
     def __init__(self):
-        ArcadeWindow.__init__(self, self.WIDTH, self.HEIGHT, self.NAME)
-        self.set_icon(style.textures.icon)
+        ArcadeWindow.__init__(
+            self,
+            style.application.window_width,
+            style.application.window_height,
+            style.application.window_name,
+            resizable=True
+        )
+        self.set_minimum_size(style.application.min_width, style.application.min_height)
+        self.set_icon(style.application.window_icon)
         inputs.setup_input_reponses()
 
         controllers = get_controllers()
