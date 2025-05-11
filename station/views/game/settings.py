@@ -1,6 +1,6 @@
 from station.gui.frame import Frame
 
-from resources import Style
+from resources import style
 
 
 class SettingsFrame(Frame):

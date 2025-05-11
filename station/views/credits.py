@@ -4,7 +4,7 @@ import re
 from arcade import Camera2D
 from pyglet.shapes import Rectangle
 from pyglet.sprite import Sprite
-from resources import Style
+from resources import style
 
 from station.graphics.format_label import FLabel
 from station.graphics.background import ParallaxBackground
@@ -32,7 +32,7 @@ class CreditsView(View):
         View.__init__(self)
         self.back: View = back
 
-        self._background = ParallaxBackground(Style.Menu.Background)
+        self._background = ParallaxBackground(style.menu.background)
         self._camera = Camera2D(projection=self.window.rect, position=(0.0, 0.0))
 
         self._rect = Rectangle(
@@ -40,11 +40,11 @@ class CreditsView(View):
             0,
             self.width * 0.4,
             self.height,
-            Style.Colors.dark,
+            style.colors.dark,
             program=get_shadow_shader(),
         )
 
-        self._logo = Sprite(Style.Textures.credits_logo, 0, 0)
+        self._logo = Sprite(style.textures.credits_logo, 0, 0)
 
         text = get_credits()
         self._text = FLabel(
@@ -53,11 +53,11 @@ class CreditsView(View):
             y=self.center_y,
             multiline=True,
             width=self.width * 0.4,
-            color=Style.Colors.highlight,
+            color=style.colors.highlight,
             anchor_x="left",
             anchor_y="center",
-            font_name=Style.Text.Names.regular,
-            font_size=Style.Text.Sizes.normal,
+            font_name=style.text.names.regular,
+            font_size=style.text.sizes.normal,
         )
 
         self._logo.x = self._text.x
@@ -70,7 +70,7 @@ class CreditsView(View):
             self._text.document.insert_text(
                 header.start(1),
                 title,
-                {"font_size": Style.Text.Sizes[f"header_{len(header.group(1))}"]},
+                {"font_size": style.text.sizes[f"header_{len(header.group(1))}"]},
             )
 
         stylings = re.finditer(STYLING, self._text.text)

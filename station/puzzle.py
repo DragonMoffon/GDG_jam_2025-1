@@ -10,7 +10,7 @@ from station.node.graph import BlockType, TestCase, OperationValue, STR_CAST, TY
 import station.node.blocks  # noqa: F401 -- importing sets up the blocks
 
 import resources.puzzles as pzls
-from resources import Style
+from resources import style
 from resources.audio import Sound
 
 
@@ -56,7 +56,7 @@ def load_puzzle(path: Path) -> Puzzle:
     config_data = raw_data["Config"]
 
     if "ambience" in config_data:
-        ambience = Style.Audio.Ambience[config_data["ambience"]]
+        ambience = style.audio.ambience[config_data["ambience"]]
     else:
         ambience = None
 

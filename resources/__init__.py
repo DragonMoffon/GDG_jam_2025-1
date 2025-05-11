@@ -1,4 +1,4 @@
-from .style import STYLE as Style
-from .audio import AUDIO as Audio
+from .style import STYLE as style
+from .audio import AUDIO as audio
 
-__all__ = ("Style", "Audio")
+__all__ = ("style", "audio")

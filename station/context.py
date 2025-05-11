@@ -16,7 +16,7 @@ from tomlkit import dumps as dumps_toml
 from station.puzzle import Puzzle, puzzles
 from station.controller import GraphController, write_graph_from_level, write_graph
 
-from resources import Style
+from resources import style
 
 try:
     import saves as save_path
@@ -400,7 +400,7 @@ class Context:
         self._current_save.complete_puzzle(puzzle, solution)
         self.close_editor_tab(puzzle.title)
         self.hide_frame()
-        Style.Audio.confirm.play()
+        style.audio.confirm.play()
         if self._level_select is not None:
             self._level_select.clear_puzzle(puzzle)
 
@@ -434,7 +434,7 @@ class Context:
         # TODO: AHHHHH
         return self._editor_frame._active_editor._puzzle
     
-    def log_fatal_exception(self, exception: Exception) -> None:
+    def log_fatal_exception(self, exception: Exception | KeyboardInterrupt) -> None:
         if self._current_save is not None:
             self._current_save.log_fatal_exception(exception)
             return

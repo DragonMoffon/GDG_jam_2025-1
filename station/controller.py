@@ -3,7 +3,7 @@ from pathlib import Path
 from tomllib import load as load_toml
 from tomlkit import document, table, inline_table, aot, dump as dump_toml
 
-from resources import Style
+from resources import style
 
 from station.node.graph import (
     Graph,
@@ -300,7 +300,7 @@ def read_graph_from_level(puzzle: Puzzle, gui: Gui) -> GraphController:
         if puzzle.constant_type is not None:
             const_block = Block(puzzle.constant_type, uid=None, **puzzle.constant_values)
             const_element = BlockElement(const_block)
-            const_element.update_position((input_element.left, input_element.bottom - const_element.height - Style.Format.footer_size))
+            const_element.update_position((input_element.left, input_element.bottom - const_element.height - style.format.footer_size))
             controller.add_block(const_element)
 
         return controller

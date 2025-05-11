@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from resources.style import STYLE
+from resources import style
 
 @dataclass
 class Communication:
@@ -27,10 +27,10 @@ class CommunicatonLog:
         self.log: list[Communication] = []
         self.notification = False
 
-    def say(self, s: str, speaker: str = None, mood: str = None) -> None:
+    def say(self, s: str, speaker: str | None = None, mood: str | None = None) -> None:
         self.log.append(Communication(s, speaker, mood))
         self.notification = True
-        STYLE.Audio.incoming_comm.play("notification")
+        style.audio.incoming_comm.play("notification")
 
     def read(self) -> None:
         self.notification = False

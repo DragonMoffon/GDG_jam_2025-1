@@ -1,7 +1,7 @@
 import re
 
 from station.graphics.format_label import FLabel
-from resources import Style
+from resources import style
 
 HEADER_EX = r"^(#{1,6})\s+(.+)$"
 STYLING_EX = r"(\*{1,2}|_{1,2})(\S.*?\S|\S)\1"

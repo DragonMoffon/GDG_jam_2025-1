@@ -1,4 +1,4 @@
-from resources import Style
+from resources import style
 
 from station.gui.core import Point
 from station.gui.graph import BlockElement
@@ -24,7 +24,7 @@ class DragBlockMode(EditorMode[Editor]):
         self._offset = cursor[0] - pos[0], cursor[1] - pos[1]
 
     def exit(self) -> None:
-        Style.Audio.drop.play('ui')
+        style.audio.drop.play('ui')
         self._selected_block.deselect()
         self._selected_block.remove_highlighting()
 

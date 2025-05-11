@@ -14,7 +14,7 @@ def main() -> None:
         win = Window()
         win.show_view(MainMenuView())
         win.run()
-    except Exception as e:
+    except (Exception, KeyboardInterrupt) as e:
         context.log_fatal_exception(e)
         raise e from e
     context.close()

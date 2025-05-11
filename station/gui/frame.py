@@ -14,7 +14,7 @@ from .core import (
     OVERLAY_HIGHLIGHT,
 )
 from station.input import inputs, Button, Axis
-from resources import Style, Audio
+from resources import style, audio
 
 
 class Frame(Element):
@@ -45,43 +45,43 @@ class Frame(Element):
             0,
             0,
             0,
-            int(Style.Text.Sizes.header) + 1,
+            int(style.text.sizes.header) + 1,
             anchor_y="top",
             multiline=True,
-            font_size=Style.Text.Sizes.header,
-            font_name=Style.Text.Names.monospace,
-            color=Style.Colors.highlight,
+            font_size=style.text.sizes.header,
+            font_name=style.text.names.monospace,
+            color=style.colors.highlight,
             group=OVERLAY_HIGHLIGHT,
         )
         self._tag_text.set_style(
-            "line_spacing", Style.Text.Sizes.header + Style.Format.padding
+            "line_spacing", style.text.sizes.header + style.format.padding
         )
         self._tag_panel = RoundedRectangle(
             0.0,
             0.0,
-            Style.Format.corner_radius
-            + 2 * Style.Format.padding
+            style.format.corner_radius
+            + 2 * style.format.padding
             + self._tag_text.content_width,
             self._tag_text.content_height
-            + 2 * Style.Format.corner_radius
-            + 2 * Style.Format.padding,
-            (Style.Format.corner_radius, Style.Format.corner_radius, 0, 0),
+            + 2 * style.format.corner_radius
+            + 2 * style.format.padding,
+            (style.format.corner_radius, style.format.corner_radius, 0, 0),
             (12, 12, 1, 1),
-            color=Style.Colors.base,
+            color=style.colors.base,
             group=OVERLAY_HIGHLIGHT,
         )
         self._tag_shadow = RoundedRectangle(
             0.0,
             0.0,
-            self._tag_panel.width + Style.Format.drop_x,
+            self._tag_panel.width + style.format.drop_x,
             self._tag_panel.height,
-            (Style.Format.corner_radius, Style.Format.corner_radius, 0, 0),
+            (style.format.corner_radius, style.format.corner_radius, 0, 0),
             (12, 12, 1, 1),
-            color=Style.Colors.dark,
+            color=style.colors.dark,
             group=OVERLAY_PRIMARY,
             program=get_shadow_shader(),
         )
-        radius = Style.Format.corner_radius + Style.Format.footer_size
+        radius = style.format.corner_radius + style.format.footer_size
         if anchor_top:
             hide_top = tag_offset < radius and 0.0 < tag_offset + self._tag_panel.height
 
@@ -110,7 +110,7 @@ class Frame(Element):
             size[1],
             (bottom_radius, top_radius, 0.0, 0.0),
             (bottom_segments, top_segments, 1, 1),
-            color=Style.Colors.base,
+            color=style.colors.base,
             group=OVERLAY_SPACING,
         )
 
@@ -147,12 +147,12 @@ class Frame(Element):
         )
         self._tag_panel.position = point[0] - self._tag_panel.width, tag_y
         self._tag_shadow.position = (
-            self._tag_panel.x - Style.Format.drop_x,
-            self._tag_panel.y - Style.Format.drop_y,
+            self._tag_panel.x - style.format.drop_x,
+            self._tag_panel.y - style.format.drop_y,
         )
         self._tag_text.position = (
-            self._tag_panel.x + Style.Format.corner_radius / 2.0,
-            self._tag_panel.y + self._tag_panel.height - Style.Format.corner_radius,
+            self._tag_panel.x + style.format.corner_radius / 2.0,
+            self._tag_panel.y + self._tag_panel.height - style.format.corner_radius,
             0.0,
         )
 
@@ -245,7 +245,7 @@ class FrameController:
         if self._selected_frame is not None:
             self._animation_mode = FrameAnimationMode.HIDE
             self._animation_time = GLOBAL_CLOCK.time
-            Style.Audio.slide_in.play()
+            style.audio.slide_in.play()
             if self._next_frame is None:
                 self._next_frame = frame
             else:
@@ -256,7 +256,7 @@ class FrameController:
 
             self._animation_mode = FrameAnimationMode.SHOW
             self._animation_time = GLOBAL_CLOCK.time
-            Style.Audio.slide_out.play()
+            style.audio.slide_out.play()
         else:
             self._pending_frame = frame
 
@@ -276,8 +276,8 @@ class FrameController:
 
         self._animation_mode = FrameAnimationMode.HIDE
         self._animation_time = GLOBAL_CLOCK.time
-        Style.Audio.slide_in.play()
-        Audio.stop("ambience2")
+        style.audio.slide_in.play()
+        audio.stop("ambience2")
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> bool | None:
         if button == inputs.PRIMARY_CLICK and pressed:
@@ -352,7 +352,7 @@ class FrameController:
     def on_update(self, delta_time: float) -> None:
         time = GLOBAL_CLOCK.time
         length = time - self._animation_time
-        fraction = length / Style.Game.Panels.panel_speed
+        fraction = length / style.game.panels.panel_speed
 
         if (
             self._selected_frame is not None
@@ -367,8 +367,8 @@ class FrameController:
                     self._next_frame.select()
 
                     self._animation_mode = FrameAnimationMode.SHOW
-                    self._animation_time = time + Style.Game.Panels.panel_speed - length
-                    Style.Audio.slide_out.play()
+                    self._animation_time = time + style.game.panels.panel_speed - length
+                    style.audio.slide_out.play()
                 else:
                     self._animation_mode = FrameAnimationMode.NONE
                     self._animation_time = 0.0

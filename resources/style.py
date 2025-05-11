@@ -106,7 +106,7 @@ class Background(StyleTable):
             tuple(data["base_offset"]),
             tuple(
                 Floating.create(floating, source)
-                for floating in data.get("Floating", ())
+                for floating in data.get("floating", ())
             ),
         )
 
@@ -143,13 +143,13 @@ class Audio(StyleTable):
     connect: Sound
     pickup: Sound
     disconnect: Sound
-    Ambience: Ambience
+    ambience: Ambience
 
     @classmethod
     def create(cls, data: dict[str, Any], source: Path) -> Self:
-        ambience = Ambience.create(data.pop("Ambience"), source)
+        ambience = Ambience.create(data.pop("ambience"), source)
         return cls(
-            Ambience=ambience,
+            ambience=ambience,
             **{name: Sound(source / pth) for name, pth in data.items()},
         )
 
@@ -173,7 +173,7 @@ class Menu(StyleTable):
     continue_fade: float
     continue_transition: float
     continue_logo: float
-    Background: Background
+    background: Background
 
 
 @dataclass
@@ -225,9 +225,9 @@ class Editor(StyleTable):
 
 @dataclass
 class Game(StyleTable):
-    Background: Background
-    Panels: Panels
-    Editor: Editor
+    background: Background
+    panels: Panels
+    editor: Editor
 
 
 @dataclass
@@ -257,8 +257,8 @@ class Font(StyleTable):
 
 @dataclass
 class Fonts(StyleTable):
-    Monospace: Font
-    Regular: Font
+    monospace: Font
+    regular: Font
 
 
 @dataclass
@@ -298,35 +298,35 @@ class TextNames(StyleTable):
 
 @dataclass
 class Text(StyleTable):
-    Fonts: Fonts
-    Names: TextNames
-    Sizes: TextSizes
+    fonts: Fonts
+    names: TextNames
+    sizes: TextSizes
 
 
 @dataclass
 class Style(StyleTable):
     source: Path
     name: str
-    Colors: Colors
-    Text: Text
-    Format: Format
-    Audio: Audio
-    Textures: Textures
-    Menu: Menu
-    Game: Game
+    colors: Colors
+    text: Text
+    format: Format
+    audio: Audio
+    textures: Textures
+    menu: Menu
+    game: Game
 
     @classmethod
     def create(cls, data: dict[str, Any], source: Path) -> Self:
         return cls(
             source,
             data["name"],
-            Colors.create(data["Colors"], source),
-            Text.create(data["Text"], source),
-            Format.create(data["Format"], source),
-            Audio.create(data["Audio"], source),
-            Textures.create(data["Textures"], source),
-            Menu.create(data["Menu"], source),
-            Game.create(data["Game"], source),
+            Colors.create(data["colors"], source),
+            Text.create(data["text"], source),
+            Format.create(data["format"], source),
+            Audio.create(data["audio"], source),
+            Textures.create(data["textures"], source),
+            Menu.create(data["menu"], source),
+            Game.create(data["game"], source),
         )
 
 

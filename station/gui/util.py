@@ -7,7 +7,7 @@ from pyglet.text import Label
 from arcade import Text
 from arcade.clock import GLOBAL_CLOCK
 
-from resources import Style
+from resources import style
 
 from station.graphics.format_label import FLabel
 
@@ -40,19 +40,19 @@ class Popup(Element):
             bottom_left[1],
             width,
             height,
-            Style.Format.padding,
+            style.format.padding,
             14,
-            Style.Colors.base,
+            style.colors.base,
             group=OVERLAY_PRIMARY,
         )
         self._shadow = RoundedRectangle(
-            bottom_left[0] - 2 * Style.Format.drop_x,
-            bottom_left[1] - 2 * Style.Format.drop_y,
+            bottom_left[0] - 2 * style.format.drop_x,
+            bottom_left[1] - 2 * style.format.drop_y,
             width,
             height,
-            Style.Format.padding,
+            style.format.padding,
             14,
-            Style.Colors.dark,
+            style.colors.dark,
             program=get_shadow_shader(),
             group=OVERLAY_SHADOW,
         )
@@ -77,17 +77,17 @@ class InfoPopup(Popup):
     ):
         self._text = Text(
             text,
-            bottom_left[0] + Style.Format.padding,
-            bottom_left[1] + Style.Format.padding,
-            Style.Colors.highlight,
-            Style.Text.Sizes.normal,
-            font_name=Style.Text.Names.monospace,
+            bottom_left[0] + style.format.padding,
+            bottom_left[1] + style.format.padding,
+            style.colors.highlight,
+            style.text.sizes.normal,
+            font_name=style.text.names.monospace,
             anchor_y="bottom",
         )
         Popup.__init__(
             self,
-            self._text.content_width + 2 * Style.Format.padding,
-            self._text.content_height + 2 * Style.Format.padding,
+            self._text.content_width + 2 * style.format.padding,
+            self._text.content_height + 2 * style.format.padding,
             bottom_left,
             uid,
         )
@@ -128,10 +128,10 @@ class SelectionPopup(Popup):
                 name,
                 0.0,
                 0.0,
-                Style.Colors.accent,
-                Style.Text.Sizes.normal,
+                style.colors.accent,
+                style.text.sizes.normal,
                 anchor_y="bottom",
-                font_name=Style.Text.Names.monospace,
+                font_name=style.text.names.monospace,
                 group=OVERLAY_HIGHLIGHT,
             )
             for name in self.actions
@@ -144,11 +144,11 @@ class SelectionPopup(Popup):
             name: RoundedRectangle(
                 0.0,
                 0.0,
-                text_width + 2 * Style.Format.padding,
-                text_height + 2 * Style.Format.padding,
-                Style.Format.padding,
+                text_width + 2 * style.format.padding,
+                text_height + 2 * style.format.padding,
+                style.format.padding,
                 14,
-                Style.Colors.background,
+                style.colors.background,
                 group=OVERLAY_HIGHLIGHT,
             )
             for name in self.actions
@@ -156,11 +156,11 @@ class SelectionPopup(Popup):
 
         width = (
             max(panel.width for panel in self._action_panels.values())
-            + 2 * Style.Format.padding
+            + 2 * style.format.padding
         )
         height = (
             sum(panel.height for panel in self._action_panels.values())
-            + (len(actions) + 1) * Style.Format.padding
+            + (len(actions) + 1) * style.format.padding
         )
 
         bottom = position[1] - height if top else position[1]
@@ -169,13 +169,13 @@ class SelectionPopup(Popup):
         for idx, action in enumerate(actions):
             y = (
                 bottom
-                + Style.Format.padding
-                + idx * (3 * Style.Format.padding + text_height)
+                + style.format.padding
+                + idx * (3 * style.format.padding + text_height)
             )
-            self._action_panels[action.name].position = left + Style.Format.padding, y
+            self._action_panels[action.name].position = left + style.format.padding, y
             self._action_text[action.name].position = (
-                left + 2 * Style.Format.padding,
-                y + Style.Format.padding,
+                left + 2 * style.format.padding,
+                y + style.format.padding,
             )
         Popup.__init__(self, width, height, (left, bottom), uid)
 
@@ -208,26 +208,26 @@ class SelectionPopup(Popup):
 
         if only or not highlight:
             self._action_panels[name].color = (
-                Style.Colors.base if highlight else Style.Colors.background
+                style.colors.base if highlight else style.colors.background
             )
             self._action_text[name].color = (
-                Style.Colors.highlight if highlight else Style.Colors.accent
+                style.colors.highlight if highlight else style.colors.accent
             )
             return
 
         for action in self.actions:
             h = action == name
             self._action_panels[action].color = (
-                Style.Colors.base if h else Style.Colors.background
+                style.colors.base if h else style.colors.background
             )
             self._action_text[action].color = (
-                Style.Colors.highlight if h else Style.Colors.accent
+                style.colors.highlight if h else style.colors.accent
             )
 
     def clear_highlight(self):
         for action in self.actions:
-            self._action_panels[action].color = Style.Colors.background
-            self._action_text[action].color = Style.Colors.accent
+            self._action_panels[action].color = style.colors.background
+            self._action_text[action].color = style.colors.accent
 
 
 class TextInput:
@@ -378,15 +378,15 @@ class TextInputPopup(Popup):
             center[0],
             center[1],
             0.0,
-            font_name=Style.Text.Names.monospace,
-            font_size=Style.Text.Sizes.header,
-            color=Style.Colors.accent,
+            font_name=style.text.names.monospace,
+            font_size=style.text.sizes.header,
+            color=style.colors.accent,
             group=OVERLAY_HIGHLIGHT,
             anchor_x="center",
             anchor_y="center",
         )
-        width = self._text.content_width + 2 * Style.Format.padding
-        height = self._text.content_height + 2 * Style.Format.padding
+        width = self._text.content_width + 2 * style.format.padding
+        height = self._text.content_height + 2 * style.format.padding
         self._text.text = " "
 
         Popup.__init__(
@@ -398,14 +398,14 @@ class TextInputPopup(Popup):
 
         self._blink = blink
         self._highlight = True
-        self._blink_time = GLOBAL_CLOCK.time + Style.Game.Editor.blink_speed
+        self._blink_time = GLOBAL_CLOCK.time + style.game.editor.blink_speed
 
     def update(self) -> None:
         if not self._blink:
             return
         if GLOBAL_CLOCK.time >= self._blink_time:
-            dt = Style.Game.Editor.blink_speed + self._blink_time - GLOBAL_CLOCK.time
-            self._blink_time = GLOBAL_CLOCK.time + (dt % Style.Game.Editor.blink_speed)
+            dt = style.game.editor.blink_speed + self._blink_time - GLOBAL_CLOCK.time
+            self._blink_time = GLOBAL_CLOCK.time + (dt % style.game.editor.blink_speed)
             self._highlight = not self._highlight
             self.clear_highlight()
             self.highlight_cursor()
@@ -432,11 +432,11 @@ class TextInputPopup(Popup):
         self.highlight_cursor()
 
         if len(self._text.text) >= 12:
-            width = self._text.content_width + 2 * Style.Format.padding
+            width = self._text.content_width + 2 * style.format.padding
             x = self._body.x - (width - self._body.width) * 0.5
             self._body.width = self._shadow.width = width
             self._body.x = x
-            self._shadow.x = x - 2 * Style.Format.drop_x
+            self._shadow.x = x - 2 * style.format.drop_x
 
     def remove_char(self) -> None:
         if self._text_input.at_end:
@@ -448,11 +448,11 @@ class TextInputPopup(Popup):
         self.highlight_cursor()
 
         if len(self._text.text) >= 12:
-            width = self._text.content_width + 2 * Style.Format.padding
+            width = self._text.content_width + 2 * style.format.padding
             x = self._body.x - (width - self._body.width) * 0.5
             self._body.width = self._shadow.width = width
             self._body.x = x
-            self._shadow.x = x - 2 * Style.Format.drop_x
+            self._shadow.x = x - 2 * style.format.drop_x
 
     def incr_cursor(self) -> None:
         if self._text_input.at_end:
@@ -496,14 +496,14 @@ class TextInputPopup(Popup):
         self._text.document.set_style(
             self.cursor,
             self.cursor + 1,
-            {"color": Style.Colors.base, "background_color": Style.Colors.accent},
+            {"color": style.colors.base, "background_color": style.colors.accent},
         )
 
     def clear_highlight(self) -> None:
         self._text.document.set_style(
             0,
             len(self._text.text),
-            {"color": Style.Colors.accent, "background_color": None},
+            {"color": style.colors.accent, "background_color": None},
         )
 
     @property
@@ -519,11 +519,11 @@ class TextInputPopup(Popup):
         self.highlight_cursor()
 
         if len(self._text.text) >= 12:
-            width = self._text.content_width + 2 * Style.Format.padding
+            width = self._text.content_width + 2 * style.format.padding
             x = self._body.x - (width - self._body.width) * 0.5
             self._body.width = self._shadow.width = width
             self._body.x = x
-            self._shadow.x = x - 2 * Style.Format.drop_x
+            self._shadow.x = x - 2 * style.format.drop_x
 
     @property
     def cursor(self) -> int:
@@ -539,20 +539,20 @@ class PageTab(Element):
             0,
             0,
             0,
-            color=Style.Colors.accent,
-            font_name=Style.Text.Names.monospace,
-            font_size=Style.Text.Sizes.normal,
+            color=style.colors.accent,
+            font_name=style.text.names.monospace,
+            font_size=style.text.sizes.normal,
             anchor_y="bottom",
             group=OVERLAY_PRIMARY,
         )
         self._panel = RoundedRectangle(
             0.0,
             0.0,
-            self._text.content_width + 2 * Style.Format.corner_radius,
-            self._text.content_height + 2 * Style.Format.padding,
-            (Style.Format.corner_radius, 0.0, 0.0, Style.Format.corner_radius),
+            self._text.content_width + 2 * style.format.corner_radius,
+            self._text.content_height + 2 * style.format.padding,
+            (style.format.corner_radius, 0.0, 0.0, style.format.corner_radius),
             (12, 1, 1, 12),
-            color=Style.Colors.base,
+            color=style.colors.base,
             group=OVERLAY_PRIMARY,
         )
 
@@ -580,18 +580,18 @@ class PageTab(Element):
     def update_position(self, point: tuple[float, float]) -> None:
         self._panel.position = point
         self._text.position = (
-            point[0] + Style.Format.corner_radius,
-            point[1] + Style.Format.padding,
+            point[0] + style.format.corner_radius,
+            point[1] + style.format.padding,
             0.0,
         )
 
     def select(self):
-        self._text.set_style("color", Style.Colors.highlight)
-        self._panel.color = Style.Colors.base
+        self._text.set_style("color", style.colors.highlight)
+        self._panel.color = style.colors.base
 
     def deselect(self):
-        self._text.set_style("color", Style.Colors.accent)
-        self._panel.color = Style.Colors.base
+        self._text.set_style("color", style.colors.accent)
+        self._panel.color = style.colors.base
 
 
 class PageRow(Element):

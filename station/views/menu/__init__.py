@@ -1,7 +1,7 @@
 from arcade import draw_rect_filled
 from pyglet.sprite import Sprite
 
-from resources import Style
+from resources import style
 
 from station.view import View
 from station.graphics.background import ParallaxBackground
@@ -18,8 +18,8 @@ class MainMenuView(View):
 
     def __init__(self):
         View.__init__(self)
-        self._background = ParallaxBackground(Style.Menu.Background)
-        self._logo = Sprite(Style.Textures.logo_big)
+        self._background = ParallaxBackground(style.menu.background)
+        self._logo = Sprite(style.textures.logo_big)
 
         self._gui = Gui(self.window.default_camera)
 
@@ -59,9 +59,9 @@ class MainMenuView(View):
         )
         self._gui.add_element(self._popup)
         self._fade_out: bool = False
-        self._speed: float = Style.Menu.new_fade
-        self._tranistion: float = Style.Menu.new_transition
-        self._flash: float = Style.Menu.new_logo
+        self._speed: float = style.menu.new_fade
+        self._tranistion: float = style.menu.new_transition
+        self._flash: float = style.menu.new_logo
         self._timer: float = 0.0
 
         self._debug_crash: bool = False
@@ -70,25 +70,25 @@ class MainMenuView(View):
         self._fade_out = True
         self._timer = self.window.time
         context.new_save()
-        Style.Audio.crash.play("intro")
+        style.audio.crash.play("intro")
 
     def continue_save(self) -> None:
         self._fade_out = True
         self._timer = self.window.time
-        self._speed = Style.Menu.continue_fade
-        self._tranistion = Style.Menu.continue_transition
-        self._flash = Style.Menu.continue_logo
+        self._speed = style.menu.continue_fade
+        self._tranistion = style.menu.continue_transition
+        self._flash = style.menu.continue_logo
         context.choose_first_save()
-        Style.Audio.boot.play("intro")
+        style.audio.boot.play("intro")
 
     def pick_save(self, name: str) -> None:
         self._fade_out = True
         self._timer = self.window.time
-        self._speed = Style.Menu.continue_fade
-        self._tranistion = Style.Menu.continue_transition
-        self._flash = Style.Menu.continue_logo
+        self._speed = style.menu.continue_fade
+        self._tranistion = style.menu.continue_transition
+        self._flash = style.menu.continue_logo
         context.choose_save(name)
-        Style.Audio.boot.play("intro")
+        style.audio.boot.play("intro")
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         l = self._popup.get_hovered_item((x, y))

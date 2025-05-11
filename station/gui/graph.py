@@ -3,7 +3,7 @@ from pyglet.text import Label
 from pyglet.shapes import RoundedRectangle, Line
 from pyglet.sprite import Sprite
 
-from resources import Style
+from resources import style
 
 
 # from station.graphics.line import Line
@@ -20,8 +20,8 @@ from .core import (
     OVERLAY_SHADOW,
 )
 
-formating = Style.Format
-colors = Style.Colors
+formating = style.format
+colors = style.colors
 
 
 def get_segment_dist_sqr(
@@ -300,8 +300,8 @@ class TextPanel(Element):
             0.0,
             0.0,
             0.0,
-            font_name=Style.Text.Names.monospace,
-            font_size=Style.Text.Sizes.normal,
+            font_name=style.text.names.monospace,
+            font_size=style.text.sizes.normal,
             color=colors.accent,
             group=group,
         )
@@ -310,7 +310,7 @@ class TextPanel(Element):
             0.0,
             0.0,
             self._text.content_width + 2 * formating.padding,
-            Style.Text.Sizes.normal + 2 * formating.padding,
+            style.text.sizes.normal + 2 * formating.padding,
             formating.padding,
             4,
             colors.background,
@@ -381,7 +381,7 @@ class BoolPanel(Element):
     def __init__(self, active: bool = False, group: Group = BASE_PRIMARY):
         self._active: bool = active
         self._sprite = Sprite(
-            Style.Game.Editor.check_inactive,
+            style.game.editor.check_inactive,
             0.0,
             0.0,
             0.0,
@@ -389,7 +389,7 @@ class BoolPanel(Element):
         )
         self._sprite.color = colors.highlight
         if active:
-            self._sprite.image = Style.Game.Editor.check_active
+            self._sprite.image = style.game.editor.check_active
 
     def connect_renderer(self, batch: Batch | None = None) -> None:
         self._sprite.batch = batch  # type: Ignore -- None
@@ -410,9 +410,9 @@ class BoolPanel(Element):
     def active(self, active: bool) -> None:
         self._active = active
         if active:
-            self._sprite.image = Style.Game.Editor.check_active
+            self._sprite.image = style.game.editor.check_active
         else:
-            self._sprite.image = Style.Game.Editor.check_inactive
+            self._sprite.image = style.game.editor.check_inactive
 
     @property
     def width(self) -> float:
@@ -436,7 +436,7 @@ class ConnectionNodeElement(Element):
     def __init__(self, name: str = "", is_input: bool = True):
         Element.__init__(self)
         self._sprite = Sprite(
-            Style.Game.Editor.node_inactive,
+            style.game.editor.node_inactive,
             0.0,
             0.0,
             0.0,
@@ -454,8 +454,8 @@ class ConnectionNodeElement(Element):
                 0.0,
                 0.0,
                 0.0,
-                font_name=Style.Text.Names.monospace,
-                font_size=Style.Text.Sizes.normal,
+                font_name=style.text.names.monospace,
+                font_size=style.text.sizes.normal,
                 color=colors.highlight,
                 anchor_y="bottom",
                 group=BASE_PRIMARY,
@@ -503,14 +503,14 @@ class ConnectionNodeElement(Element):
         self._active = active
         if active:
             if self._branch:
-                self._sprite.image = Style.Game.Editor.branch_active
+                self._sprite.image = style.game.editor.branch_active
             else:
-                self._sprite.image = Style.Game.Editor.node_active
+                self._sprite.image = style.game.editor.node_active
         else:
             if self._branch:
-                self._sprite.image = Style.Game.Editor.branch_inactive
+                self._sprite.image = style.game.editor.branch_inactive
             else:
-                self._sprite.image = Style.Game.Editor.node_inactive
+                self._sprite.image = style.game.editor.node_inactive
 
     @property
     def branch(self) -> bool:
@@ -521,14 +521,14 @@ class ConnectionNodeElement(Element):
         self._branch = branch
         if branch:
             if self._active:
-                self._sprite.image = Style.Game.Editor.branch_active
+                self._sprite.image = style.game.editor.branch_active
             else:
-                self._sprite.image = Style.Game.Editor.branch_inactive
+                self._sprite.image = style.game.editor.branch_inactive
         else:
             if self._active:
-                self._sprite.image = Style.Game.Editor.node_active
+                self._sprite.image = style.game.editor.node_active
             else:
-                self._sprite.image = Style.Game.Editor.node_inactive
+                self._sprite.image = style.game.editor.node_inactive
 
     @property
     def link_pos(self) -> tuple[float, float]:
@@ -693,7 +693,7 @@ class BlockElement(Element):
         row_count = max(
             len(block.type.inputs), len(block.type.config), len(block.type.outputs)
         )
-        body_height = row_count * (Style.Text.Sizes.normal + 3 * formating.padding)
+        body_height = row_count * (style.text.sizes.normal + 3 * formating.padding)
 
         self._title: Label = Label(
             block.type.name,
@@ -701,8 +701,8 @@ class BlockElement(Element):
             0.0,
             0.0,
             anchor_y="bottom",
-            font_name=Style.Text.Names.monospace,
-            font_size=Style.Text.Sizes.normal,
+            font_name=style.text.names.monospace,
+            font_size=style.text.sizes.normal,
             color=colors.base,
             group=BASE_PRIMARY,
         )
@@ -799,12 +799,12 @@ class BlockElement(Element):
             0.0,
         )
 
-        line_height = Style.Text.Sizes.normal + 3 * formating.padding
+        line_height = style.text.sizes.normal + 3 * formating.padding
 
         dx = formating.padding
         for idx, node in enumerate(self._input_nodes.values()):
             dy = (idx + 1) * line_height
-            of = (Style.Text.Sizes.normal + 2 * formating.padding - node.height) / 2.0
+            of = (style.text.sizes.normal + 2 * formating.padding - node.height) / 2.0
             node.update_position((point[0] + dx, self._header.y - dy + of))
 
             if self._input_connections[node.name] is not None:
@@ -813,7 +813,7 @@ class BlockElement(Element):
         dx = self.width - formating.padding
         for idx, node in enumerate(self._output_nodes.values()):
             dy = (idx + 1) * line_height
-            of = (Style.Text.Sizes.normal + 2 * formating.padding - node.height) / 2.0
+            of = (style.text.sizes.normal + 2 * formating.padding - node.height) / 2.0
             node.update_position((point[0] + dx - node.width, self._header.y - dy + of))
 
             for connection in self._output_connections[node.name]:
@@ -822,7 +822,7 @@ class BlockElement(Element):
         dx = 2 * formating.padding + self.input_width
         for idx, panel in enumerate(self._config_panels.values()):
             dy = (idx + 1) * line_height
-            of = (Style.Text.Sizes.normal + 2 * formating.padding - panel.height) / 2.0
+            of = (style.text.sizes.normal + 2 * formating.padding - panel.height) / 2.0
             panel.update_position((point[0] + dx, self._header.y - dy + of))
 
     def contains_point(self, point: tuple[float, float]) -> bool:
@@ -957,7 +957,7 @@ class ValueGroup(Element):
         self._values = values
         self._input_order = input_order
 
-        line_height = Style.Text.Sizes.normal + 2 * formating.padding
+        line_height = style.text.sizes.normal + 2 * formating.padding
         h, w = 0.0, 0.0
         self._names: list[Label] = []
         self._panels: list[BoolPanel | TextPanel] = []
@@ -969,8 +969,8 @@ class ValueGroup(Element):
                 0.0,
                 0.0,
                 0.0,
-                font_name=Style.Text.Names.monospace,
-                font_size=Style.Text.Sizes.normal,
+                font_name=style.text.names.monospace,
+                font_size=style.text.sizes.normal,
                 color=colors.highlight,
                 group=OVERLAY_PRIMARY,
             )
@@ -1040,7 +1040,7 @@ class ValueGroup(Element):
             tx = point[0] + formating.padding
             px = point[0] + self._text_width + 2 * formating.padding
 
-        line_height = Style.Text.Sizes.normal + 3 * formating.padding
+        line_height = style.text.sizes.normal + 3 * formating.padding
         y = point[1] + self._body.height
         for idx in range(len(self._values)):
             dy = y - (idx + 1) * line_height
@@ -1104,7 +1104,7 @@ class TestRunner(Element):
             color=colors.background,
             group=OVERLAY_PRIMARY,
         )
-        self._nav_up_icon = Sprite(Style.Game.Editor.nav_p, group=OVERLAY_PRIMARY)
+        self._nav_up_icon = Sprite(style.game.editor.nav_p, group=OVERLAY_PRIMARY)
 
         self._run_one_button = RoundedRectangle(
             0.0,
@@ -1115,7 +1115,7 @@ class TestRunner(Element):
             color=colors.background,
             group=OVERLAY_PRIMARY,
         )
-        self._run_one_icon = Sprite(Style.Game.Editor.run_one, group=OVERLAY_PRIMARY)
+        self._run_one_icon = Sprite(style.game.editor.run_one, group=OVERLAY_PRIMARY)
 
         self._run_all_button = RoundedRectangle(
             0.0,
@@ -1126,7 +1126,7 @@ class TestRunner(Element):
             color=colors.background,
             group=OVERLAY_PRIMARY,
         )
-        self._run_all_icon = Sprite(Style.Game.Editor.run_all, group=OVERLAY_PRIMARY)
+        self._run_all_icon = Sprite(style.game.editor.run_all, group=OVERLAY_PRIMARY)
 
         self._nav_down_button = RoundedRectangle(
             0.0,
@@ -1137,7 +1137,7 @@ class TestRunner(Element):
             color=colors.background,
             group=OVERLAY_PRIMARY,
         )
-        self._nav_down_icon = Sprite(Style.Game.Editor.nav_n, group=OVERLAY_PRIMARY)
+        self._nav_down_icon = Sprite(style.game.editor.nav_n, group=OVERLAY_PRIMARY)
 
         self._buttons = [
             self._nav_up_button,
