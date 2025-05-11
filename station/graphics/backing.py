@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from pyglet.graphics import Batch, Group, TextureGroup
-from pyglet.image import AbstractImage, Texture
+from pyglet.graphics import Batch, Group
+from pyglet.graphics.vertexdomain import IndexedVertexList
 from pyglet.graphics.shader import ShaderProgram
+from pyglet.image import AbstractImage, Texture
 
 import arcade.gl as gl
 import pyglet.gl as pygl
@@ -112,17 +113,20 @@ class Backing:
     def __init__(
         self,
         image: AbstractImage,
-        position: tuple[float, float],
-        size: tuple[float, float],
-        shift: tuple[float, float],
+        position: tuple[float, float] = (0.0, 0.0),
+        size: tuple[float, float] | None = None,
+        shift: tuple[float, float] = (0.0, 0.0),
         wrap_x: bool = True,
         wrap_y: bool = True,
-        linear_x: bool = True,
-        linear_y: bool = True,
+        linear_x: bool = False,
+        linear_y: bool = False,
         program: ShaderProgram | None = None,
         batch: Batch | None = None,
         group: Group | None = None,
     ):
+        if size is None:
+            size = image.width, image.height
+
         self._position: tuple[float, float] = position
         self._size: tuple[float, float] = size
         self._scale: tuple[int, int] = image.width, image.height
@@ -141,9 +145,10 @@ class Backing:
         self._image: AbstractImage = image
 
         self._user_group: Group | None = group
-        self._group: TextureGroup = self._create_backing_group()
+        self._group: BackingGroup = self._create_backing_group()
         self._batch: Batch | None = batch
 
+        self._vertex_list: IndexedVertexList
         self._create_vertex_list()
 
     def _calculate_position(self) -> tuple[float, ...]:
@@ -247,6 +252,17 @@ class Backing:
             return
         self._size = size
         self._vertex_list.in_position[:] = self._calculate_position()
+
+    @property
+    def shift(self) -> tuple[float, float]:
+        return self._shift
+    
+    @shift.setter
+    def shift(self, shift: tuple[float, float]) -> None:
+        if shift == self._shift:
+            return
+        self._shift = shift
+        self._vertex_list.in_uv[:] = self._calculate_uv_shift()
 
     @property
     def image(self) -> AbstractImage:

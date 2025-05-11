@@ -88,7 +88,7 @@ class FloatMotionMode(IntEnum):
 
 @dataclass
 class Floating(StyleTable):
-    src: Path
+    texture: AbstractImage
     offset: tuple[float, float]
     foci: tuple[float, float]
     depth: float
@@ -100,7 +100,7 @@ class Floating(StyleTable):
     @classmethod
     def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         return cls(
-            source / data["src"],
+            load_texture(source / data["texture"]),
             data["offset"],
             data["foci"],
             data["depth"],
@@ -114,7 +114,7 @@ class Floating(StyleTable):
 @dataclass
 class Background(StyleTable):
     color: tuple[int, int, int, int]
-    base: StylePath
+    base: AbstractImage
     base_offset: tuple[float, float]
     layers: tuple[Floating, ...]
 
@@ -122,7 +122,7 @@ class Background(StyleTable):
     def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         return cls(
             tuple(data["color"]),
-            source / data["base"],
+            load_texture(source / data["base"]),
             tuple(data["base_offset"]),
             tuple(
                 Floating.create(floating, source)
@@ -357,7 +357,7 @@ def get_style(name: str) -> Style:
             cfg = pth / "style.cfg"
             with open(cfg, "rb") as fp:
                 return Style.create(tomllib.load(fp), pth)
-    with path(styles, f"{name}.stl") as pth:
+    with path(styles, f"{name}.syl") as pth:
         if pth.exists():
             zip = ZipPath(pth)
             cfg = zip / "style.cfg"

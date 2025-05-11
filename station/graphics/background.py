@@ -1,11 +1,12 @@
 from math import cos, sin, tau
 
 from arcade.clock import GLOBAL_CLOCK
-from arcade.future.background import Background, BackgroundGroup
+from pyglet.graphics import Batch
 
 from resources import style
 from resources.style import FloatMotionMode, Background as StyleBackground
 
+from station.graphics.backing import Backing
 
 class ParallaxBackground:
 
@@ -13,31 +14,36 @@ class ParallaxBackground:
         if background is None:
             background = style.menu.background
         self._data: StyleBackground = background
-        self._base: Background = Background.from_file(
-            background.base, background.base_offset
-        )
-        self._layers: tuple[Background, ...] = tuple(
-            Background.from_file(floating.src, floating.offset)
+        self._base: Backing = Backing(background.base, background.base_offset)
+        self._layers: tuple[Backing, ...] = tuple(
+            Backing(floating.texture, floating.offset)
             for floating in background.layers
         )
-        self._background = BackgroundGroup([self._base, *self._layers])
 
         self.layer_offsets: list[tuple[float, float]] = [(0.0, 0.0)] * len(self._layers)
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._base.batch = batch
+        for backing in self._layers:
+            backing.batch = batch
+
+    def disconnect_renderer(self):
+        self.connect_renderer(None)
 
     def cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         for idx, layer in enumerate(self._layers):
             data = self._data.layers[idx]
             origin = (
-                data.foci[0] * layer.texture.texture.width,
-                data.foci[1] * layer.texture.texture.height,
+                data.foci[0] * layer.size[0],
+                data.foci[1] * layer.size[1],
             )
             shift = int((origin[0] - x) / (data.depth)), int(
                 (origin[1] - y) / (data.depth)
             )
-            layer.pos = shift
+            layer.position = shift
             self.layer_offsets[idx] = (
-                shift[0] - layer.texture.offset[0],
-                shift[1] - layer.texture.offset[1],
+                shift[0] - layer.shift[0],
+                shift[1] - layer.shift[1],
             )
 
     def update(self) -> None:
@@ -52,8 +58,10 @@ class ParallaxBackground:
                 case FloatMotionMode.DIAGONAL:
                     x = data.scale * cos(fraction * tau)
                     y = x
-            layer.texture.offset = (x, y)
-            self.layer_offsets[idx] = layer.pos[0] - x, layer.pos[1] - y
+            layer.shift = (x, y)
+            self.layer_offsets[idx] = layer.position[0] - x, layer.position[1] - y
 
-    def draw(self) -> None:
-        self._background.draw()
+    def draw(self):
+        self._base.draw()
+        for layer in self._layers:
+            layer.draw()
