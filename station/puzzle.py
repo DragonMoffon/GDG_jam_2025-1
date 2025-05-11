@@ -5,6 +5,7 @@ from importlib.resources import path
 from tomllib import load as load_toml
 from dataclasses import dataclass
 
+from station.comms import Communication
 from station.node.graph import BlockType, TestCase, OperationValue, STR_CAST, TYPE_CAST, _variable
 import station.node.blocks  # noqa: F401 -- importing sets up the blocks
 
@@ -45,6 +46,7 @@ class Puzzle:
     constant_values: dict[str, OperationValue]
     source_graph: Path | None
     tests: tuple[TestCase, ...]
+    comms: tuple[Communication, ...]
 
 
 def load_puzzle(path: Path) -> Puzzle:
@@ -104,6 +106,13 @@ def load_puzzle(path: Path) -> Puzzle:
         }
         tests.append(TestCase(case_inputs, case_outputs))
 
+    comms_data: list[dict[str, str]] = raw_data.get(
+        "Comms", []
+    )
+    comms: list[Communication] = []
+    for comm in comms_data:
+        comms.append(Communication(comm["dialogue"], comm.get("speaker", None), comm.get("mood", None)))
+
     alert_data = raw_data["Alert"]
     alert = PuzzleAlert(
         tuple(alert_data["pin"]),
@@ -128,6 +137,7 @@ def load_puzzle(path: Path) -> Puzzle:
         constant_values=const_values,
         source_graph=graph,
         tests=tuple(tests),
+        comms=tuple(comms)
     )
 
 

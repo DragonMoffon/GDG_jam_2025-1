@@ -11,6 +11,7 @@ from station.input import inputs, Button, Axis
 from station.context import context
 from station.puzzle import Puzzle
 from station.graphics.background import ParallaxBackground
+from station.comms import comms as station_comms
 
 from .editor import EditorFrame
 from .settings import SettingsFrame
@@ -58,6 +59,10 @@ class LevelSelect:
             self._gui.add_element(alert)
             self._alerts[puzzle.name] = alert
             Style.Audio.notification.play()
+            if puzzle.comms:
+                for comm in puzzle.comms:
+                    station_comms.say(comm.dialogue, comm.speaker, comm.mood)
+            context._comms_frame.update_comms()
 
 
 class GameView(View):

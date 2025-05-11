@@ -36,3 +36,10 @@ outputs = {"celsius"=0.0, "kelvin"=273.15}
 [[Tests]]
 inputs = {"fahrenheit"=0.0}
 outputs = {"celsius"=-17.7777778, "kelvin"=255.3722}
+
+[[Comms]]
+dialogue = "You recieve a new transmission."
+
+[[Comms]]
+dialogue = "I'm glad you got the ship at least up to emergency power standards. Now we just have to deal with the fact that the designers of the temperature systems were American..."
+speaker = "Engineering Dept."

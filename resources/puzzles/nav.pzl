@@ -47,3 +47,10 @@ outputs = {"pos_x" = 2393.5, "pos_y" = 3380}
 [[Tests]]
 inputs = {"bearing_a" = 102, "bearing_b" = 44}
 outputs = {"pos_x" = 2687.5, "pos_y" = 951.9}
+
+[[Comms]]
+dialogue = "You recieve a new transmission."
+
+[[Comms]]
+dialogue = "This one's a doozy. Even the old captain used to have to check their notes to get this one back up and running. But I'm sure you can do it!"
+speaker = "Navigation Wing"

@@ -408,7 +408,7 @@ class Context:
         if self._current_save is None:
             return None
         self._current_save.save_puzzle(puzzle, working)
-    
+
     def save_sandbox(self, graph: GraphController, name: str) -> None:
         if self._current_save is None:
             return None
