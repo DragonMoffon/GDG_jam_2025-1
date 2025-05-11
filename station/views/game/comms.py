@@ -129,3 +129,6 @@ class CommsFrame(Frame):
         self, x: float, y: float, scroll_x: float, scroll_y: float
     ) -> None:
         pass
+
+    def on_select(self) -> None: ...
+    def on_hide(self) -> None: ...
