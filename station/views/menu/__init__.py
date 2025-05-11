@@ -5,13 +5,12 @@ from resources import style
 
 from station.view import View
 from station.graphics.background import ParallaxBackground
-from station.gui.core import Gui, OVERLAY_HIGHLIGHT
+from station.gui.core import Gui
 from station.gui.util import PopupAction, SelectionPopup
 from station.context import context
 from station.views.game import GameView
 from station.views.credits import has_credits, CreditsView
 from station.input import inputs, Button
-from station.graphics.backing import Backing
 
 
 class MainMenuView(View):
