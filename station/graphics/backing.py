@@ -4,7 +4,6 @@ from pyglet.graphics import Batch, Group, TextureGroup
 from pyglet.image import AbstractImage, Texture
 from pyglet.graphics.shader import ShaderProgram
 
-from arcade import get_window, ArcadeContext
 import arcade.gl as gl
 import pyglet.gl as pygl
 
@@ -23,7 +22,6 @@ void main(){
     gl_Position = window.projection * window.view * vec4(in_position, 1.0);
     vs_uv = in_uv;
 }
-
 """
 _backing_fragment_source = """#version 330 core
 in vec2 vs_uv;

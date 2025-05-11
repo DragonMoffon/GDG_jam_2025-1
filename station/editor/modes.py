@@ -40,7 +40,7 @@ class DragBlockMode(EditorMode[Editor]):
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
         if pressed:
-            pass # We only care when primary is released.
+            return # We only care when primary is released.
 
         if button == inputs.PRIMARY_CLICK:
             self._editor.pop_mode()
