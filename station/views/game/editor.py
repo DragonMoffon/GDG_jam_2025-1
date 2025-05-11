@@ -1,6 +1,5 @@
 from pathlib import Path
 from enum import Enum, auto
-from importlib.resources import path
 
 from pyglet.graphics import Batch
 from pyglet.shapes import RoundedRectangle
@@ -82,7 +81,21 @@ class Editor:
             input_block = gui.BlockElement(graph.Block(input_type))
             input_block.update_position((50.0, 300.0))
             output_type = graph.BlockType(
-                "Output", graph._variable, {'str_1': graph.StrValue, 'str_2': graph.StrValue, 'bool_1': graph.BoolValue, 'bool_2': graph.BoolValue, 'int_1': graph.IntValue, 'int_2': graph.IntValue, 'float_1': graph.FloatValue, 'float_2': graph.FloatValue}, {}, {}, exclusive=True
+                "Output",
+                graph._variable,
+                {
+                    "str_1": graph.StrValue,
+                    "str_2": graph.StrValue,
+                    "bool_1": graph.BoolValue,
+                    "bool_2": graph.BoolValue,
+                    "int_1": graph.IntValue,
+                    "int_2": graph.IntValue,
+                    "float_1": graph.FloatValue,
+                    "float_2": graph.FloatValue,
+                },
+                {},
+                {},
+                exclusive=True,
             )
             output_block = gui.BlockElement(graph.Block(output_type))
             output_block.update_position((750.0, 300.0))
@@ -471,10 +484,7 @@ class Editor:
                 self.set_mode_add_connection(source, output)
 
             return
-        elif (
-            button == inputs.SAVE_INPUT
-            and modifiers & inputs.SAVE_MOD
-        ):
+        elif button == inputs.SAVE_INPUT and modifiers & inputs.SAVE_MOD:
             self.set_mode_save_graph()
 
     def drag_block_on_input(
