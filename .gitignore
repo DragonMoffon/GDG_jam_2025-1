@@ -59,3 +59,4 @@ cython_debug/
 # crash logs
 crash-*/
 crash-*.txt
+early-crash*.txt
