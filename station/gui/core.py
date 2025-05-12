@@ -47,10 +47,10 @@ class Element:
         self.uid: UUID = uid or uuid4()
         self.gui: GUI | None = None
 
-        if self.parent is not None:
-            self.parent.add_child(self)
+        if parent is not None:
+            parent.add_child(self)
             if self.layer is None:
-                self.layer = self.parent.layer
+                self.layer = parent.layer
 
     # -- GROUP METHODS --
 
@@ -132,6 +132,8 @@ class Element:
     def contains_point(self, point: Point) -> bool:
         return False
 
+    # Still responsible for update position because layouting adds a lot of
+    # opinionated complexity
     def update_position(self, point: Point) -> None:
         raise NotImplementedError
 

@@ -1,21 +1,15 @@
 from uuid import UUID
 from enum import Enum
 
-from pyglet.graphics import Batch
-from pyglet.shapes import RoundedRectangle
-from pyglet.text import Label
+from pyglet.graphics import Group
 from arcade.clock import GLOBAL_CLOCK
 
 from resources import style, audio
 from station.input import inputs, Button, Axis
+from station.graphics.shadow import get_shadow_shader
 
-from .core import (
-    Element,
-    get_shadow_shader,
-    OVERLAY_SPACING,
-    OVERLAY_PRIMARY,
-    OVERLAY_HIGHLIGHT,
-)
+from .core import Element, Point
+from .elements import Label, RoundedRectangle
 
 
 class Frame(Element):
@@ -29,9 +23,11 @@ class Frame(Element):
         show_body: bool = False,
         show_shadow: bool = True,
         anchor_top: bool = True,
+        parent: Element | None = None,
+        layer: Group | None = None,
         uid: UUID | None = None,
     ):
-        Element.__init__(self, uid)
+        Element.__init__(self, parent, layer, uid)
         self._name = name
         self._size = size
         self._position = position
@@ -52,9 +48,10 @@ class Frame(Element):
             font_size=style.text.sizes.header,
             font_name=style.text.names.monospace,
             color=style.colors.highlight,
-            group=OVERLAY_HIGHLIGHT,
+            parent=self,
+            layer=self.HIGHLIGHT(2),
         )
-        self._tag_text.set_style(
+        self._tag_text.label.set_style(
             "line_spacing", style.text.sizes.header + style.format.padding
         )
         self._tag_panel = RoundedRectangle(
@@ -62,14 +59,15 @@ class Frame(Element):
             0.0,
             style.format.corner_radius
             + 2 * style.format.padding
-            + self._tag_text.content_width,
-            self._tag_text.content_height
+            + self._tag_text.width,
+            self._tag_text.height
             + 2 * style.format.corner_radius
             + 2 * style.format.padding,
             (style.format.corner_radius, style.format.corner_radius, 0, 0),
             (12, 12, 1, 1),
             color=style.colors.base,
-            group=OVERLAY_HIGHLIGHT,
+            parent=self,
+            layer=self.HIGHLIGHT(1),
         )
         self._tag_shadow = RoundedRectangle(
             0.0,
@@ -79,7 +77,8 @@ class Frame(Element):
             (style.format.corner_radius, style.format.corner_radius, 0, 0),
             (12, 12, 1, 1),
             color=style.colors.dark,
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.HIGHLIGHT(0),
             program=get_shadow_shader(),
         )
         radius = style.format.corner_radius + style.format.footer_size
@@ -112,10 +111,9 @@ class Frame(Element):
             (bottom_radius, top_radius, 0.0, 0.0),
             (bottom_segments, top_segments, 1, 1),
             color=style.colors.base,
-            group=OVERLAY_SPACING,
+            parent=self,
+            layer=self.BODY,
         )
-
-        self.update_position(position)
         self.show_body = show_body
         self.show_shadow = show_shadow
 
@@ -123,21 +121,22 @@ class Frame(Element):
     def tag_height(self) -> float:
         return self._tag_panel.height
 
-    @property
-    def panel_width(self) -> float:
-        return self._panel.width
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        return (
+            0 <= point[0] - self._panel.x <= self._panel.width
+            and 0 <= point[1] - self._panel.y <= self._panel.height
+        ) or (
+            0 <= point[0] - self._tag_panel.x <= self._tag_panel.width
+            and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
+        )
 
-    @property
-    def panel_height(self) -> float:
-        return self._panel.height
+    def tag_contains_point(self, point: tuple[float, float]) -> bool:
+        return (
+            0 <= point[0] - self._tag_panel.x <= self._tag_panel.width
+            and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
+        )
 
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._tag_shadow.batch = batch
-        self._tag_panel.batch = batch
-        self._panel.batch = batch
-        self._tag_text.batch = batch
-
-    def update_position(self, point: tuple[float, float]) -> None:
+    def update_position(self, point: Point) -> None:
         self._position = point
         self._panel.position = point
 
@@ -156,6 +155,18 @@ class Frame(Element):
             self._tag_panel.y + self._tag_panel.height - style.format.corner_radius,
             0.0,
         )
+
+    def get_position(self) -> Point:
+        return self._panel.position
+
+    def update_size(self, size: tuple[float, float]) -> None:
+        if size == self._size:
+            return
+        self._size = self._panel.width, self._panel.height = size
+        self.update_position(self._position)
+
+    def get_size(self) -> tuple[float, float]:
+        return self._size
 
     @property
     def show_body(self) -> bool:
@@ -185,24 +196,10 @@ class Frame(Element):
         self.show_shadow = True
         self.on_hide()
 
-    def contains_point(self, point: tuple[float, float]) -> bool:
-        return (
-            0 <= point[0] - self._panel.x <= self._panel.width
-            and 0 <= point[1] - self._panel.y <= self._panel.height
-        ) or (
-            0 <= point[0] - self._tag_panel.x <= self._tag_panel.width
-            and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
-        )
-
-    def tag_contains_point(self, point: tuple[float, float]) -> bool:
-        return (
-            0 <= point[0] - self._tag_panel.x <= self._tag_panel.width
-            and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
-        )
-
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None: ...
     def on_axis_change(self, axis: Axis, value_1: float, value_2: float) -> None: ...
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None: ...
+
     def on_cursor_scroll(
         self, x: float, y: float, scroll_x: float, scroll_y: float
     ) -> None: ...
@@ -374,10 +371,7 @@ class FrameController:
                     self._animation_mode = FrameAnimationMode.NONE
                     self._animation_time = 0.0
             else:
-                x = (
-                    self._pos[0]
-                    - (1 - fraction) ** 3 * self._selected_frame.panel_width
-                )
+                x = self._pos[0] - (1 - fraction) ** 3 * self._selected_frame.width
                 self._selected_frame.update_position((x, self._pos[1]))
         elif (
             self._next_frame is not None
@@ -390,14 +384,10 @@ class FrameController:
                 self._animation_mode = FrameAnimationMode.NONE
                 self._animation_time = 0.0
 
-                self._selected_frame.update_position(
-                    (self._pos[0] - self._selected_frame.panel_width, self._pos[1])
-                )
+                x = self._pos[0] - self._selected_frame.width
+                self._selected_frame.update_position((x, self._pos[1]))
             else:
-                x = (
-                    self._pos[0]
-                    - (1 - (1 - fraction) ** 3) * self._next_frame.panel_width
-                )
+                x = self._pos[0] - (1 - (1 - fraction) ** 3) * self._next_frame.width
                 self._next_frame.update_position((x, self._pos[1]))
 
         if (

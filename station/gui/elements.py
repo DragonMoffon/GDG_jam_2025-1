@@ -4,7 +4,8 @@ from uuid import UUID
 from pyglet.gl import GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
 from pyglet.graphics.shader import ShaderProgram
 from pyglet.graphics import Batch, Group
-from pyglet.text import Label as pyLabel, AnchorX, AnchorY, ContentVAlign
+from pyglet.text import Label as pyLabel
+from pyglet.customtypes import AnchorX, AnchorY, ContentVAlign
 from pyglet.image import AbstractImage, Animation
 from pyglet import shapes, sprite
 

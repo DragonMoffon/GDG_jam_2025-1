@@ -1,17 +1,25 @@
-from pyglet.graphics import Batch
-from pyglet.shapes import RoundedRectangle, Line
-from pyglet.sprite import Sprite
+from uuid import UUID
+
+from pyglet.graphics import Group
 
 from resources import style
-
-from .core import Element, BASE_PRIMARY, BASE_SPACING
 from station.puzzle import Puzzle, AlertOrientation
+from .core import Element, Point
+from .elements import Line, RoundedRectangle, Sprite
+
+__all__ = ("AlertElement", "AlertOrientation")
 
 
 class AlertElement(Element):
 
-    def __init__(self, puzzle: Puzzle):
-        Element.__init__(self)
+    def __init__(
+        self,
+        puzzle: Puzzle,
+        parent: Element | None = None,
+        layer: Group | None = None,
+        uid: UUID | None = None,
+    ):
+        Element.__init__(self, parent, layer, uid)
         self._pin = puzzle.alert.pin
         self._pin_orientation = puzzle.alert.pin_orientation
         self._loc = puzzle.alert.loc
@@ -24,7 +32,8 @@ class AlertElement(Element):
             style.game.editor.puzzle_alert,
             self._loc[0],
             self._loc[1],
-            group=BASE_PRIMARY,
+            parent=self,
+            layer=self.BODY(2),
         )
         self._icon.color = style.colors.highlight
         self._body = RoundedRectangle(
@@ -34,7 +43,8 @@ class AlertElement(Element):
             self._icon.height,
             style.format.padding,
             color=style.colors.base,
-            group=BASE_PRIMARY,
+            parent=self,
+            layer=self.BODY(1),
         )
         self._select = RoundedRectangle(
             self._icon.x - style.format.select_radius,
@@ -43,19 +53,41 @@ class AlertElement(Element):
             self._icon.height + 2 * style.format.select_radius,
             style.format.padding + style.format.select_radius,
             color=style.colors.highlight,
-            group=BASE_SPACING,
+            parent=self,
+            layer=self.SPACING(),
         )
         self._select.visible = False
 
         self._lines: tuple[Line, Line, Line] = (
             Line(
-                0.0, 0.0, 1.0, 1.0, style.format.line_thickness, style.colors.highlight
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                style.format.line_thickness,
+                style.colors.highlight,
+                parent=self,
+                layer=self.BODY(),
             ),
             Line(
-                0.0, 0.0, 1.0, 1.0, style.format.line_thickness, style.colors.highlight
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                style.format.line_thickness,
+                style.colors.highlight,
+                parent=self,
+                layer=self.BODY(),
             ),
             Line(
-                0.0, 0.0, 1.0, 1.0, style.format.line_thickness, style.colors.highlight
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                style.format.line_thickness,
+                style.colors.highlight,
+                parent=self,
+                layer=self.BODY(),
             ),
         )
         self._place_lines()
@@ -64,19 +96,12 @@ class AlertElement(Element):
     def puzzle(self) -> Puzzle:
         return self._puzzle
 
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._body.batch = batch
-        self._select.batch = batch
-        self._icon.batch = batch
-        for line in self._lines:
-            line.batch = batch
-
-    def contains_point(self, point: tuple[float, float]) -> bool:
+    def contains_point(self, point: Point) -> bool:
         l, b, *_ = self._icon.position
         w, h = self._icon.width, self._icon.height
         return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
 
-    def update_position(self, point: tuple[float, float]) -> None:
+    def update_position(self, point: Point) -> None:
         self._icon.position = point[0], point[1], 0
         self._select.position = (
             point[0] - style.format.select_radius,
@@ -84,11 +109,25 @@ class AlertElement(Element):
         )
         self._place_lines()
 
-    def update_offset(self, offset: tuple[float, float]):
+    def get_position(self) -> Point:
+        return self._icon.position
+
+    def update_size(self, size: tuple[float, float]) -> None:
+        self._icon.width, self._icon.height = size
+        self._body.width, self._body.height = size
+        self._select.width = size[0] + 2 * style.format.select_radius
+        self._select.height = size[1] + 2 * style.format.select_radius
+
+        self._place_lines()
+
+    def get_size(self) -> tuple[float, float]:
+        return self._icon.width, self._icon.height
+
+    def update_offset(self, offset: tuple[float, float]) -> None:
         self._pin_offset = offset
         self._place_lines()
 
-    def _place_lines(self):
+    def _place_lines(self) -> None:
         pin = self._pin[0] + self._pin_offset[0], self._pin[1] + self._pin_offset[1]
         loc = self._loc
 
@@ -140,8 +179,8 @@ class AlertElement(Element):
         l3.position = lx2, ly2
         l3.x2, l3.y2 = lx, ly
 
-    def highlight(self):
+    def highlight(self) -> None:
         self._select.visible = True
 
-    def deselect(self):
+    def deselect(self) -> None:
         self._select.visible = False
