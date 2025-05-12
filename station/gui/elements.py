@@ -250,13 +250,6 @@ class Line(Element):
     def get_position2(self) -> Point:
         return self._line.x2, self._line.y2
 
-    def update_size(self, size: tuple[float, float]) -> None:
-        x, y = self._line.position
-        dx, dy = self._line.x2 - x, self._line.y2 - y
-        self._line._x2 = x + (dx / abs(dx)) * size[0]
-        self._line._y2 = y + (dy / abs(dy)) * size[1]
-        self._update_vertices()
-
     def get_size(self) -> tuple[float, float]:
         return self._line.x2 - self._line.x, self._line.y2 - self._line.y
 

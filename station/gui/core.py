@@ -104,6 +104,11 @@ class Element:
         if self.gui is not None:
             self.gui.remove_element(child)
 
+    def clear_children(self) -> None:
+        for child in self.children.values():
+            child.clear_children()
+            self.remove_child(child)
+
     def connect_renderer(self, batch: Batch | None) -> None:
         pass
 
@@ -140,9 +145,6 @@ class Element:
     def get_position(self) -> Point:
         raise NotImplementedError
 
-    def update_size(self, size: tuple[float, float]) -> None:
-        raise NotImplementedError
-
     def get_size(self) -> tuple[float, float]:
         raise NotImplementedError
 
@@ -169,8 +171,8 @@ class GUI:
         self._elements[element.uid] = element
 
         element.gui = self
-        for element in element.children.values():
-            self.add_element(element)
+        for child in element.children.values():
+            self.add_element(child)
 
     def remove_element(self, element: Element) -> None:
         if element.uid not in self._elements:

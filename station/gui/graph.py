@@ -15,9 +15,6 @@ from station.node.graph import (
 from .core import Element, Point
 from .elements import Label, Line, RoundedRectangle, Sprite
 
-style.format = style.format
-style.colors = style.style.colors
-
 
 def get_segment_dist_sqr(s: Point, e: Point, p: Point) -> float:
     length = e[0] - s[0], e[1] - s[1]
@@ -41,7 +38,7 @@ class ConnectionElement(Element):
         start: tuple[float, float],
         end: tuple[float, float],
         parent: Element | None = None,
-        layer: Group | None = None
+        layer: Group | None = None,
         *,
         links: tuple[tuple[float, float], ...] = (),
     ):
@@ -97,12 +94,6 @@ class ConnectionElement(Element):
 
     def get_position(self) -> Point:
         return self._start
-
-    def update_size(self, size: tuple[float, float]) -> None:
-        x, y = self._start
-        dx, dy = self._end[0] - x, self._end[1] - y
-        end = x + size[0] * dx / abs(dx), y + size[1] * dy / abs(dy)
-        self.update_end(end)
 
     def get_size(self) -> tuple[float, float]:
         return self._end[0] - self._start[0], self._end[1] - self._start[1]
@@ -225,7 +216,7 @@ class ConnectionElement(Element):
             style.format.line_thickness,
             color=style.colors.highlight,
             parent=self,
-            layer=self.BODY(1),
+            layer=self.BODY(4),
         )
         shadow_line = Line(
             *shadow_start,
@@ -247,7 +238,7 @@ class TextPanel(Element):
         char_count: int = 6,
         parent: Element | None = None,
         layer: Group | None = None,
-        uid: UUID | None = None
+        uid: UUID | None = None,
     ):
         Element.__init__(self, parent, layer, uid)
         self._text: Label = Label(
@@ -258,18 +249,18 @@ class TextPanel(Element):
             font_name=style.text.names.monospace,
             font_size=style.text.sizes.normal,
             color=style.colors.accent,
-            parent=self
+            parent=self,
         )
-        self._text_width = self._text.content_width
+        self._text_width = self._text.width
         self._panel: RoundedRectangle = RoundedRectangle(
             0.0,
             0.0,
-            self._text.content_width + 2 * style.format.padding,
+            self._text.width + 2 * style.format.padding,
             style.text.sizes.normal + 2 * style.format.padding,
             style.format.padding,
             4,
             style.colors.background,
-            parent=self
+            parent=self,
         )
 
         self._full_text = self._text.text = ""
@@ -318,44 +309,37 @@ class TextPanel(Element):
     def update_position(self, point: Point) -> None:
         self._panel.update_position(point)
         self._text.update_position(
-            point[0] + style.format.padding,
-            point[1] + style.format.padding,
+            (
+                point[0] + style.format.padding,
+                point[1] + style.format.padding,
+            )
         )
 
     def get_position(self) -> Point:
         return self._panel.get_position()
 
-    def update_size(self, size: tuple[float, float]) -> None:
-        self._panel.update_size(size)
-
     def get_size(self) -> tuple[float, float]:
         return self._panel.get_size()
 
-class BoolPanel(Element):
 
-    def __init__(self, active: bool = False, group: Group = BASE_PRIMARY):
-        self._active: bool = active
-        self._sprite = Sprite(
-            style.game.editor.check_inactive,
-            0.0,
-            0.0,
-            0.0,
-            group=group,
+class BoolPanel(Sprite):
+
+    def __init__(
+        self,
+        x: float = 0.0,
+        y: float = 0.0,
+        active: bool = False,
+        parent: Element | None = None,
+        layer: Group | None = None,
+        uid: UUID | None = None,
+    ):
+        Sprite.__init__(
+            style.game.editor.check_inactive, x, y, parent=parent, layer=layer, uid=uid
         )
+        self._active: bool = active
         self._sprite.color = style.colors.highlight
         if active:
             self._sprite.image = style.game.editor.check_active
-
-    def connect_renderer(self, batch: Batch | None = None) -> None:
-        self._sprite.batch = batch  # type: Ignore -- None
-
-    def update_position(self, point: tuple[float, float]) -> None:
-        self._sprite.position = point[0], point[1], 0.0
-
-    def contains_point(self, point: tuple[float, float]) -> bool:
-        l, b, *_ = self._sprite.position
-        w, h = self._sprite.width, self._sprite.height
-        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
 
     @property
     def active(self) -> bool:
@@ -369,33 +353,20 @@ class BoolPanel(Element):
         else:
             self._sprite.image = style.game.editor.check_inactive
 
-    @property
-    def width(self) -> float:
-        return self._sprite.height
-
-    @property
-    def height(self) -> float:
-        return self._sprite.width
-
-    @property
-    def left(self) -> float:
-        return self._sprite.x
-
-    @property
-    def bottom(self) -> float:
-        return self._sprite.y
-
 
 class ConnectionNodeElement(Element):
 
-    def __init__(self, name: str = "", is_input: bool = True):
-        Element.__init__(self)
+    def __init__(
+        self,
+        name: str = "",
+        is_input: bool = True,
+        parent: Element | None = None,
+        layer: Group | None = None,
+        uid: UUID | None = None,
+    ):
+        Element.__init__(self, parent, layer, uid)
         self._sprite = Sprite(
-            style.game.editor.node_inactive,
-            0.0,
-            0.0,
-            0.0,
-            group=BASE_PRIMARY,
+            style.game.editor.node_inactive, 0.0, 0.0, 0.0, parent=self
         )
         self._sprite.width = 2 * style.format.point_radius
         self._sprite.height = 2 * style.format.point_radius
@@ -413,7 +384,7 @@ class ConnectionNodeElement(Element):
                 font_size=style.text.sizes.normal,
                 color=style.colors.highlight,
                 anchor_y="bottom",
-                group=BASE_PRIMARY,
+                parent=self,
             )
 
         self._is_input: bool = is_input
@@ -421,22 +392,33 @@ class ConnectionNodeElement(Element):
         self._active: bool = False
         self._branch: bool = False
 
-    def update_position(self, point: tuple[float, float]) -> None:
+    def contains_point(self, point: Point) -> bool:
+        l, b = self.get_position()
+        w, h = self.get_size()
+        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+
+    def update_position(self, point: Point) -> None:
         s_x = point[0]
         if self._label is not None:
             l_x = point[0] + self._sprite.width + style.format.padding
             if not self._is_input:
-                s_x = point[0] + self._label.content_width + style.format.padding
+                s_x = point[0] + self._label.width + style.format.padding
                 l_x = point[0]
 
-            l_y = point[1] + (self._sprite.height - self._label.content_height) / 2.0
+            l_y = point[1] + (self._sprite.height - self._label.height) / 2.0
             self._label.position = l_x, l_y + 1, 0.0
         self._sprite.position = s_x, point[1], 0.0
 
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._sprite.batch = batch  # type: ignore -- None
-        if self._label is not None:
-            self._label.batch = batch
+    def get_position(self) -> Point:
+        if self._label is None or self._is_input:
+            return self._sprite.get_position()
+        return self._label.get_position()
+
+    def get_size(self) -> tuple[float, float]:
+        w, h = self._sprite.get_size
+        if self._label is None:
+            return w, h
+        return w + style.format.padding + self._label.width, h
 
     @property
     def name(self) -> str:
@@ -492,29 +474,25 @@ class ConnectionNodeElement(Element):
             return self._sprite.x, y
         return self._sprite.x + self._sprite.width, y
 
-    @property
-    def width(self) -> float:
-        if self._label is None:
-            return self._sprite.width
-        return self._sprite.width + style.format.padding + self._label.content_width
-
-    @property
-    def height(self) -> float:
-        return self._sprite.height
-
 
 class TempValueElement(Element):
 
-    def __init__(self, block: Block, connection: Connection):
+    def __init__(
+        self,
+        block: Block,
+        connection: Connection,
+        parent: Element | None = None,
+        layer: Group | None = None,
+    ):
         self._block = block
         self._connection = connection
         self._type: type[OperationValue] = block.type.outputs[connection.output]
-        Element.__init__(self, block.uid)
+        Element.__init__(self, parent, layer, block.uid)
 
         if self._type._typ is bool:
-            self._panel = BoolPanel()
+            self._panel = BoolPanel(parent=self, layer=self.BODY())
         else:
-            self._panel = TextPanel()
+            self._panel = TextPanel(parent=self, layer=self.BODY())
             self._panel.text = str(block.config[connection.output].value)
 
         self._line = Line(
@@ -524,7 +502,8 @@ class TempValueElement(Element):
             1.0,
             style.format.line_thickness,
             style.colors.highlight,
-            group=BASE_PRIMARY,
+            parent=self,
+            layer=self.BODY(4),
         )
 
         self._panel_shadow = RoundedRectangle(
@@ -536,7 +515,8 @@ class TempValueElement(Element):
             12,
             style.colors.dark,
             program=get_shadow_shader(),
-            group=BASE_SHADOW,
+            parent=self,
+            layer=self.SHADOW(),
         )
         self._line_shadow = Line(
             0.0,
@@ -546,7 +526,8 @@ class TempValueElement(Element):
             style.format.line_thickness,
             style.colors.dark,
             program=get_shadow_shader(),
-            group=BASE_SHADOW,
+            parent=self,
+            layer=self.SHADOW(),
         )
 
     @property
@@ -565,17 +546,29 @@ class TempValueElement(Element):
     def bottom(self) -> float:
         return self._panel.bottom
 
+    def contains_point(self, point: Point) -> bool:
+        return self._panel.contains_point(point)
+
+    def update_position(self, point: Point) -> None:
+        self.update_end(point)
+
+    def get_position(self) -> Point:
+        return self._line.get_position2()
+
+    def get_size(self) -> tuple[float, float]:
+        return self._panel.get_size()
+
     def update_end(self, point: tuple[float, float]) -> None:
         link = point[0] - style.format.corner_radius, point[1]
 
         shadow_point = point[0] - style.format.drop_x, point[1] - style.format.drop_y
         shadow_link = link[0] - style.format.drop_x, link[1] - style.format.drop_y
 
-        self._line.position = link
-        self._line.x2, self._line.y2 = point
+        self._line.update_position(link)
+        self._line.update_position2(point)
 
-        self._line_shadow.position = shadow_link
-        self._line_shadow.x2, self._line_shadow.y2 = shadow_point
+        self._line_shadow.update_position(shadow_link)
+        self._line_shadow.update_position2(shadow_point)
 
         panel_pos = link[0] - self._panel.width, link[1] - self._panel.height * 0.5
         shadow_pos = (
@@ -584,7 +577,7 @@ class TempValueElement(Element):
         )
 
         self._panel.update_position(panel_pos)
-        self._panel_shadow.position = shadow_pos
+        self._panel_shadow.update_position(shadow_pos)
 
     def get_hovered_config(self, point: tuple[float, float]) -> str | None:
         if not self.contains_point(point):
@@ -596,23 +589,13 @@ class TempValueElement(Element):
             raise KeyError(f"{name} not a config of block type {self.block.type}")
         return self._panel
 
-    def update_position(self, point: tuple[float, float]) -> None:
-        self.update_end(point)
-
-    def contains_point(self, point: tuple[float, float]) -> bool:
-        return self._panel.contains_point(point)
-
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._panel.connect_renderer(batch)
-        self._panel_shadow.batch = batch
-        self._line.batch = batch
-        self._line_shadow.batch = batch
-
 
 class BlockElement(Element):
 
-    def __init__(self, block: Block):
-        super().__init__(block.uid)
+    def __init__(
+        self, block: Block, parent: Element | None = None, layer: Group | None = None
+    ):
+        Element.__init__(self, parent, layer, block.uid)
         self._block = block
 
         self._input_nodes: dict[str, ConnectionNodeElement] = {}
@@ -623,7 +606,9 @@ class BlockElement(Element):
         self.input_width = 0.0
         if block.type.inputs:
             for name in block.type.inputs:
-                node = ConnectionNodeElement(name)
+                node = ConnectionNodeElement(
+                    name, True, parent=self, layer=self.BODY(1)
+                )
                 self.input_width = max(node.width, self.input_width)
                 self._input_nodes[name] = node
             body_width += self.input_width + style.format.padding
@@ -631,7 +616,9 @@ class BlockElement(Element):
         self.output_width = 0.0
         if block.type.outputs:
             for name in block.type.outputs:
-                node = ConnectionNodeElement(name, False)
+                node = ConnectionNodeElement(
+                    name, False, parent=self, layer=self.BODY(1)
+                )
                 self.output_width = max(node.width, self.output_width)
                 self._output_nodes[name] = node
             body_width += self.output_width + style.format.padding
@@ -640,9 +627,9 @@ class BlockElement(Element):
         if block.type.config:
             for name, typ in block.type.config.items():
                 if typ._typ is bool:
-                    panel = BoolPanel()
+                    panel = BoolPanel(parent=self, layer=self.BODY(1))
                 else:
-                    panel = TextPanel()
+                    panel = TextPanel(parent=self, layer=self.BODY(1))
                     panel.text = str(block.config[name].value)
                 self.config_width = max(panel.width, self.config_width)
                 self._config_panels[name] = panel
@@ -662,9 +649,10 @@ class BlockElement(Element):
             font_name=style.text.names.monospace,
             font_size=style.text.sizes.normal,
             color=style.colors.base,
-            group=BASE_PRIMARY,
+            parent=self,
+            layer=self.BODY(2),
         )
-        title_width = self._title.content_width + 2 * style.format.corner_radius
+        title_width = self._title.width + 2 * style.format.corner_radius
 
         block_width = max(body_width, title_width)
         block_height = style.format.header_size + body_height + style.format.footer_size
@@ -676,7 +664,8 @@ class BlockElement(Element):
             style.format.corner_radius,
             12,
             style.colors.base,
-            group=BASE_PRIMARY,
+            parent=self,
+            layer=self.BODY(),
         )
         self._header: RoundedRectangle = RoundedRectangle(
             0.0,
@@ -686,7 +675,8 @@ class BlockElement(Element):
             (0, style.format.corner_radius, style.format.corner_radius, 0),
             12,
             style.colors.accent,
-            group=BASE_PRIMARY,
+            parent=self,
+            layer=self.BODY(1),
         )
         self._shadow: RoundedRectangle = RoundedRectangle(
             0.0,
@@ -697,7 +687,8 @@ class BlockElement(Element):
             12,
             style.colors.dark,
             program=get_shadow_shader(),
-            group=BASE_SHADOW,
+            parent=self,
+            layer=self.SHADOW(),
         )
         self._select: RoundedRectangle = RoundedRectangle(
             0.0,
@@ -707,7 +698,8 @@ class BlockElement(Element):
             style.format.corner_radius + style.format.select_radius,
             12,
             style.colors.highlight,
-            group=BASE_SPACING,
+            parent=self,
+            layer=self.SPACING(),
         )
         self._select.visible = False
 
@@ -722,53 +714,43 @@ class BlockElement(Element):
     def block(self) -> Block:
         return self._block
 
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._shadow.batch = batch
-        self._select.batch = batch
-        self._body.batch = batch
-        self._header.batch = batch
-
-        self._title.batch = batch
-
-        for node in self._input_nodes.values():
-            node.connect_renderer(batch)
-
-        for node in self._output_nodes.values():
-            node.connect_renderer(batch)
-
-        for panel in self._config_panels.values():
-            panel.connect_renderer(batch)
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        l, b = self._body.position
+        w, h = self.get_size()
+        return 0 <= point[0] - l <= w and 0 < point[1] - b <= h
 
     def update_position(self, point: tuple[float, float]) -> None:
-        self._body.position = point
-        self._select.position = (
-            point[0] - style.format.select_radius,
-            point[1] - style.format.select_radius,
+        self._body.update_position(point)
+        h = self._body.height
+        self._select.update_position(
+            (
+                point[0] - style.format.select_radius,
+                point[1] - style.format.select_radius,
+            )
         )
-        self._header.position = (
-            point[0],
-            point[1] + self._body.height - style.format.header_size,
+        self._header.update_position(
+            (point[0], point[1] + h - style.format.header_size)
         )
-        self._shadow.position = (
-            point[0] - style.format.drop_x,
-            point[1] - style.format.drop_y,
-        )
-
-        self._title.position = (
-            point[0] + style.format.corner_radius,
-            self._header.y + style.format.padding,
-            0.0,
+        self._shadow.update_position(
+            (point[0] - style.format.drop_x, point[1] - style.format.drop_y)
         )
 
+        self._title.update_position(
+            (
+                point[0] + style.format.corner_radius,
+                self._header.y + style.format.padding,
+            )
+        )
+
+        hy = self._header.y
         line_height = style.text.sizes.normal + 3 * style.format.padding
+        sub_line_height = style.text.sizes.normal + 2 * style.format.padding
 
         dx = style.format.padding
         for idx, node in enumerate(self._input_nodes.values()):
             dy = (idx + 1) * line_height
-            of = (
-                style.text.sizes.normal + 2 * style.format.padding - node.height
-            ) / 2.0
-            node.update_position((point[0] + dx, self._header.y - dy + of))
+            of = (sub_line_height - node.height) / 2.0
+            node.update_position((point[0] + dx, hy - dy + of))
 
             if self._input_connections[node.name] is not None:
                 self._input_connections[node.name].update_end(node.link_pos)
@@ -776,10 +758,8 @@ class BlockElement(Element):
         dx = self.width - style.format.padding
         for idx, node in enumerate(self._output_nodes.values()):
             dy = (idx + 1) * line_height
-            of = (
-                style.text.sizes.normal + 2 * style.format.padding - node.height
-            ) / 2.0
-            node.update_position((point[0] + dx - node.width, self._header.y - dy + of))
+            of = (sub_line_height - node.height) / 2.0
+            node.update_position((point[0] + dx - node.width, hy - dy + of))
 
             for connection in self._output_connections[node.name]:
                 connection.update_start(node.link_pos)
@@ -787,14 +767,14 @@ class BlockElement(Element):
         dx = 2 * style.format.padding + self.input_width
         for idx, panel in enumerate(self._config_panels.values()):
             dy = (idx + 1) * line_height
-            of = (
-                style.text.sizes.normal + 2 * style.format.padding - panel.height
-            ) / 2.0
-            panel.update_position((point[0] + dx, self._header.y - dy + of))
+            of = (sub_line_height - panel.height) / 2.0
+            panel.update_position((point[0] + dx, hy - dy + of))
 
-    def contains_point(self, point: tuple[float, float]) -> bool:
-        l, b = self._body.position
-        return 0 <= point[0] - l <= self.width and 0 < point[1] - b <= self.height
+    def get_position(self) -> Point:
+        return self._body.get_position()
+
+    def get_size(self) -> tuple[float, float]:
+        return self._body.get_size()
 
     def near_point(self, point: tuple[float, float], radius: float) -> bool:
         l, b = self.left, self.bottom
@@ -919,8 +899,11 @@ class ValueGroup(Element):
         input_order: bool = True,
         success_marker: bool = False,
         show_names: bool = True,
+        parent: Element | None = None,
+        layer: Group | None = None,
+        uid: UUID | None = None,
     ):
-        Element.__init__(self)
+        Element.__init__(self, parent, layer, uid)
         self._values = values
         self._input_order = input_order
 
@@ -939,7 +922,6 @@ class ValueGroup(Element):
                 font_name=style.text.names.monospace,
                 font_size=style.text.sizes.normal,
                 color=style.colors.highlight,
-                group=OVERLAY_PRIMARY,
             )
             self._names.append(label)
             if value.type is bool:
