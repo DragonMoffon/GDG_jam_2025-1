@@ -1,32 +1,25 @@
-from pyglet.graphics import Batch, Group
-from pyglet.text import Label
-from pyglet.shapes import RoundedRectangle, Line
-from pyglet.sprite import Sprite
+from uuid import UUID
+from pyglet.graphics import Group
 
 from resources import style
 
-
-# from station.graphics.line import Line
-
-from station.node.graph import Block, Connection, BlockComputation, OperationValue, TestCase
-
-from .core import (
-    Element,
-    get_shadow_shader,
-    BASE_PRIMARY,
-    BASE_SHADOW,
-    BASE_SPACING,
-    OVERLAY_PRIMARY,
-    OVERLAY_SHADOW,
+from station.graphics.shadow import get_shadow_shader
+from station.node.graph import (
+    Block,
+    Connection,
+    BlockComputation,
+    OperationValue,
+    TestCase,
 )
 
-formating = style.format
-colors = style.colors
+from .core import Element, Point
+from .elements import Label, Line, RoundedRectangle, Sprite
+
+style.format = style.format
+style.colors = style.style.colors
 
 
-def get_segment_dist_sqr(
-    s: tuple[float, float], e: tuple[float, float], p: tuple[float, float]
-) -> float:
+def get_segment_dist_sqr(s: Point, e: Point, p: Point) -> float:
     length = e[0] - s[0], e[1] - s[1]
     l2 = length[0] ** 2 + length[1] ** 2
     diff = p[0] - s[0], p[1] - s[1]
@@ -47,11 +40,12 @@ class ConnectionElement(Element):
         connection: Connection,
         start: tuple[float, float],
         end: tuple[float, float],
+        parent: Element | None = None,
+        layer: Group | None = None
         *,
         links: tuple[tuple[float, float], ...] = (),
     ):
-        Element.__init__(self, connection.uid)
-        self._batch: Batch | None = None
+        Element.__init__(self, parent, layer, connection.uid)
         # TODO: add Style attribute for connection start, and end
 
         self._connection: Connection = connection
@@ -59,8 +53,8 @@ class ConnectionElement(Element):
         self._start: tuple[float, float] = start
         self._end: tuple[float, float] = end
 
-        start_link = (start[0] + formating.corner_radius, start[1])
-        end_link = (end[0] - formating.corner_radius, end[1])
+        start_link = (start[0] + style.format.corner_radius, start[1])
+        end_link = (end[0] - style.format.corner_radius, end[1])
         self._links: list[tuple[float, float]] = [start_link, *links, end_link]
 
         self._lines: list[Line] = []
@@ -76,12 +70,42 @@ class ConnectionElement(Element):
         self._lines.append(line)
         self._shadow_lines.append(shadow)
 
-        # self._joints: list[Circle] = [s_joint, m_joint, e_joint]
-        # self._shadow_joints: list[Circle] = [s_s_joint, m_s_joint, e_s_joint]
-
     @property
     def connection(self) -> Connection:
         return self._connection
+
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        # compute end line
+        dist = get_segment_dist_sqr(self._links[-1], self._end, point)
+        if dist <= style.format.point_radius**2:
+            return True
+
+        pos = self._start
+        # Check along all lines except end line
+        for link in self._links:
+            dist = get_segment_dist_sqr(pos, link, point)
+
+            if dist <= style.format.point_radius**2:
+                return True
+
+            pos = link
+
+        return False
+
+    def update_position(self, point: Point) -> None:
+        self.update_start(point)
+
+    def get_position(self) -> Point:
+        return self._start
+
+    def update_size(self, size: tuple[float, float]) -> None:
+        x, y = self._start
+        dx, dy = self._end[0] - x, self._end[1] - y
+        end = x + size[0] * dx / abs(dx), y + size[1] * dy / abs(dy)
+        self.update_end(end)
+
+    def get_size(self) -> tuple[float, float]:
+        return self._end[0] - self._start[0], self._end[1] - self._start[1]
 
     def get_closest_link(self, point: tuple[float, float]) -> tuple[int, float]:
         # TODO: make it not exlude start and end links?
@@ -107,85 +131,46 @@ class ConnectionElement(Element):
 
         return line_idx, smallest**0.5
 
-    def contains_point(self, point: tuple[float, float]) -> bool:
-        # compute end line
-        dist = get_segment_dist_sqr(self._links[-1], self._end, point)
-        if dist <= formating.point_radius**2:
-            return True
-
-        pos = self._start
-        # Check along all lines except end line
-        for link in self._links:
-            dist = get_segment_dist_sqr(pos, link, point)
-
-            if dist <= formating.point_radius**2:
-                return True
-
-            pos = link
-
-        return False
-
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._batch = batch
-        for idx in range(len(self._links) + 1):  # fence post problem
-            self._lines[idx].batch = batch
-            self._shadow_lines[idx].batch = batch
-
-        # for idx in range(len(self._links)):
-        #     self._joints[idx].batch = batch
-        #     self._shadow_joints[idx].batch = batch
-
     def update_start(self, point: tuple[float, float]) -> None:
         self._start = point
 
-        link = point[0] + formating.corner_radius, point[1]
-        link2 = self._links[1]
+        link = point[0] + style.format.corner_radius, point[1]
+        shadow_point = (point[0] - style.format.drop_x, point[1] - style.format.drop_y)
+        shadow_link = shadow_point[0] + style.format.corner_radius, shadow_point[1]
+
         self._links[0] = link
 
-        self._lines[0].position = point
-        self._lines[1].position = link
-        self._lines[0].x2, self._lines[0].y2 = link
-        self._lines[1].x2, self._lines[1].y2 = link2
-        # self.joint[0].position = link
+        self._lines[0].update_position(point)
+        self._lines[0].update_position2(link)
+        self._lines[1].update_position(link)
 
-        shadow_point = (point[0] - formating.drop_x, point[1] - formating.drop_y)
-        shadow_link = shadow_point[0] + formating.corner_radius, shadow_point[1]
-        shadow_link2 = link2[0] - formating.drop_x, link2[1] - formating.drop_y
-
-        self._shadow_lines[0].position = shadow_point
-        self._shadow_lines[1].position = shadow_link
-        self._shadow_lines[0].x2, self._shadow_lines[0].y2 = shadow_link
-        self._shadow_lines[1].x2, self._shadow_lines[1].y2 = shadow_link2
-        # self._shadow_joints[0].position = shadow_link
+        self._shadow_lines[0].update_position(shadow_point)
+        self._shadow_lines[0].update_position2(shadow_link)
+        self._shadow_lines[1].update_position(shadow_link)
 
     def update_end(self, point: tuple[float, float]) -> None:
         self._end = point
 
-        link = point[0] - formating.corner_radius, point[1]
+        link = point[0] - style.format.corner_radius, point[1]
+        shadow_point = (point[0] - style.format.drop_x, point[1] - style.format.drop_y)
+        shadow_link = shadow_point[0] - style.format.corner_radius, shadow_point[1]
+
         self._links[-1] = link
 
-        self._lines[-1].position = link
-        self._lines[-2].x2, self._lines[-2].y2 = link
-        self._lines[-1].x2, self._lines[-1].y2 = point
-        # self._joints[-1].position = link
+        self._lines[-1].update_position(link)
+        self._lines[-2].update_position2(link)
+        self._lines[-1].update_position2(point)
 
-        shadow_point = (point[0] - formating.drop_x, point[1] - formating.drop_y)
-        shadow_link = shadow_point[0] - formating.corner_radius, shadow_point[1]
-
-        self._shadow_lines[-1].position = shadow_link
-        self._shadow_lines[-2].x2, self._shadow_lines[-2].y2 = shadow_link
-        self._shadow_lines[-1].x2, self._shadow_lines[-1].y2 = shadow_point
-        # self._shadow_joints[-1].position = shadow_point
+        self._shadow_lines[-1].update_postion(shadow_link)
+        self._shadow_lines[-2].update_position2(shadow_link)
+        self._shadow_lines[-1].update_position2(shadow_point)
 
     def update_link(self, link: int, point: tuple[float, float]) -> None:
         if not 0 < link < len(self._links):
             return  # ignore the start and end links
+        shadow = point[0] - style.format.drop_x, point[1] - style.format.drop_y
 
         self._links[link] = point
-        n_link = self._links[link + 1]
-
-        # self._joints[link].position = point
-        # self._shadow_joints[link] = shadow
 
         pl = self._lines[link]
         nl = self._lines[link + 1]
@@ -193,108 +178,78 @@ class ConnectionElement(Element):
         ps = self._shadow_lines[link]
         ns = self._shadow_lines[link + 1]
 
-        pl.x2, pl.y2 = point
-        ps.x2, ps.y2 = point[0] - formating.drop_x, point[1] - formating.drop_y
+        pl.update_position2(point)
+        ps.update_position2(shadow)
 
-        nl.position = point
-        nl.x2, nl.y2 = n_link
-
-        ns.position = point[0] - formating.drop_x, point[1] - formating.drop_y
-        ns.x2, ns.y2 = n_link[0] - formating.drop_x, n_link[1] - formating.drop_y
+        nl.update_position(point)
+        ns.update_position(shadow)
 
     def insert_link(self, link: int, point: tuple[float, float]) -> None:
         if not 0 < link < len(self._links):
             return  # ignore the start and end links
+        shadow = point[0] - style.format.drop_x, point[1] - style.format.drop_y
+
         old_start = self._links[link - 1]
-        old_end = self._links[link]
 
-        o_line = self._lines[link]
-        o_line.position = point
-        o_line.x2, o_line.y2 = old_end
-
-        o_s_line = self._shadow_lines[link]
-        o_s_line.position = point[0] - formating.drop_x, point[1] - formating.drop_y
-        o_s_line.x2, o_s_line.y2 = (
-            old_end[0] - formating.drop_x,
-            old_end[1] - formating.drop_y,
-        )
+        self._lines[link].update_position(point)
+        self._shadow_lines[link].update_position(shadow)
 
         n_line, n_s_line = self._create_link(old_start, point)
 
         self._lines.insert(link, n_line)
-        # self._joints.insert(link, n_joint)
         self._shadow_lines.insert(link, n_s_line)
-        # self._shadow_joints.insert(link, n_s_joint)
         self._links.insert(link, point)
 
     def remove_link(self, link: int) -> None:
         if not 2 <= link + 1 < len(self._links):
             return  # ignore the start and end
 
-        new_start = self._links[link - 1]
-        new_shadow = new_start[0] - formating.drop_x, new_start[1] - formating.drop_y
+        start = self._links[link - 1]
+        shadow = start[0] - style.format.drop_x, start[1] - style.format.drop_y
 
-        self._lines.pop(link).batch = None
-        # self._joints.pop(link).batch = None
-        self._shadow_lines.pop(link).batch = None
-        # self._shadow_joints.pop(link).batch = None
+        self.remove_child(self._lines.pop(link))
+        self.remove_child(self._shadow_lines.pop(link))
         self._links.pop(link)
 
-        old_end = self._links[link]
-        old_shadow = old_end[0] - formating.drop_x, old_end[1] - formating.drop_y
-
-        line = self._lines[link]
-        shadow = self._shadow_lines[link]
-
-        line.position = new_start
-        line.x2, line.y2 = old_end
-        shadow.position = new_shadow
-        shadow.x2, shadow.y2 = old_shadow
+        self._lines[link].update_position(start)
+        self._shadow_lines[link].update_position(shadow)
 
     def _create_link(
         self, start: tuple[float, float], end: tuple[float, float]
     ) -> tuple[Line, Line]:
-        shadow_start = start[0] - formating.drop_x, start[1] - formating.drop_y
-        shadow_end = end[0] - formating.drop_x, end[1] - formating.drop_y
+        shadow_start = start[0] - style.format.drop_x, start[1] - style.format.drop_y
+        shadow_end = end[0] - style.format.drop_x, end[1] - style.format.drop_y
         line = Line(
             *start,
             *end,
-            formating.line_thickness,
-            color=colors.highlight,
-            batch=self._batch,
-            group=BASE_PRIMARY,
+            style.format.line_thickness,
+            color=style.colors.highlight,
+            parent=self,
+            layer=self.BODY(1),
         )
-        # joint = Circle(
-        #     *end,
-        #     formating.line_thickness / 2.0,
-        #     color=colors.highlight,
-        #     batch=self._batch,
-        #     group=BASE_PRIMARY,
-        # )
         shadow_line = Line(
             *shadow_start,
             *shadow_end,
-            formating.line_thickness,
-            color=colors.dark,
-            batch=self._batch,
+            style.format.line_thickness,
+            color=style.colors.dark,
             program=get_shadow_shader(),
-            group=BASE_SHADOW,
+            parent=self,
+            layer=self.SHADOW(),
         )
-        # shadow_joint = Circle(
-        #     *shadow_end,
-        #     formating.line_thickness / 2.0,
-        #     color=colors.dark,
-        #     batch=self._batch,
-        #     program=get_shadow_shader(),
-        #     group=BASE_SHADOW,
-        # )
 
         return line, shadow_line
 
 
 class TextPanel(Element):
 
-    def __init__(self, char_count: int = 6, group: Group = BASE_PRIMARY):
+    def __init__(
+        self,
+        char_count: int = 6,
+        parent: Element | None = None,
+        layer: Group | None = None,
+        uid: UUID | None = None
+    ):
+        Element.__init__(self, parent, layer, uid)
         self._text: Label = Label(
             "#" * char_count,
             0.0,
@@ -302,19 +257,19 @@ class TextPanel(Element):
             0.0,
             font_name=style.text.names.monospace,
             font_size=style.text.sizes.normal,
-            color=colors.accent,
-            group=group,
+            color=style.colors.accent,
+            parent=self
         )
         self._text_width = self._text.content_width
         self._panel: RoundedRectangle = RoundedRectangle(
             0.0,
             0.0,
-            self._text.content_width + 2 * formating.padding,
-            style.text.sizes.normal + 2 * formating.padding,
-            formating.padding,
+            self._text.content_width + 2 * style.format.padding,
+            style.text.sizes.normal + 2 * style.format.padding,
+            style.format.padding,
             4,
-            colors.background,
-            group=group,
+            style.colors.background,
+            parent=self
         )
 
         self._full_text = self._text.text = ""
@@ -357,24 +312,24 @@ class TextPanel(Element):
     def bottom(self) -> float:
         return self._panel.y
 
-    def update_position(self, point: tuple[float, float]) -> None:
-        self._panel.position = point
-        self._text.position = (
-            point[0] + formating.padding,
-            point[1] + formating.padding,
-            0.0,
+    def contains_point(self, point: Point) -> bool:
+        return self._panel.contains_point(point)
+
+    def update_position(self, point: Point) -> None:
+        self._panel.update_position(point)
+        self._text.update_position(
+            point[0] + style.format.padding,
+            point[1] + style.format.padding,
         )
 
-    def contains_point(self, point: tuple[float, float]) -> bool:
-        l, b = self._panel.position
-        w, h = self._panel._width, self._panel._height
+    def get_position(self) -> Point:
+        return self._panel.get_position()
 
-        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+    def update_size(self, size: tuple[float, float]) -> None:
+        self._panel.update_size(size)
 
-    def connect_renderer(self, batch: Batch | None = None) -> None:
-        self._panel.batch = batch
-        self._text.batch = batch
-
+    def get_size(self) -> tuple[float, float]:
+        return self._panel.get_size()
 
 class BoolPanel(Element):
 
@@ -387,7 +342,7 @@ class BoolPanel(Element):
             0.0,
             group=group,
         )
-        self._sprite.color = colors.highlight
+        self._sprite.color = style.colors.highlight
         if active:
             self._sprite.image = style.game.editor.check_active
 
@@ -442,9 +397,9 @@ class ConnectionNodeElement(Element):
             0.0,
             group=BASE_PRIMARY,
         )
-        self._sprite.width = 2 * formating.point_radius
-        self._sprite.height = 2 * formating.point_radius
-        self._sprite.color = colors.highlight
+        self._sprite.width = 2 * style.format.point_radius
+        self._sprite.height = 2 * style.format.point_radius
+        self._sprite.color = style.colors.highlight
 
         self._name: str = name
         self._label: Label | None = None
@@ -456,7 +411,7 @@ class ConnectionNodeElement(Element):
                 0.0,
                 font_name=style.text.names.monospace,
                 font_size=style.text.sizes.normal,
-                color=colors.highlight,
+                color=style.colors.highlight,
                 anchor_y="bottom",
                 group=BASE_PRIMARY,
             )
@@ -469,9 +424,9 @@ class ConnectionNodeElement(Element):
     def update_position(self, point: tuple[float, float]) -> None:
         s_x = point[0]
         if self._label is not None:
-            l_x = point[0] + self._sprite.width + formating.padding
+            l_x = point[0] + self._sprite.width + style.format.padding
             if not self._is_input:
-                s_x = point[0] + self._label.content_width + formating.padding
+                s_x = point[0] + self._label.content_width + style.format.padding
                 l_x = point[0]
 
             l_y = point[1] + (self._sprite.height - self._label.content_height) / 2.0
@@ -541,7 +496,7 @@ class ConnectionNodeElement(Element):
     def width(self) -> float:
         if self._label is None:
             return self._sprite.width
-        return self._sprite.width + formating.padding + self._label.content_width
+        return self._sprite.width + style.format.padding + self._label.content_width
 
     @property
     def height(self) -> float:
@@ -567,8 +522,8 @@ class TempValueElement(Element):
             0.0,
             1.0,
             1.0,
-            formating.line_thickness,
-            colors.highlight,
+            style.format.line_thickness,
+            style.colors.highlight,
             group=BASE_PRIMARY,
         )
 
@@ -577,9 +532,9 @@ class TempValueElement(Element):
             0.0,
             self._panel.width,
             self._panel.height,
-            formating.padding,
+            style.format.padding,
             12,
-            colors.dark,
+            style.colors.dark,
             program=get_shadow_shader(),
             group=BASE_SHADOW,
         )
@@ -588,8 +543,8 @@ class TempValueElement(Element):
             0.0,
             1.0,
             1.0,
-            formating.line_thickness,
-            colors.dark,
+            style.format.line_thickness,
+            style.colors.dark,
             program=get_shadow_shader(),
             group=BASE_SHADOW,
         )
@@ -611,10 +566,10 @@ class TempValueElement(Element):
         return self._panel.bottom
 
     def update_end(self, point: tuple[float, float]) -> None:
-        link = point[0] - formating.corner_radius, point[1]
+        link = point[0] - style.format.corner_radius, point[1]
 
-        shadow_point = point[0] - formating.drop_x, point[1] - formating.drop_y
-        shadow_link = link[0] - formating.drop_x, link[1] - formating.drop_y
+        shadow_point = point[0] - style.format.drop_x, point[1] - style.format.drop_y
+        shadow_link = link[0] - style.format.drop_x, link[1] - style.format.drop_y
 
         self._line.position = link
         self._line.x2, self._line.y2 = point
@@ -623,7 +578,10 @@ class TempValueElement(Element):
         self._line_shadow.x2, self._line_shadow.y2 = shadow_point
 
         panel_pos = link[0] - self._panel.width, link[1] - self._panel.height * 0.5
-        shadow_pos = panel_pos[0] - formating.drop_x, panel_pos[1] - formating.drop_y
+        shadow_pos = (
+            panel_pos[0] - style.format.drop_x,
+            panel_pos[1] - style.format.drop_y,
+        )
 
         self._panel.update_position(panel_pos)
         self._panel_shadow.position = shadow_pos
@@ -661,14 +619,14 @@ class BlockElement(Element):
         self._output_nodes: dict[str, ConnectionNodeElement] = {}
         self._config_panels: dict[str, TextPanel | BoolPanel] = {}
 
-        body_width = formating.padding
+        body_width = style.format.padding
         self.input_width = 0.0
         if block.type.inputs:
             for name in block.type.inputs:
                 node = ConnectionNodeElement(name)
                 self.input_width = max(node.width, self.input_width)
                 self._input_nodes[name] = node
-            body_width += self.input_width + formating.padding
+            body_width += self.input_width + style.format.padding
 
         self.output_width = 0.0
         if block.type.outputs:
@@ -676,7 +634,7 @@ class BlockElement(Element):
                 node = ConnectionNodeElement(name, False)
                 self.output_width = max(node.width, self.output_width)
                 self._output_nodes[name] = node
-            body_width += self.output_width + formating.padding
+            body_width += self.output_width + style.format.padding
 
         self.config_width = 0.0
         if block.type.config:
@@ -688,12 +646,12 @@ class BlockElement(Element):
                     panel.text = str(block.config[name].value)
                 self.config_width = max(panel.width, self.config_width)
                 self._config_panels[name] = panel
-            body_width += self.config_width + formating.padding
+            body_width += self.config_width + style.format.padding
 
         row_count = max(
             len(block.type.inputs), len(block.type.config), len(block.type.outputs)
         )
-        body_height = row_count * (style.text.sizes.normal + 3 * formating.padding)
+        body_height = row_count * (style.text.sizes.normal + 3 * style.format.padding)
 
         self._title: Label = Label(
             block.type.name,
@@ -703,31 +661,31 @@ class BlockElement(Element):
             anchor_y="bottom",
             font_name=style.text.names.monospace,
             font_size=style.text.sizes.normal,
-            color=colors.base,
+            color=style.colors.base,
             group=BASE_PRIMARY,
         )
-        title_width = self._title.content_width + 2 * formating.corner_radius
+        title_width = self._title.content_width + 2 * style.format.corner_radius
 
         block_width = max(body_width, title_width)
-        block_height = formating.header_size + body_height + formating.footer_size
+        block_height = style.format.header_size + body_height + style.format.footer_size
         self._body: RoundedRectangle = RoundedRectangle(
             0.0,
             0.0,
             block_width,
             block_height,
-            formating.corner_radius,
+            style.format.corner_radius,
             12,
-            colors.base,
+            style.colors.base,
             group=BASE_PRIMARY,
         )
         self._header: RoundedRectangle = RoundedRectangle(
             0.0,
             0.0,
             block_width,
-            formating.header_size,
-            (0, formating.corner_radius, formating.corner_radius, 0),
+            style.format.header_size,
+            (0, style.format.corner_radius, style.format.corner_radius, 0),
             12,
-            colors.accent,
+            style.colors.accent,
             group=BASE_PRIMARY,
         )
         self._shadow: RoundedRectangle = RoundedRectangle(
@@ -735,20 +693,20 @@ class BlockElement(Element):
             0.0,
             block_width,
             block_height,
-            formating.corner_radius,
+            style.format.corner_radius,
             12,
-            colors.dark,
+            style.colors.dark,
             program=get_shadow_shader(),
             group=BASE_SHADOW,
         )
         self._select: RoundedRectangle = RoundedRectangle(
             0.0,
             0.0,
-            block_width + 2 * formating.select_radius,
-            block_height + 2 * formating.select_radius,
-            formating.corner_radius + formating.select_radius,
+            block_width + 2 * style.format.select_radius,
+            block_height + 2 * style.format.select_radius,
+            style.format.corner_radius + style.format.select_radius,
             12,
-            colors.highlight,
+            style.colors.highlight,
             group=BASE_SPACING,
         )
         self._select.visible = False
@@ -784,45 +742,54 @@ class BlockElement(Element):
     def update_position(self, point: tuple[float, float]) -> None:
         self._body.position = point
         self._select.position = (
-            point[0] - formating.select_radius,
-            point[1] - formating.select_radius,
+            point[0] - style.format.select_radius,
+            point[1] - style.format.select_radius,
         )
         self._header.position = (
             point[0],
-            point[1] + self._body.height - formating.header_size,
+            point[1] + self._body.height - style.format.header_size,
         )
-        self._shadow.position = point[0] - formating.drop_x, point[1] - formating.drop_y
+        self._shadow.position = (
+            point[0] - style.format.drop_x,
+            point[1] - style.format.drop_y,
+        )
 
         self._title.position = (
-            point[0] + formating.corner_radius,
-            self._header.y + formating.padding,
+            point[0] + style.format.corner_radius,
+            self._header.y + style.format.padding,
             0.0,
         )
 
-        line_height = style.text.sizes.normal + 3 * formating.padding
+        line_height = style.text.sizes.normal + 3 * style.format.padding
 
-        dx = formating.padding
+        dx = style.format.padding
         for idx, node in enumerate(self._input_nodes.values()):
             dy = (idx + 1) * line_height
-            of = (style.text.sizes.normal + 2 * formating.padding - node.height) / 2.0
+            of = (
+                style.text.sizes.normal + 2 * style.format.padding - node.height
+            ) / 2.0
             node.update_position((point[0] + dx, self._header.y - dy + of))
 
             if self._input_connections[node.name] is not None:
                 self._input_connections[node.name].update_end(node.link_pos)
 
-        dx = self.width - formating.padding
+        dx = self.width - style.format.padding
         for idx, node in enumerate(self._output_nodes.values()):
             dy = (idx + 1) * line_height
-            of = (style.text.sizes.normal + 2 * formating.padding - node.height) / 2.0
+            of = (
+                style.text.sizes.normal + 2 * style.format.padding - node.height
+            ) / 2.0
             node.update_position((point[0] + dx - node.width, self._header.y - dy + of))
 
             for connection in self._output_connections[node.name]:
                 connection.update_start(node.link_pos)
 
-        dx = 2 * formating.padding + self.input_width
+        dx = 2 * style.format.padding + self.input_width
         for idx, panel in enumerate(self._config_panels.values()):
             dy = (idx + 1) * line_height
-            of = (style.text.sizes.normal + 2 * formating.padding - panel.height) / 2.0
+            of = (
+                style.text.sizes.normal + 2 * style.format.padding - panel.height
+            ) / 2.0
             panel.update_position((point[0] + dx, self._header.y - dy + of))
 
     def contains_point(self, point: tuple[float, float]) -> bool:
@@ -957,7 +924,7 @@ class ValueGroup(Element):
         self._values = values
         self._input_order = input_order
 
-        line_height = style.text.sizes.normal + 2 * formating.padding
+        line_height = style.text.sizes.normal + 2 * style.format.padding
         h, w = 0.0, 0.0
         self._names: list[Label] = []
         self._panels: list[BoolPanel | TextPanel] = []
@@ -971,7 +938,7 @@ class ValueGroup(Element):
                 0.0,
                 font_name=style.text.names.monospace,
                 font_size=style.text.sizes.normal,
-                color=colors.highlight,
+                color=style.colors.highlight,
                 group=OVERLAY_PRIMARY,
             )
             self._names.append(label)
@@ -984,22 +951,22 @@ class ValueGroup(Element):
             self._panels.append(panel)
             self._text_width = max(self._text_width, label.content_width)
             self._panel_width = max(self._panel_width, panel.width)
-        w = self._text_width + self._panel_width + formating.padding
-        h = len(values) * line_height + (len(values) - 1) * formating.padding
+        w = self._text_width + self._panel_width + style.format.padding
+        h = len(values) * line_height + (len(values) - 1) * style.format.padding
 
         self._success: BoolPanel | None = (
             BoolPanel(group=OVERLAY_PRIMARY) if success_marker else None
         )
         if success_marker:
-            w += formating.padding + self._success.width
+            w += style.format.padding + self._success.width
 
         self._body = RoundedRectangle(
             0.0,
             0.0,
-            w + 3 * formating.padding,
-            h + 2 * formating.padding,
-            formating.padding,
-            color=colors.base,
+            w + 3 * style.format.padding,
+            h + 2 * style.format.padding,
+            style.format.padding,
+            color=style.colors.base,
             group=OVERLAY_PRIMARY,
         )
 
@@ -1029,18 +996,20 @@ class ValueGroup(Element):
         self._body.position = point
 
         if self._success is not None:
-            sx = point[0] + self._body.width - self._success.width - formating.padding
+            sx = (
+                point[0] + self._body.width - self._success.width - style.format.padding
+            )
             sy = point[1] + 0.5 * (self._body.height - self._success.height)
             self._success.update_position((sx, sy))
 
         if self._input_order:
-            tx = point[0] + self._panel_width + 2 * formating.padding
-            px = point[0] + formating.padding
+            tx = point[0] + self._panel_width + 2 * style.format.padding
+            px = point[0] + style.format.padding
         else:
-            tx = point[0] + formating.padding
-            px = point[0] + self._text_width + 2 * formating.padding
+            tx = point[0] + style.format.padding
+            px = point[0] + self._text_width + 2 * style.format.padding
 
-        line_height = style.text.sizes.normal + 3 * formating.padding
+        line_height = style.text.sizes.normal + 3 * style.format.padding
         y = point[1] + self._body.height
         for idx in range(len(self._values)):
             dy = y - (idx + 1) * line_height
@@ -1075,23 +1044,23 @@ class TestRunner(Element):
             wo = 0
         self._output: ValueGroup | None = out
 
-        h += 2 * formating.padding
+        h += 2 * style.format.padding
         self._input_body = RoundedRectangle(
             0.0,
             0.0,
-            wi + 2 * formating.padding,
+            wi + 2 * style.format.padding,
             h,
-            formating.padding,
-            color=colors.background,
+            style.format.padding,
+            color=style.colors.background,
             group=OVERLAY_PRIMARY,
         )
         self._output_body = RoundedRectangle(
             0.0,
             0.0,
-            wo + 2 * formating.padding,
+            wo + 2 * style.format.padding,
             h,
-            formating.padding,
-            color=colors.background,
+            style.format.padding,
+            color=style.colors.background,
             group=OVERLAY_PRIMARY,
         )
 
@@ -1100,8 +1069,8 @@ class TestRunner(Element):
             0.0,
             32.0,
             32.0,
-            formating.padding,
-            color=colors.background,
+            style.format.padding,
+            color=style.colors.background,
             group=OVERLAY_PRIMARY,
         )
         self._nav_up_icon = Sprite(style.game.editor.nav_p, group=OVERLAY_PRIMARY)
@@ -1111,8 +1080,8 @@ class TestRunner(Element):
             0.0,
             32.0,
             32.0,
-            formating.padding,
-            color=colors.background,
+            style.format.padding,
+            color=style.colors.background,
             group=OVERLAY_PRIMARY,
         )
         self._run_one_icon = Sprite(style.game.editor.run_one, group=OVERLAY_PRIMARY)
@@ -1122,8 +1091,8 @@ class TestRunner(Element):
             0.0,
             32.0,
             32.0,
-            formating.padding,
-            color=colors.background,
+            style.format.padding,
+            color=style.colors.background,
             group=OVERLAY_PRIMARY,
         )
         self._run_all_icon = Sprite(style.game.editor.run_all, group=OVERLAY_PRIMARY)
@@ -1133,8 +1102,8 @@ class TestRunner(Element):
             0.0,
             32.0,
             32.0,
-            formating.padding,
-            color=colors.background,
+            style.format.padding,
+            color=style.colors.background,
             group=OVERLAY_PRIMARY,
         )
         self._nav_down_icon = Sprite(style.game.editor.nav_n, group=OVERLAY_PRIMARY)
@@ -1153,20 +1122,22 @@ class TestRunner(Element):
         ]
         self.deselect_buttons()
 
-        self.wb = wb = 32.0 * len(self._buttons) + formating.padding * (
+        self.wb = wb = 32.0 * len(self._buttons) + style.format.padding * (
             len(self._buttons) - 1
         )
 
-        body_width = max(wi + wo + formating.padding, wb) + 2 * formating.corner_radius
-        body_height = h + 32.0 + formating.padding + 2 * formating.corner_radius
+        body_width = (
+            max(wi + wo + style.format.padding, wb) + 2 * style.format.corner_radius
+        )
+        body_height = h + 32.0 + style.format.padding + 2 * style.format.corner_radius
 
         self._body = RoundedRectangle(
             0.0,
             0.0,
             body_width,
             body_height,
-            formating.corner_radius,
-            color=colors.base,
+            style.format.corner_radius,
+            color=style.colors.base,
             group=OVERLAY_PRIMARY,
         )
         self._shadow = RoundedRectangle(
@@ -1174,8 +1145,8 @@ class TestRunner(Element):
             0.0,
             body_width,
             body_height,
-            formating.corner_radius,
-            color=colors.dark,
+            style.format.corner_radius,
+            color=style.colors.dark,
             program=get_shadow_shader(),
             group=OVERLAY_SHADOW,
         )
@@ -1188,41 +1159,41 @@ class TestRunner(Element):
     def update_position(self, point: tuple[float, float]) -> None:
         self._body.position = point
         self._shadow.position = (
-            point[0] - 2 * formating.drop_x,
-            point[1] - 2 * formating.drop_y,
+            point[0] - 2 * style.format.drop_x,
+            point[1] - 2 * style.format.drop_y,
         )
 
-        pw = self._input_body.width + self._output_body.width + formating.padding
+        pw = self._input_body.width + self._output_body.width + style.format.padding
         px = point[0] + (self._body.width - pw) / 2.0
         self._input_body.position = (
             px,
-            point[1] + 32.0 + formating.padding + formating.corner_radius,
+            point[1] + 32.0 + style.format.padding + style.format.corner_radius,
         )
         self._output_body.position = (
-            px + formating.padding + self._input_body.width,
-            point[1] + 32.0 + formating.padding + formating.corner_radius,
+            px + style.format.padding + self._input_body.width,
+            point[1] + 32.0 + style.format.padding + style.format.corner_radius,
         )
 
         cx = point[0] + (self._body.width - self.wb) / 2.0
-        y = point[1] + formating.corner_radius
+        y = point[1] + style.format.corner_radius
         for idx, button in enumerate(self._buttons):
             icon = self._icons[idx]
-            dx = cx + (32.0 + formating.padding) * idx
+            dx = cx + (32.0 + style.format.padding) * idx
             button.position = dx, y
             icon.position = dx, y, 0.0
 
         self._input.update_position(
             (
-                self._input_body.x + formating.padding,
-                self._input_body.y + formating.padding,
+                self._input_body.x + style.format.padding,
+                self._input_body.y + style.format.padding,
             )
         )
 
         if self._output is not None:
             self._output.update_position(
                 (
-                    self._output_body.x + formating.padding,
-                    self._output_body.y + formating.padding,
+                    self._output_body.x + style.format.padding,
+                    self._output_body.y + style.format.padding,
                 )
             )
 
@@ -1307,23 +1278,23 @@ class TestRunner(Element):
 
     def select_nav_up(self) -> None:
         self.deselect_buttons()
-        self._nav_up_icon.color = colors.highlight
+        self._nav_up_icon.color = style.colors.highlight
 
     def select_nav_down(self) -> None:
         self.deselect_buttons()
-        self._nav_down_icon.color = colors.highlight
+        self._nav_down_icon.color = style.colors.highlight
 
     def select_run_one(self) -> None:
         self.deselect_buttons()
-        self._run_one_icon.color = colors.highlight
+        self._run_one_icon.color = style.colors.highlight
 
     def select_run_all(self) -> None:
         self.deselect_buttons()
-        self._run_all_icon.color = colors.highlight
+        self._run_all_icon.color = style.colors.highlight
 
     def deselect_buttons(self) -> None:
         for icon in self._icons:
-            icon.color = colors.base
+            icon.color = style.colors.base
 
     def get_shown_test(self) -> TestCase:
         return self._tests[self._shown]
@@ -1342,8 +1313,8 @@ class ResultsPanel(Element):
             0.0,
             self._data.width,
             self._data.height,
-            formating.padding,
-            color=colors.dark,
+            style.format.padding,
+            color=style.colors.dark,
             program=get_shadow_shader(),
             group=OVERLAY_SHADOW,
         )
@@ -1355,6 +1326,6 @@ class ResultsPanel(Element):
     def update_position(self, point: tuple[float, float]) -> None:
         self._data.update_position(point)
         self._shadow.position = (
-            point[0] - 2 * formating.drop_x,
-            point[1] - 2 * formating.drop_y,
+            point[0] - 2 * style.format.drop_x,
+            point[1] - 2 * style.format.drop_y,
         )

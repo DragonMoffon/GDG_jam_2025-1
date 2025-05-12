@@ -82,10 +82,10 @@ class FLabel(Element):
         return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
 
     def update_position(self, point: Point) -> None:
-        self._label.position = point
+        self._label.position = point[0], point[1], 0.0
 
     def get_position(self) -> Point:
-        return self._label.position
+        return self._label.x, self._label.y
 
     def update_size(self, size: tuple[float, float]) -> None:
         self._label.width, self._label.height = size
@@ -160,10 +160,10 @@ class Label(Element):
         return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
 
     def update_position(self, point: Point) -> None:
-        self._label.position = point
+        self._label.position = point[0], point[1], 0.0
 
     def get_position(self) -> Point:
-        return self._label.position
+        return self._label.x, self._label.y
 
     def update_size(self, size: tuple[float, float]) -> None:
         self._label.width, self._label.height = size
