@@ -6,6 +6,9 @@ from pyglet.shapes import RoundedRectangle
 from pyglet.text import Label
 from arcade.clock import GLOBAL_CLOCK
 
+from resources import style, audio
+from station.input import inputs, Button, Axis
+
 from .core import (
     Element,
     get_shadow_shader,
@@ -13,8 +16,6 @@ from .core import (
     OVERLAY_PRIMARY,
     OVERLAY_HIGHLIGHT,
 )
-from station.input import inputs, Button, Axis
-from resources import style, audio
 
 
 class Frame(Element):

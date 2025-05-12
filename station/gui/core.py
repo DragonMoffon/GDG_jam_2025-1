@@ -1,25 +1,28 @@
 from __future__ import annotations
-import sys
 from uuid import UUID, uuid4
 
 from arcade import get_window
-from pyglet import gl as pygl
-from pyglet.graphics.shader import ShaderProgram
-from pyglet.graphics import Batch, Group
 from arcade.camera import Projector
+from pyglet.graphics import Batch, Group
+
+__all__ = (
+    "GUI",
+    "Element",
+    "Point",
+    "ProjectorGroup",
+)
 
 Point = tuple[float, float]
 
+
 class ProjectorGroup(Group):
 
-    def __init__(self, order: int = 0) -> None:
+    def __init__(self, projector: Projector, order: int = 0) -> None:
         super().__init__(order)
-        self.projector: Projector | None = None
+        self.projector: Projector = projector
         self._previous_projector: Projector | None = None
 
     def set_state(self) -> None:
-        if self.projector is None:
-            return
         self._previous_projector = get_window().current_camera
         self.projector.use()
 
@@ -30,132 +33,123 @@ class ProjectorGroup(Group):
         self._previous_projector = None
 
 
-BASE_GROUP = ProjectorGroup(0)
-OVERLAY_GROUP = ProjectorGroup(1)
-
-BASE_SHADOW = Group(0, BASE_GROUP)
-BASE_SPACING = Group(1, BASE_GROUP)
-BASE_PRIMARY = Group(2, BASE_GROUP)
-BASE_HIGHLIGHT = Group(3, BASE_GROUP)
-
-OVERLAY_SHADOW = Group(0, OVERLAY_GROUP)
-OVERLAY_SPACING = Group(1, OVERLAY_GROUP)
-OVERLAY_PRIMARY = Group(2, OVERLAY_GROUP)
-OVERLAY_HIGHLIGHT = Group(3, OVERLAY_GROUP)
-
-if sys.platform == 'win32':
-    vec4_color = "color"
-else:
-    vec4_color = "colors"
-
-vertex_source = f"""#version 150 core
-    in vec2 position;
-    in vec2 translation;
-    in vec4 {vec4_color};
-    in float zposition;
-    in float rotation;
-
-
-    out vec4 vertex_color;
-
-    uniform WindowBlock
-    {{
-        mat4 projection;
-        mat4 view;
-    }} window;
-
-    mat4 m_rotation = mat4(1.0);
-    mat4 m_translate = mat4(1.0);
-
-    void main()
-    {{
-        m_translate[3][0] = translation.x;
-        m_translate[3][1] = translation.y;
-        m_rotation[0][0] =  cos(-radians(rotation));
-        m_rotation[0][1] =  sin(-radians(rotation));
-        m_rotation[1][0] = -sin(-radians(rotation));
-        m_rotation[1][1] =  cos(-radians(rotation));
-
-        gl_Position = window.projection * window.view * m_translate * m_rotation * vec4(position, zposition, 1.0);
-        vertex_color = {vec4_color};
-    }}
-"""
-
-fragment_source = """#version 150 core
-    in vec4 vertex_color;
-    out vec4 final_color;
-
-    const mat4 bayer = 1.0/16.0 * mat4(
-        vec4(0, 8, 2, 10),
-        vec4(12, 4, 14, 6),
-        vec4(3, 11, 1, 9),
-        vec4(15, 7, 13, 5)
-    );
-
-    void main()
-    {
-        ivec2 loc = ivec2(mod(gl_FragCoord.x, 4), mod(gl_FragCoord.y, 4));
-        float col = (0.9 * bayer[loc.x][loc.y] - 0.5);
-        if (col <= 0.0){
-            discard;
-        }
-
-        final_color = vertex_color;
-        // No GL_ALPHA_TEST in core, use shader to discard.
-        if(final_color.a < 0.01){
-            discard;
-        }
-    }
-"""
-
-
-
-def get_shadow_shader() -> ShaderProgram:
-    if pygl.current_context is None:
-        raise ValueError("gl context does not exsist yet")
-    return pygl.current_context.create_program(
-        (vertex_source, "vertex"), (fragment_source, "fragment")
-    )
-
-
 class Element:
 
-    def __init__(self, uid: UUID | None = None):
-        self.uid = uid or uuid4()
-        self.gui: Gui | None = None
+    def __init__(
+        self,
+        parent: Element | None = None,
+        layer: Group | None = None,
+        uid: UUID | None = None,
+    ):
+        self.parent: Element | None = None
+        self.children: dict[UUID, Element] = {}
+        self.layer: Group | None = layer
+        self.uid: UUID = uid or uuid4()
+        self.gui: GUI | None = None
 
-    def connect_renderer(self, batch: Batch | None) -> None: ...
+        if self.parent is not None:
+            self.parent.add_child(self)
+            if self.layer is None:
+                self.layer = self.parent.layer
+
+    # -- GROUP METHODS --
+
+    def SHADOW(self) -> Group:
+        if self.layer is None:
+            return Group(0)
+        return Group(0, self.layer)
+
+    def SPACING(self) -> Group:
+        return Group(1, self.layer)
+
+    def BODY(self, order: int = 0) -> Group:
+        if order < 0 or 7 < order:
+            print("WARNING: body layer overlapping with other batch layer")
+        return Group(2 + order, self.layer)
+
+    def NEXT(self, order: int = 0) -> Group:
+        if self.layer is None:
+            return Group(3 + order, None)
+        return Group(self.layer.order + 1 + order, self.layer.parent)
+
+    def PREV(self, order: int = 0) -> Group:
+        if self.layer is None:
+            return Group(1 + order)
+        return Group(self.layer.order - 1 + order, self.layer.parent)
+
+    def HIGHLIGHT(self, order: int = 0) -> Group:
+        return Group(10 + order, self.layer.highlight)
+
+    # -- TREE METHODS --
+
+    def __hash__(self) -> int:
+        return hash(self.uid)
+
+    def __eq__(self, other: Element) -> bool:
+        return self.uid == other.uid
+
+    def add_child(self, child: Element) -> None:
+        if child.uid in self.children:
+            return
+        child.parent = self
+        self.children[child.uid] = child
+        if self.gui is not None:
+            self.gui.add_element(child)
+
+    def remove_child(self, child: Element) -> None:
+        if child.uid not in self.children:
+            return
+        self.children.pop(child.uid)
+        child.parent = None
+        if self.gui is not None:
+            self.gui.remove_element(child)
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        pass
 
     def disconnect_renderer(self) -> None:
         self.connect_renderer(None)
 
+    # -- VALUE PROPERTIES --
+    @property
+    def width(self) -> float:
+        return self.get_size()[0]
+
+    @property
+    def height(self) -> float:
+        return self.get_size()[1]
+
+    @property
+    def x(self) -> float:
+        return self.get_position()[0]
+
+    @property
+    def y(self) -> float:
+        return self.get_position()[1]
+
     # -- VALUE METHODS --
 
-    def contains_point(self, point: tuple[float, float]) -> bool: ...
-    def update_position(self, point: tuple[float, float]) -> None: ...
+    def contains_point(self, point: Point) -> bool:
+        return False
 
-    # -- EVENT RESPONSES --
+    def update_position(self, point: Point) -> None:
+        raise NotImplementedError
 
-    def __gui_connected__(self, gui: Gui) -> None: ...
-    def __gui_disconnected__(self) -> None: ...
+    def get_position(self) -> Point:
+        raise NotImplementedError
 
-    def __cursor_entered__(self) -> None: ...
-    def __cursor_exited__(self) -> None: ...
+    def update_size(self, size: tuple[float, float]) -> None:
+        raise NotImplementedError
 
-    def __cursor_pressed__(self) -> None: ...
+    def get_size(self) -> tuple[float, float]:
+        raise NotImplementedError
 
 
-class Gui:
+class GUI:
 
-    def __init__(
-        self, base_projector: Projector, overlay_projector: Projector | None = None
-    ):
+    def __init__(self):
         self._ctx = get_window().ctx
         self._batch = Batch()
-        self._base_camera = base_projector
-        self._overlay_camera = (
-            overlay_projector if overlay_projector is not None else base_projector
-        )
         self._elements: dict[UUID, Element] = {}
 
     @property
@@ -163,8 +157,6 @@ class Gui:
         return self._batch
 
     def draw(self) -> None:
-        BASE_GROUP.projector = self._base_camera
-        OVERLAY_GROUP.projector = self._overlay_camera
         self._batch.draw()
 
     def add_element(self, element: Element) -> None:
@@ -175,20 +167,16 @@ class Gui:
         self._elements[element.uid] = element
 
         element.gui = self
-        element.__gui_connected__(self)
+        for element in element.children.values():
+            self.add_element(element)
 
     def remove_element(self, element: Element) -> None:
         if element.uid not in self._elements:
             return
+        for child in element.children.values():
+            self.remove_element(child)
 
         element.disconnect_renderer()
         self._elements.pop(element.uid)
 
-        element.__gui_disconnected__()
         element.gui = None
-
-
-class Frame:
-
-    def __init__(self) -> None:
-        pass
