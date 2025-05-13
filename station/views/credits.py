@@ -7,6 +7,7 @@ from pyglet.sprite import Sprite
 from resources import style
 
 from station.graphics.format_label import FLabel
+from station.markdown import markdown_label
 from station.graphics.background import ParallaxBackground
 from station.gui.core import get_shadow_shader
 from station.view import View
@@ -47,51 +48,19 @@ class CreditsView(View):
         self._logo = Sprite(style.textures.credits_logo, 0, 0)
 
         text = get_credits()
-        self._text = FLabel(
+        self._text = markdown_label(
             text,
-            x=self.center_x,
-            y=self.center_y,
-            multiline=True,
+            style.text.names.regular,
+            self.center_x,
+            self.center_y,
             width=self.width * 0.4,
             color=style.colors.highlight,
             anchor_x="left",
             anchor_y="center",
-            font_name=style.text.names.regular,
-            font_size=style.text.sizes.normal,
         )
 
         self._logo.x = self._text.x
         self._logo.y = self._text.y + (self._text.content_height / 2) + 25
-
-        headers = re.finditer(HEADER_EX, text, flags=re.MULTILINE)
-        for header in tuple(headers)[::-1]:
-            title = header.group(2)
-            self._text.document.delete_text(header.start(1), header.end(2))
-            self._text.document.insert_text(
-                header.start(1),
-                title,
-                {"font_size": style.text.sizes[f"header_{len(header.group(1))}"]},
-            )
-
-        stylings = re.finditer(STYLING, self._text.text)
-        # TODO: This doesn't work with nested formating
-        for styling in tuple(stylings)[::-1]:
-            txt = styling.group(2)
-            m = len(styling.group(1))
-            if m == 1:
-                self._text.document.delete_text(styling.start(1), styling.end(2) + 1)
-                self._text.document.insert_text(
-                    styling.start(1),
-                    txt,
-                    {"italic": True},
-                )
-            elif m == 2:
-                self._text.document.delete_text(styling.start(1), styling.end(2) + 2)
-                self._text.document.insert_text(
-                    styling.start(1),
-                    txt,
-                    {"weight": "bold"},
-                )
 
     def on_draw(self) -> None:
         self.clear()
