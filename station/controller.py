@@ -19,14 +19,14 @@ from station.node.graph import (
 from station.node import blocks as block_impl
 from station.puzzle import Puzzle
 from station.gui.graph import BlockElement, ConnectionElement, TempValueElement
-from station.gui.core import Gui
+from station.gui.core import GUI
 
 
 class GraphController:
 
     def __init__(
         self,
-        gui: Gui,
+        gui: GUI,
         name: str = "graph",
         available: tuple[BlockType, ...] | None = None,
         sandbox: bool = False,
@@ -49,7 +49,7 @@ class GraphController:
         return self._graph
 
     @property
-    def gui(self) -> Gui:
+    def gui(self) -> GUI:
         return self.gui
 
     @property
@@ -119,6 +119,7 @@ class GraphController:
         self._gui.remove_element(block)
         self._graph.remove_block(block.block)
         self._block_elements.pop(block.uid)
+        block.clear_children()
 
     def add_connection(self, connection: ConnectionElement) -> None:
         self._link_connection(connection)
@@ -162,6 +163,7 @@ class GraphController:
 
         self._connection_elements.pop(connection.uid)
         self._gui.remove_element(connection)
+        connection.clear_children()
 
     def create_temporary(
         self, block: BlockElement, inp: str, value: OperationValue | None = None
@@ -193,9 +195,10 @@ class GraphController:
         self._gui.remove_element(temp)
         self._graph.remove_block(temp.block)
         self._temp_elements.pop(temp.uid)
+        temp.clear_children()
 
 
-def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
+def read_graph(path: Path, gui: GUI, sandbox: bool = False) -> GraphController:
     with open(path, "rb") as fp:
         raw_data = load_toml(fp)
 
@@ -214,7 +217,9 @@ def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
         config = outputs.copy()
 
         name = variable["name"]
-        variable_types[name] = BlockType(name, _variable, inputs, outputs, config, exclusive=True)
+        variable_types[name] = BlockType(
+            name, _variable, inputs, outputs, config, exclusive=True
+        )
 
     for block in block_table.get("Data", []):
         uid_str: str | None = block.get("uid", None)
@@ -275,7 +280,7 @@ def read_graph(path: Path, gui: Gui, sandbox: bool = False) -> GraphController:
     return controller
 
 
-def read_graph_from_level(puzzle: Puzzle, gui: Gui) -> GraphController:
+def read_graph_from_level(puzzle: Puzzle, gui: GUI) -> GraphController:
     path = puzzle.source_graph
     if path is None:
         input_block = Block(puzzle.input_type)
@@ -298,9 +303,18 @@ def read_graph_from_level(puzzle: Puzzle, gui: Gui) -> GraphController:
         controller.add_block(input_element)
         controller.add_block(output_element)
         if puzzle.constant_type is not None:
-            const_block = Block(puzzle.constant_type, uid=None, **puzzle.constant_values)
+            const_block = Block(
+                puzzle.constant_type, uid=None, **puzzle.constant_values
+            )
             const_element = BlockElement(const_block)
-            const_element.update_position((input_element.left, input_element.bottom - const_element.height - style.format.footer_size))
+            const_element.update_position(
+                (
+                    input_element.left,
+                    input_element.bottom
+                    - const_element.height
+                    - style.format.footer_size,
+                )
+            )
             controller.add_block(const_element)
 
         return controller

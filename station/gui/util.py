@@ -11,13 +11,7 @@ from resources import style
 
 from station.graphics.format_label import FLabel
 
-from .core import (
-    Element,
-    OVERLAY_SHADOW,
-    OVERLAY_PRIMARY,
-    OVERLAY_HIGHLIGHT,
-    get_shadow_shader,
-)
+from .core import Element
 
 
 class Popup(Element):

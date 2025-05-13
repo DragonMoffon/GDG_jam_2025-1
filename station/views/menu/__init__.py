@@ -5,7 +5,7 @@ from resources import style
 
 from station.view import View
 from station.graphics.background import ParallaxBackground
-from station.gui.core import Gui
+from station.gui.core import GUI
 from station.gui.util import PopupAction, SelectionPopup
 from station.context import context
 from station.views.game import GameView
@@ -20,7 +20,7 @@ class MainMenuView(View):
         self._background = ParallaxBackground(style.menu.background)
         self._logo = Sprite(style.textures.logo_big)
 
-        self._gui = Gui(self.window.default_camera)
+        self._gui = GUI()
 
         if has_credits():
             show_credits = (

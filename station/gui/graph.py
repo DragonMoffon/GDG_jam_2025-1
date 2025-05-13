@@ -922,22 +922,24 @@ class ValueGroup(Element):
                 font_name=style.text.names.monospace,
                 font_size=style.text.sizes.normal,
                 color=style.colors.highlight,
+                parent=self,
+                layer=self.NEXT(),
             )
             self._names.append(label)
             if value.type is bool:
-                panel = BoolPanel(group=OVERLAY_PRIMARY)
+                panel = BoolPanel(parent=self, layer=self.NEXT())
                 panel.active = value.value
             else:
-                panel = TextPanel(group=OVERLAY_PRIMARY)
+                panel = TextPanel(parent=self, layer=self.NEXT())
                 panel.text = str(value.value)
             self._panels.append(panel)
-            self._text_width = max(self._text_width, label.content_width)
+            self._text_width = max(self._text_width, label.width)
             self._panel_width = max(self._panel_width, panel.width)
         w = self._text_width + self._panel_width + style.format.padding
         h = len(values) * line_height + (len(values) - 1) * style.format.padding
 
         self._success: BoolPanel | None = (
-            BoolPanel(group=OVERLAY_PRIMARY) if success_marker else None
+            BoolPanel(parent=self, layer=self.NEXT()) if success_marker else None
         )
         if success_marker:
             w += style.format.padding + self._success.width
@@ -949,32 +951,13 @@ class ValueGroup(Element):
             h + 2 * style.format.padding,
             style.format.padding,
             color=style.colors.base,
-            group=OVERLAY_PRIMARY,
+            parent=self,
         )
 
-    @property
-    def width(self) -> float:
-        return self._body.width
+    def contains_point(self, point: Point) -> bool:
+        return self._body.contains_point(point)
 
-    @property
-    def height(self) -> float:
-        return self._body.height
-
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._body.batch = batch
-        for panel in self._panels:
-            panel.connect_renderer(batch)
-        for name in self._names:
-            name.batch = batch
-        if self._success is not None:
-            self._success.connect_renderer(batch)
-
-    def contains_point(self, point: tuple[float, float]) -> bool:
-        l, b = self._body.position
-        w, h = self._body.width, self._body.height
-        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
-
-    def update_position(self, point: tuple[float, float]) -> None:
+    def update_position(self, point: Point) -> None:
         self._body.position = point
 
         if self._success is not None:
@@ -995,8 +978,14 @@ class ValueGroup(Element):
         y = point[1] + self._body.height
         for idx in range(len(self._values)):
             dy = y - (idx + 1) * line_height
-            self._names[idx].position = tx, dy, 0.0
+            self._names[idx].update_position(tx, dy)
             self._panels[idx].update_position((px, dy))
+
+    def get_position(self) -> Point:
+        return self._body.get_position()
+
+    def get_size(self) -> tuple[float, float]:
+        return self._body.get_size()
 
 
 class TestRunner(Element):
@@ -1013,11 +1002,13 @@ class TestRunner(Element):
             raise ValueError("TestRunner requires atleast one test")
 
         case = self._tests[0]
-        self._input: ValueGroup = ValueGroup(case.inputs)
+        self._input: ValueGroup = ValueGroup(
+            case.inputs, parent=self, layer=self.BODY(2)
+        )
         h = self._input.height
         wi = self._input.width
         if case.outputs is not None:
-            out = ValueGroup(case.outputs, False, True)
+            out = ValueGroup(case.outputs, False, True, parent=self, layer=self.BODY(2))
             out._success.active = case.complete
             wo = out.width
             h = max(h, out.height)
@@ -1034,7 +1025,8 @@ class TestRunner(Element):
             h,
             style.format.padding,
             color=style.colors.background,
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.BODY(1),
         )
         self._output_body = RoundedRectangle(
             0.0,
@@ -1043,7 +1035,8 @@ class TestRunner(Element):
             h,
             style.format.padding,
             color=style.colors.background,
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.BODY(1),
         )
 
         self._nav_up_button = RoundedRectangle(
@@ -1053,9 +1046,12 @@ class TestRunner(Element):
             32.0,
             style.format.padding,
             color=style.colors.background,
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.BODY(1),
         )
-        self._nav_up_icon = Sprite(style.game.editor.nav_p, group=OVERLAY_PRIMARY)
+        self._nav_up_icon = Sprite(
+            style.game.editor.nav_p, parent=self, layer=self.BODY(2)
+        )
 
         self._run_one_button = RoundedRectangle(
             0.0,
@@ -1064,9 +1060,12 @@ class TestRunner(Element):
             32.0,
             style.format.padding,
             color=style.colors.background,
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.BODY(1),
         )
-        self._run_one_icon = Sprite(style.game.editor.run_one, group=OVERLAY_PRIMARY)
+        self._run_one_icon = Sprite(
+            style.game.editor.run_one, parent=self, layer=self.BODY(2)
+        )
 
         self._run_all_button = RoundedRectangle(
             0.0,
@@ -1075,9 +1074,12 @@ class TestRunner(Element):
             32.0,
             style.format.padding,
             color=style.colors.background,
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.BODY(1),
         )
-        self._run_all_icon = Sprite(style.game.editor.run_all, group=OVERLAY_PRIMARY)
+        self._run_all_icon = Sprite(
+            style.game.editor.run_all, parent=self, layer=self.BODY(2)
+        )
 
         self._nav_down_button = RoundedRectangle(
             0.0,
@@ -1086,9 +1088,12 @@ class TestRunner(Element):
             32.0,
             style.format.padding,
             color=style.colors.background,
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.BODY(1),
         )
-        self._nav_down_icon = Sprite(style.game.editor.nav_n, group=OVERLAY_PRIMARY)
+        self._nav_down_icon = Sprite(
+            style.game.editor.nav_n, parent=self, layer=self.BODY(2)
+        )
 
         self._buttons = [
             self._nav_up_button,
@@ -1120,7 +1125,8 @@ class TestRunner(Element):
             body_height,
             style.format.corner_radius,
             color=style.colors.base,
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.BODY(),
         )
         self._shadow = RoundedRectangle(
             0.0,
@@ -1130,7 +1136,8 @@ class TestRunner(Element):
             style.format.corner_radius,
             color=style.colors.dark,
             program=get_shadow_shader(),
-            group=OVERLAY_SHADOW,
+            parent=self,
+            layer=self.SHADOW(),
         )
 
     def contains_point(self, point: tuple[float, float]) -> bool:
@@ -1139,21 +1146,27 @@ class TestRunner(Element):
         return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
 
     def update_position(self, point: tuple[float, float]) -> None:
-        self._body.position = point
-        self._shadow.position = (
-            point[0] - 2 * style.format.drop_x,
-            point[1] - 2 * style.format.drop_y,
+        self._body.update_position(point)
+        self._shadow.update_position(
+            (
+                point[0] - 2 * style.format.drop_x,
+                point[1] - 2 * style.format.drop_y,
+            )
         )
 
         pw = self._input_body.width + self._output_body.width + style.format.padding
         px = point[0] + (self._body.width - pw) / 2.0
-        self._input_body.position = (
-            px,
-            point[1] + 32.0 + style.format.padding + style.format.corner_radius,
+        self._input_body.update_position(
+            (
+                px,
+                point[1] + 32.0 + style.format.padding + style.format.corner_radius,
+            )
         )
-        self._output_body.position = (
-            px + style.format.padding + self._input_body.width,
-            point[1] + 32.0 + style.format.padding + style.format.corner_radius,
+        self._output_body.update_position(
+            (
+                px + style.format.padding + self._input_body.width,
+                point[1] + 32.0 + style.format.padding + style.format.corner_radius,
+            )
         )
 
         cx = point[0] + (self._body.width - self.wb) / 2.0
@@ -1161,8 +1174,8 @@ class TestRunner(Element):
         for idx, button in enumerate(self._buttons):
             icon = self._icons[idx]
             dx = cx + (32.0 + style.format.padding) * idx
-            button.position = dx, y
-            icon.position = dx, y, 0.0
+            button.update_position(dx, y)
+            icon.update_position(dx, y)
 
         self._input.update_position(
             (
@@ -1179,40 +1192,32 @@ class TestRunner(Element):
                 )
             )
 
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._body.batch = batch
-        self._shadow.batch = batch
-        self._input_body.batch = batch
-        self._output_body.batch = batch
-        for button in self._buttons:
-            button.batch = batch
-        for icon in self._icons:
-            icon.batch = batch
-        self._input.connect_renderer(batch)
-        if self._output is not None:
-            self._output.connect_renderer(batch)
+    def get_position(self) -> Point:
+        return self._body.get_position()
 
-    def _create_inp_out(self):
+    def get_size(self) -> tuple[float, float]:
+        return self._body.get_size()
+
+    def _create_inp_out(self) -> None:
         # TODO: don't assume they'll stay the same size
         case = self._tests[self._shown]
-        self._input: ValueGroup = ValueGroup(case.inputs)
+        self.remove_child(self._input)
+        self._input.clear_children()
+        self._input = ValueGroup(case.inputs, parent=self, layer=self.BODY(2))
         if case.outputs is not None:
-            out = ValueGroup(case.outputs, False, True)
+            out = ValueGroup(case.outputs, False, True, parent=self, layer=self.BODY(2))
             out._success.active = case.complete
         else:
             out = None
-        self._output: ValueGroup | None = out
 
-        self._input.connect_renderer(self._body.batch)
-        self._output.connect_renderer(self._body.batch)
-
+        if self._output is not None:
+            self.remove_child(self._output)
+            self._output.clear_children()
+        self._output = out
         self.update_position(self._body.position)
 
-    def check_test_output(self):
-        if self._output is None:
-            return
-
-        if self._output._success is None:
+    def check_test_output(self) -> None:
+        if self._output is None or self._output._success is None:
             return
 
         self._output._success.active = self.get_shown_test().complete
@@ -1224,14 +1229,14 @@ class TestRunner(Element):
         self._shown = self._shown % len(test)
         self._create_inp_out()
 
-    def next_test(self):
+    def next_test(self) -> None:
         prev = self._shown
         self._shown = (self._shown + 1) % len(self._tests)
         if self._shown == prev:
             return
         self._create_inp_out()
 
-    def prev_test(self):
+    def prev_test(self) -> None:
         prev = self._shown
         self._shown = (self._shown - 1) % len(self._tests)
         if self._shown == prev:
@@ -1289,7 +1294,13 @@ class ResultsPanel(Element):
 
     def __init__(self, result: BlockComputation):
         Element.__init__(self)
-        self._data = ValueGroup(result.outputs, input_order=False, show_names=False)
+        self._data = ValueGroup(
+            result.outputs,
+            input_order=False,
+            show_names=False,
+            parent=self,
+            layer=self.BODY(),
+        )
         self._shadow = RoundedRectangle(
             0.0,
             0.0,
@@ -1298,16 +1309,19 @@ class ResultsPanel(Element):
             style.format.padding,
             color=style.colors.dark,
             program=get_shadow_shader(),
-            group=OVERLAY_SHADOW,
+            parent=self,
+            layer=self.SHADOW(),
         )
 
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._data.connect_renderer(batch)
-        self._shadow.batch = batch
-
-    def update_position(self, point: tuple[float, float]) -> None:
+    def update_position(self, point: Point) -> None:
         self._data.update_position(point)
         self._shadow.position = (
             point[0] - 2 * style.format.drop_x,
             point[1] - 2 * style.format.drop_y,
         )
+
+    def get_position(self) -> Point:
+        return self._data.get_position()
+
+    def get_size(self) -> tuple[float, float]:
+        return self._data.get_size()
