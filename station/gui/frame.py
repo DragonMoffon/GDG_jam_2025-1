@@ -1,15 +1,102 @@
 from uuid import UUID
 from enum import Enum
 
-from pyglet.graphics import Group
+from pyglet.graphics import Batch, Group
+from pyglet.shapes import RoundedRectangle as pyRoundedRectangle
+from arcade import LBWH
+from arcade.camera import ViewportProjector
 from arcade.clock import GLOBAL_CLOCK
 
 from resources import style, audio
 from station.input import inputs, Button, Axis
 from station.graphics.shadow import get_shadow_shader
+from station.graphics.clip import ClippingMask, FramebufferGroup
 
 from .core import Element, Point
 from .elements import Label, RoundedRectangle
+
+
+class FrameTab(Element):
+
+    def __init__(
+        self,
+        text: str,
+        parent: Element | None = None,
+        layer: Group | None = None,
+        uid: UUID | None = None,
+    ):
+        Element.__init__(self, parent, layer, uid)
+        self._text = Label(
+            "\n".join(text),
+            0,
+            0,
+            0,
+            int(style.text.sizes.header) + 1,
+            anchor_y="top",
+            multiline=True,
+            font_name=style.text.names.monospace,
+            font_size=style.text.sizes.header,
+            color=style.colors.highlight,
+            parent=self,
+            layer=self.HIGHLIGHT(1),
+        )
+        self._text.label.set_style(
+            "line_spacing", style.text.sizes.header + style.format.padding
+        )
+        self._panel = RoundedRectangle(
+            0.0,
+            0.0,
+            self._text.width + style.format.corner_radius + 2 * style.format.padding,
+            self._text.height
+            + 2 * style.format.corner_radius
+            + 2 * style.format.padding,
+            (style.format.corner_radius, style.format.corner_radius, 0, 0),
+            (12, 12, 1, 1),
+            color=style.colors.base,
+            parent=self,
+            layer=self.HIGHLIGHT(),
+        )
+        self._shadow = RoundedRectangle(
+            0.0,
+            0.0,
+            self._panel.width + style.format.drop_x,
+            self._panel.height,
+            (style.format.corner_radius, style.format.corner_radius, 0, 0),
+            (12, 12, 1, 1),
+            color=style.colors.dark,
+            program=get_shadow_shader(),
+            parent=self,
+            layer=self.SHADOW(),
+        )
+
+    def contains_point(self, point: Point) -> bool:
+        return self._panel.contains_point(point)
+
+    def update_position(self, point: Point) -> None:
+        self._panel.update_position(point)
+        self._shadow.update_position(
+            (point[0] - style.format.drop_x, point[1] - style.format.drop_y)
+        )
+        self._text.update_position(
+            (
+                point[0] + style.format.corner_radius / 2.0,
+                point[1] + self._panel.height - style.format.corner_radius,
+            )
+        )
+
+    def get_position(self) -> Point:
+        return self._panel.get_position()
+
+    def get_size(self) -> tuple[float, float]:
+        return self._panel.get_size()
+
+    @property
+    def show_shadow(self) -> bool:
+        return self._shadow._body.visible
+
+    @show_shadow.setter
+    def show_shadow(self, show: bool) -> None:
+        self._shadow._body.visible = show
 
 
 class Frame(Element):
@@ -18,7 +105,6 @@ class Frame(Element):
         self,
         name: str,
         tag_offset: float,
-        position: tuple[float, float],
         size: tuple[float, float],
         show_body: bool = False,
         show_shadow: bool = True,
@@ -37,71 +123,11 @@ class Frame(Element):
         self._show_body: bool = True
         self._show_shadow: bool = True
 
-        self._tag_text = Label(
-            "\n".join(name),
-            0,
-            0,
-            0,
-            int(style.text.sizes.header) + 1,
-            anchor_y="top",
-            multiline=True,
-            font_size=style.text.sizes.header,
-            font_name=style.text.names.monospace,
-            color=style.colors.highlight,
-            parent=self,
-            layer=self.HIGHLIGHT(2),
-        )
-        self._tag_text.label.set_style(
-            "line_spacing", style.text.sizes.header + style.format.padding
-        )
-        self._tag_panel = RoundedRectangle(
-            0.0,
-            0.0,
-            style.format.corner_radius
-            + 2 * style.format.padding
-            + self._tag_text.width,
-            self._tag_text.height
-            + 2 * style.format.corner_radius
-            + 2 * style.format.padding,
-            (style.format.corner_radius, style.format.corner_radius, 0, 0),
-            (12, 12, 1, 1),
-            color=style.colors.base,
-            parent=self,
-            layer=self.HIGHLIGHT(1),
-        )
-        self._tag_shadow = RoundedRectangle(
-            0.0,
-            0.0,
-            self._tag_panel.width + style.format.drop_x,
-            self._tag_panel.height,
-            (style.format.corner_radius, style.format.corner_radius, 0, 0),
-            (12, 12, 1, 1),
-            color=style.colors.dark,
-            parent=self,
-            layer=self.HIGHLIGHT(0),
-            program=get_shadow_shader(),
-        )
-        radius = style.format.corner_radius + style.format.footer_size
-        if anchor_top:
-            hide_top = tag_offset < radius and 0.0 < tag_offset + self._tag_panel.height
+        self._tab = FrameTab(name, self)
 
-            bottom_dist = size[1] - tag_offset - self._tag_panel.height
-            hide_bottom = (
-                bottom_dist < radius and 0.0 < bottom_dist + self._tag_panel.height
-            )
-        else:
-            top_dist = size[1] - tag_offset - self._tag_panel.height
-            hide_top = top_dist < radius and 0.0 < top_dist + self._tag_panel.height
-
-            hide_bottom = (
-                tag_offset < radius and 0.0 < tag_offset + self._tag_panel.height
-            )
-
-        top_radius = 0.0 if hide_top else radius
-        top_segments = 1 if hide_top else 12
-
-        bottom_radius = 0.0 if hide_bottom else radius
-        bottom_segments = 1 if hide_bottom else 12
+        top_radius, bottom_radius = self._calculate_tab_radii()
+        top_segments = 12 if top_radius > 0.0 else 1
+        bottom_segments = 12 if bottom_radius > 0.0 else 1
 
         self._panel = RoundedRectangle(
             0.0,
@@ -112,57 +138,103 @@ class Frame(Element):
             (bottom_segments, top_segments, 1, 1),
             color=style.colors.base,
             parent=self,
-            layer=self.BODY,
+            layer=self.BODY(),
         )
+
+        clip_size = int(size[0] - style.format.footer_size), int(
+            size[1] - 2 * style.format.footer_size
+        )
+        self._clip = ClippingMask(
+            (0.0, 0.0), clip_size, clip_size, visible=show_body, group=self.BODY(1)
+        )
+        self._render_clip_mask()
+
+        self.clip_layer: FramebufferGroup = self._clip.target_group
+
         self.show_body = show_body
         self.show_shadow = show_shadow
 
+    def _render_clip_mask(self) -> None:
+        clip_rect = LBWH(0.0, 0.0, *self._clip.size)
+        viewport = ViewportProjector(clip_rect)
+        radius = style.format.corner_radius
+        with self._clip.:
+            with viewport.activate():
+                pyRoundedRectangle(
+                    0,
+                    0,
+                    clip_rect.width,
+                    clip_rect.height,
+                    (radius, radius, 0, 0),
+                    (12, 12, 1, 1),
+                ).draw()
+
+    def _calculate_tab_radii(self) -> tuple[float, int, float, int]:
+        tag_offset = self._tag_offset
+        size = self._size
+
+        radius = style.format.corner_radius + style.format.footer_size
+        if self._anchor_top:
+            hide_top = tag_offset < radius and 0.0 < tag_offset + self._tab.height
+
+            bottom_dist = size[1] - tag_offset - self._tab.height
+            hide_bottom = bottom_dist < radius and 0.0 < bottom_dist + self._tab.height
+        else:
+            top_dist = size[1] - tag_offset - self._tab.height
+            hide_top = top_dist < radius and 0.0 < top_dist + self._tab.height
+
+            hide_bottom = tag_offset < radius and 0.0 < tag_offset + self._tab.height
+
+        top_radius = 0.0 if hide_top else radius
+
+        bottom_radius = 0.0 if hide_bottom else radius
+
+        return top_radius, bottom_radius
+
     @property
-    def tag_height(self) -> float:
-        return self._tag_panel.height
+    def tab_height(self) -> float:
+        return self._tab.height
 
-    def contains_point(self, point: tuple[float, float]) -> bool:
-        return (
-            0 <= point[0] - self._panel.x <= self._panel.width
-            and 0 <= point[1] - self._panel.y <= self._panel.height
-        ) or (
-            0 <= point[0] - self._tag_panel.x <= self._tag_panel.width
-            and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
-        )
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._clip.batch = batch
 
-    def tag_contains_point(self, point: tuple[float, float]) -> bool:
-        return (
-            0 <= point[0] - self._tag_panel.x <= self._tag_panel.width
-            and 0 <= point[1] - self._tag_panel.y <= self._tag_panel.height
-        )
+    def contains_point(self, point: Point) -> bool:
+        return self._panel.contains_point(point) or self._tab.contains_point(point)
+
+    def tab_contains_point(self, point: tuple[float, float]) -> bool:
+        return self._tab.contains_point(point)
 
     def update_position(self, point: Point) -> None:
         self._position = point
-        self._panel.position = point
+        self._panel.update_position(point)
+        self._clip._update_position(
+            (
+                point[0] + style.format.footer_size,
+                point[1] + style.format.footer_size
+            )
+        )
 
         tag_y = point[1] + (
-            self._panel.height - self._tag_offset - self._tag_panel.height
+            self._panel.height - self._tag_offset - self._tab.height
             if self._anchor_top
             else self._tag_offset
         )
-        self._tag_panel.position = point[0] - self._tag_panel.width, tag_y
-        self._tag_shadow.position = (
-            self._tag_panel.x - style.format.drop_x,
-            self._tag_panel.y - style.format.drop_y,
-        )
-        self._tag_text.position = (
-            self._tag_panel.x + style.format.corner_radius / 2.0,
-            self._tag_panel.y + self._tag_panel.height - style.format.corner_radius,
-            0.0,
-        )
+        self._tab.update_position((point[0] - self.tab.width, tag_y))
 
     def get_position(self) -> Point:
-        return self._panel.position
+        return self._panel.get_position
 
     def update_size(self, size: tuple[float, float]) -> None:
         if size == self._size:
             return
-        self._size = self._panel.width, self._panel.height = size
+        self._size = size
+        self._panel.update_size(size)
+
+        self._clip.size = size
+        self._clip.update_clip_size(size)
+        self._clip.update_target_size(size)
+        self._render_clip_mask()
+
         self.update_position(self._position)
 
     def get_size(self) -> tuple[float, float]:
@@ -175,7 +247,8 @@ class Frame(Element):
     @show_body.setter
     def show_body(self, show: bool) -> None:
         self._show_body = show
-        self._panel.visible = show
+        self._panel._body.visible = show
+        self._clip.visible = show
 
     @property
     def show_shadow(self) -> bool:
@@ -184,7 +257,7 @@ class Frame(Element):
     @show_shadow.setter
     def show_shadow(self, show: bool) -> None:
         self._show_shadow = show
-        self._tag_shadow.visible = show
+        self._tab.show_shadow = show
 
     def select(self) -> None:
         self.show_body = True

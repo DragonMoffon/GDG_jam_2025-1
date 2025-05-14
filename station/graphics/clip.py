@@ -64,7 +64,6 @@ class ClipGroup(Group):
         self.clip.use(1)
 
         pygl.glEnable(pygl.GL_BLEND)
-
         pygl.glBlendFunc(pygl.GL_SRC_ALPHA, pygl.GL_ONE_MINUS_SRC_ALPHA)
 
     def unset_state(self) -> None:
@@ -79,6 +78,7 @@ class ClipGroup(Group):
             other.__class__ is self.__class__
             and self.program is other.program
             and self.parent == other.parent
+            and self.order == other.order
             and self.target == other.target
             and self.clip == other.clip
         )
@@ -87,10 +87,55 @@ class ClipGroup(Group):
         return hash(
             (
                 self.program,
+                self.order,
                 self.parent,
                 int.from_bytes(self.target.glo),
                 int.from_bytes(self.clip.glo),
             )
+        )
+
+
+class FramebufferGroup(Group):
+
+    def __init__(
+        self,
+        framebuffer: gl.Framebuffer,
+        color: tuple[int, int, int] | tuple[int, int, int, int] = (255, 255, 255),
+        order: int = 0,
+        parent: Group | None = None,
+    ):
+        Group.__init__(self, order, parent)
+        self._framebuffer = framebuffer
+        self._color = color
+        self._previous: None | gl.Framebuffer = None
+
+    def set_state(self) -> None:
+        self._previous = get_window().ctx.active_framebuffer
+        self._framebuffer.use()
+        self._framebuffer.clear(color=self._color)
+
+    def unset_state(self) -> None:
+        if self._previous is not None:
+            self._previous.use()
+            self._previous = None
+
+    def __hash__(self) -> int:
+        return hash(
+            (
+                int.from_bytes(self._framebuffer.glo),
+                self._color,
+                self.order,
+                self.parent,
+            )
+        )
+
+    def __eq__(self, other: FramebufferGroup) -> bool:
+        return (
+            other.__class__ == self.__class__
+            and other._framebuffer is self._framebuffer
+            and other._color == self._color
+            and other.parent == self.parent
+            and other.order == self.order
         )
 
 
@@ -188,6 +233,14 @@ class ClippingMask:
     @property
     def clip_texture(self) -> gl.Texture2D:
         return self._clip_framebuffer.color_attachments[0]
+
+    @property
+    def target_group(self) -> FramebufferGroup:
+        return FramebufferGroup(self._target_framebuffer, (0, 0, 0, 0))
+
+    @property
+    def clip_group(self) -> FramebufferGroup:
+        return FramebufferGroup(self._clip_framebuffer, (0, 0, 0, 0))
 
     @property
     def batch(self) -> Batch | None:
