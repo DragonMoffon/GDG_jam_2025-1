@@ -75,11 +75,12 @@ class GameView(View):
         self._logo.color = (255, 255, 255, 0)
         self._gui = GUI()
 
-        self._editor_frame = EditorFrame(0.0, (self.width, 0.0), 720)
-        self._gui.add_element(self._editor_frame)
+        # self._editor_frame = EditorFrame(0.0, (self.width, 0.0), 720)
+        # self._gui.add_element(self._editor_frame)
+        e_frame_height = 100.0
 
         self._info_frame = InfoFrame(
-            self._editor_frame.tag_height + 2 * style.format.padding,
+            e_frame_height + 2 * style.format.padding,
             (self.width, 0.0),
             720,
         )
@@ -89,9 +90,7 @@ class GameView(View):
         self._timer: float = 0.0
 
         comm_offset = (
-            self._editor_frame.tag_height
-            + self._info_frame.tag_height
-            + 3 * style.format.padding
+            e_frame_height + self._info_frame.tag_height + 3 * style.format.padding
         )
         self._comms_frame = CommsFrame(
             comm_offset,
@@ -105,7 +104,7 @@ class GameView(View):
 
         self._frame_controller = FrameController(
             (
-                self._editor_frame,
+                None,
                 self._setting_frame,
                 self._info_frame,
                 self._comms_frame,
@@ -122,7 +121,7 @@ class GameView(View):
         self._level_check_time = self.window.time + 2
         context.set_frames(
             self._frame_controller,
-            self._editor_frame,
+            None,
             self._info_frame,
             self._comms_frame,
             self._setting_frame,
