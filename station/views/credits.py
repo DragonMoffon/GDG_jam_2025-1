@@ -8,7 +8,7 @@ from resources import style
 
 from station.graphics.format_label import FLabel
 from station.graphics.background import ParallaxBackground
-from station.gui.core import get_shadow_shader
+from station.graphics.shadow import get_shadow_shader
 from station.view import View
 from station.input import Button
 

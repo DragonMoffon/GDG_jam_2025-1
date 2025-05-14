@@ -1,96 +1,14 @@
 from uuid import UUID
 from typing import Callable, Any
 
-from pyglet.graphics import Batch
-from pyglet.shapes import RoundedRectangle
-from pyglet.text import Label
-from arcade import Text
-from arcade.clock import GLOBAL_CLOCK
+from pyglet.graphics import Group
 
 from resources import style
 
-from station.graphics.format_label import FLabel
+from station.graphics.shadow import get_shadow_shader
 
-from .core import Element
-
-
-class Popup(Element):
-
-    def __init__(
-        self,
-        width: float,
-        height: float,
-        bottom_left: tuple[float, float],
-        uid: UUID | None = None,
-    ):
-        Element.__init__(self, uid)
-
-        self.width = width
-        self.height = height
-        self.bottom_left = bottom_left
-
-        self._body = RoundedRectangle(
-            bottom_left[0],
-            bottom_left[1],
-            width,
-            height,
-            style.format.padding,
-            14,
-            style.colors.base,
-            group=OVERLAY_PRIMARY,
-        )
-        self._shadow = RoundedRectangle(
-            bottom_left[0] - 2 * style.format.drop_x,
-            bottom_left[1] - 2 * style.format.drop_y,
-            width,
-            height,
-            style.format.padding,
-            14,
-            style.colors.dark,
-            program=get_shadow_shader(),
-            group=OVERLAY_SHADOW,
-        )
-
-    def connect_renderer(self, batch: Batch | None):
-        self._body.group = OVERLAY_PRIMARY
-        self._shadow.group = OVERLAY_SHADOW
-
-        self._body.batch = batch
-        self._shadow.batch = batch
-
-    def contains_point(self, point: tuple[float, float]):
-        l, b = self.bottom_left
-        w, h = self.width, self.height
-        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
-
-
-class InfoPopup(Popup):
-
-    def __init__(
-        self, text: str, bottom_left: tuple[float, float], uid: UUID | None = None
-    ):
-        self._text = Text(
-            text,
-            bottom_left[0] + style.format.padding,
-            bottom_left[1] + style.format.padding,
-            style.colors.highlight,
-            style.text.sizes.normal,
-            font_name=style.text.names.monospace,
-            anchor_y="bottom",
-        )
-        Popup.__init__(
-            self,
-            self._text.content_width + 2 * style.format.padding,
-            self._text.content_height + 2 * style.format.padding,
-            bottom_left,
-            uid,
-        )
-
-    def connect_renderer(self, batch: Batch | None):
-        Popup.connect_renderer(self, batch)
-
-        self._text.group = OVERLAY_PRIMARY
-        self._text.batch = batch
+from .core import Element, Point
+from .elements import Label, RoundedRectangle
 
 
 class PopupAction:
@@ -105,45 +23,51 @@ class PopupAction:
         return self.action(*self._args, **self._kwds)
 
 
-class SelectionPopup(Popup):
+class SelectionPopup(Element):
 
     def __init__(
         self,
         actions: tuple[PopupAction, ...],
-        position: tuple[float, float],
         top: bool = False,
         right: bool = False,
+        parent: Element | None = None,
+        layer: Group | None = None,
         uid: UUID | None = None,
     ):
+        Element.__init__(self, parent, layer, uid)
+        self._right = right
+        self._top = top
 
         self.actions = {action.name: action for action in actions}
         self._action_text = {
-            name: Text(
+            name: Label(
                 name,
                 0.0,
                 0.0,
-                style.colors.accent,
-                style.text.sizes.normal,
-                anchor_y="bottom",
+                color=style.colors.accent,
+                font_size=style.text.sizes.normal,
                 font_name=style.text.names.monospace,
-                group=OVERLAY_HIGHLIGHT,
+                anchor_y="bottom",
+                parent=self,
+                layer=self.BODY(2),
             )
             for name in self.actions
         }
 
-        text_width = max(text.content_width for text in self._action_text.values())
-        text_height = max(text.content_height for text in self._action_text.values())
+        self._text_width = max(text.width for text in self._action_text.values())
+        self._text_height = max(text.height for text in self._action_text.values())
 
         self._action_panels = {
             name: RoundedRectangle(
                 0.0,
                 0.0,
-                text_width + 2 * style.format.padding,
-                text_height + 2 * style.format.padding,
+                self._text_width + 2 * style.format.padding,
+                self._text_height + 2 * style.format.padding,
                 style.format.padding,
                 14,
                 style.colors.background,
-                group=OVERLAY_HIGHLIGHT,
+                parent=self,
+                layer=self.BODY(1),
             )
             for name in self.actions
         }
@@ -157,30 +81,58 @@ class SelectionPopup(Popup):
             + (len(actions) + 1) * style.format.padding
         )
 
-        bottom = position[1] - height if top else position[1]
-        left = position[0] - width if right else position[0]
+        self._body = RoundedRectangle(
+            0.0,
+            0.0,
+            width,
+            height,
+            style.format.padding,
+            14,
+            style.colors.base,
+            parent=self,
+            layer=self.BODY(),
+        )
+        self._shadow = RoundedRectangle(
+            0.0,
+            0.0,
+            width,
+            height,
+            style.format.padding,
+            14,
+            style.colors.dark,
+            program=get_shadow_shader(),
+            parent=self,
+            layer=self.SHADOW(),
+        )
 
-        for idx, action in enumerate(actions):
-            y = (
-                bottom
-                + style.format.padding
-                + idx * (3 * style.format.padding + text_height)
+    def contains_point(self, point: Point) -> bool:
+        return self._body.contains_point(point)
+
+    def update_position(self, point: Point) -> None:
+        left = point[0] - self._body.width if self._right else point[0]
+        bottom = point[1] - self._body.height if self._top else point[1]
+        self._body.update_position((left, bottom))
+        self._shadow.update_position(
+            (left - 2 * style.format.drop_x, bottom - 2 * style.format.drop_y)
+        )
+
+        x = left + style.format.padding
+        dy = 3 * style.format.padding + self._text_height
+        for idx, action in enumerate(self.actions):
+            y = bottom + style.format.padding + idx * dy
+            self._action_panels[action].update_position((x, y))
+            self._action_text[action].update_position(
+                (
+                    x + style.format.padding,
+                    y + style.format.padding,
+                )
             )
-            self._action_panels[action.name].position = left + style.format.padding, y
-            self._action_text[action.name].position = (
-                left + 2 * style.format.padding,
-                y + style.format.padding,
-            )
-        Popup.__init__(self, width, height, (left, bottom), uid)
 
-    def connect_renderer(self, batch: Batch | None):
-        Popup.connect_renderer(self, batch)
+    def get_position(self) -> Point:
+        return self._body.get_position()
 
-        for action in self.actions:
-            p = self._action_panels[action]
-            p.batch = batch
-            t = self._action_text[action]
-            t.batch = batch
+    def get_size(self) -> tuple[float, float]:
+        return self._body.get_size()
 
     def get_hovered_item(self, point: tuple[float, float]) -> str | None:
         for name, panel in self._action_panels.items():
@@ -193,7 +145,7 @@ class SelectionPopup(Popup):
 
     def highlight_action(
         self, name: str | None, highlight: bool = True, only: bool = False
-    ):
+    ) -> None:
         if name not in self.actions and name is not None:
             return
 
@@ -218,316 +170,23 @@ class SelectionPopup(Popup):
                 style.colors.highlight if h else style.colors.accent
             )
 
-    def clear_highlight(self):
+    def clear_highlight(self) -> None:
         for action in self.actions:
             self._action_panels[action].color = style.colors.background
             self._action_text[action].color = style.colors.accent
 
 
-class TextInput:
-
-    def __init__(
-        self, charset: set[str], chararray: tuple[str, ...], max_char: int = -1
-    ):
-        self._charset = charset
-        self._chararray = chararray
-        self._max_char = max_char
-        self._str = ""
-        self._idx = 0
-
-    @property
-    def set(self) -> set[str]:
-        return self._charset
-
-    @property
-    def array(self) -> tuple[str, ...]:
-        return self._chararray
-
-    @property
-    def max(self) -> int:
-        return self._max_char
-
-    @property
-    def cursor(self) -> int:
-        return self._idx
-
-    @property
-    def text(self) -> str:
-        return self._str
-
-    @property
-    def size(self) -> int:
-        return len(self._str)
-
-    @property
-    def at_start(self) -> bool:
-        return self._idx == 0
-
-    @property
-    def at_end(self) -> bool:
-        return self._idx == len(self._str)
-
-    @property
-    def at_max(self) -> bool:
-        return self._max_char >= 0 and self._idx == self._max_char
-
-    @property
-    def is_max(self) -> bool:
-        return self._max_char >= 0 and len(self._str) == self._max_char
-
-    def incr_cursor(self, wrap: bool = True) -> int:
-        self._idx += 1
-        if self._idx > len(self._str):
-            self._idx = 0 if wrap else len(self._str)
-        return self._idx
-
-    def decr_cursor(self, wrap: bool = True) -> int:
-        self._idx -= 1
-        if self._idx < 0:
-            self._idx = len(self._str) if wrap else 0
-        return self._idx
-
-    def move_cursor(self, new: int) -> int:
-        self._idx = new % len(self._str)
-        return self._idx
-
-    def add_char(self, char: str) -> str:
-        if char not in self._charset:
-            return self._str
-
-        if self._max_char >= 0 and len(self._str) == self._max_char:
-            return self._str
-
-        self._str = f"{self._str[:self._idx]}{char}{self._str[self._idx:]}"
-        self.incr_cursor(wrap=False)
-        return self._str
-
-    def rem_char(self) -> str:
-        if self._idx <= 0:
-            self._idx = 0
-            return self._str
-
-        self.decr_cursor(wrap=False)
-        self._str = f"{self._str[:self._idx]}{self._str[self._idx + 1:]}"
-        return self._str
-
-    def incr_char(self) -> str:
-        if self.at_end:
-            if not self.is_max:
-                self._str = self._str + self._chararray[0]
-            return self._str
-        char = self._str[self._idx]
-        idx = (self._chararray.index(char) + 1) % len(self._chararray)
-        new = self._chararray[idx]
-        self._str = f"{self._str[:self._idx]}{new}{self._str[self._idx + 1:]}"
-        return self._str
-
-    def decr_char(self) -> str:
-        if self.at_end:
-            if not self.is_max:
-                self._str = self._str + self._chararray[-1]
-            return self._str
-        char = self._str[self._idx]
-        idx = self._chararray.index(char) - 1
-        new = self._chararray[idx]
-        self._str = f"{self._str[:self._idx]}{new}{self._str[self._idx + 1:]}"
-        return self._str
-
-    def set_char(self, new: str) -> str:
-        if new not in self._charset or self.at_end:
-            return self._str
-        self._str = f"{self._str[:self._idx]}{new}{self._str[self._idx + 1:]}"
-        return self._str
-
-    def set_text(self, text: str, cursor: int = -1) -> str:
-        if self._max_char >= 0:
-            text = text[: self._max_char]
-        self._str = text
-        if cursor >= 0:
-            self._idx = min(len(self._str), cursor)
-        else:
-            self._idx = len(self._str)
-
-        return self._str
-
-    def clear_text(self) -> None:
-        self._str = ""
-        self._idx = 0
-
-
-class TextInputPopup(Popup):
+class PageTab(Element):
 
     def __init__(
         self,
-        center: tuple[float, float],
-        charset: set[str],
-        chararray: tuple[str, ...],
-        max_char: int = -1,
-        blink: bool = True,
+        text: str,
+        content: Element,
+        parent: Element | None = None,
+        layer: Group | None = None,
+        uid: UUID | None = None,
     ):
-        self._text_input = TextInput(charset, chararray, max_char)
-        count = min(12, max_char) if max_char > 0 else 12
-        self._text = FLabel(
-            "#" * count,
-            center[0],
-            center[1],
-            0.0,
-            font_name=style.text.names.monospace,
-            font_size=style.text.sizes.header,
-            color=style.colors.accent,
-            group=OVERLAY_HIGHLIGHT,
-            anchor_x="center",
-            anchor_y="center",
-        )
-        width = self._text.content_width + 2 * style.format.padding
-        height = self._text.content_height + 2 * style.format.padding
-        self._text.text = " "
-
-        Popup.__init__(
-            self,
-            width,
-            height,
-            (center[0] - width / 2.0, center[1] - height / 2.0),
-        )
-
-        self._blink = blink
-        self._highlight = True
-        self._blink_time = GLOBAL_CLOCK.time + style.game.editor.blink_speed
-
-    def update(self) -> None:
-        if not self._blink:
-            return
-        if GLOBAL_CLOCK.time >= self._blink_time:
-            dt = style.game.editor.blink_speed + self._blink_time - GLOBAL_CLOCK.time
-            self._blink_time = GLOBAL_CLOCK.time + (dt % style.game.editor.blink_speed)
-            self._highlight = not self._highlight
-            self.clear_highlight()
-            self.highlight_cursor()
-
-    def update_position(self, point: tuple[float, float]) -> None:
-        Popup.update_position(self, point)
-        self._text.position = (
-            point[0] + self._body.width * 0.5,
-            point[1] + self._body.height * 0.5,
-            0.0,
-        )
-
-    def connect_renderer(self, batch: Batch | None) -> None:
-        Popup.connect_renderer(self, batch)
-        self._text.batch = batch
-
-    def input_char(self, char: str) -> None:
-        if self._text_input.at_end:
-            self._text.text = self._text.text.strip()
-        self._text.text = self._text_input.add_char(char)
-        if self._text_input.at_end:
-            self._text.text += " "
-        self.clear_highlight()
-        self.highlight_cursor()
-
-        if len(self._text.text) >= 12:
-            width = self._text.content_width + 2 * style.format.padding
-            x = self._body.x - (width - self._body.width) * 0.5
-            self._body.width = self._shadow.width = width
-            self._body.x = x
-            self._shadow.x = x - 2 * style.format.drop_x
-
-    def remove_char(self) -> None:
-        if self._text_input.at_end:
-            self._text.text = self._text.text.strip()
-        self._text.text = self._text_input.rem_char()
-        if self._text_input.at_end:
-            self._text.text += " "
-        self.clear_highlight()
-        self.highlight_cursor()
-
-        if len(self._text.text) >= 12:
-            width = self._text.content_width + 2 * style.format.padding
-            x = self._body.x - (width - self._body.width) * 0.5
-            self._body.width = self._shadow.width = width
-            self._body.x = x
-            self._shadow.x = x - 2 * style.format.drop_x
-
-    def incr_cursor(self) -> None:
-        if self._text_input.at_end:
-            self._text.text = self._text.text.strip()
-        self._text_input.incr_cursor()
-        if self._text_input.at_end:
-            self._text.text += " "
-        self.clear_highlight()
-        self.highlight_cursor()
-
-    def decr_cursor(self) -> None:
-        if self._text_input.at_end:
-            self._text.text = self._text.text.strip()
-        self._text_input.decr_cursor()
-        if self._text_input.at_end:
-            self._text.text += " "
-        self.clear_highlight()
-        self.highlight_cursor()
-
-    def incr_char(self) -> None:
-        if self._text_input.at_end:
-            self._text.text = self._text.text.strip()
-        self._text.text = self._text_input.incr_char()
-        if self._text_input.at_end:
-            self._text.text += " "
-        self.clear_highlight()
-        self.highlight_cursor()
-
-    def decr_char(self) -> None:
-        if self._text_input.at_end:
-            self._text.text = self._text.text.strip()
-        self._text.text = self._text_input.decr_char()
-        if self._text_input.at_end:
-            self._text.text += " "
-        self.clear_highlight()
-        self.highlight_cursor()
-
-    def highlight_cursor(self) -> None:
-        if not self._highlight:
-            return
-        self._text.document.set_style(
-            self.cursor,
-            self.cursor + 1,
-            {"color": style.colors.base, "background_color": style.colors.accent},
-        )
-
-    def clear_highlight(self) -> None:
-        self._text.document.set_style(
-            0,
-            len(self._text.text),
-            {"color": style.colors.accent, "background_color": None},
-        )
-
-    @property
-    def text(self) -> str:
-        return self._text_input.text
-
-    @text.setter
-    def text(self, text: str) -> None:
-        self._text.text = self._text_input.set_text(text)
-        if self._text_input.at_end:
-            self._text.text += " "
-        self.clear_highlight()
-        self.highlight_cursor()
-
-        if len(self._text.text) >= 12:
-            width = self._text.content_width + 2 * style.format.padding
-            x = self._body.x - (width - self._body.width) * 0.5
-            self._body.width = self._shadow.width = width
-            self._body.x = x
-            self._shadow.x = x - 2 * style.format.drop_x
-
-    @property
-    def cursor(self) -> int:
-        return self._text_input.cursor
-
-
-class PageTab(Element):
-
-    def __init__(self, text: str):
-        Element.__init__(self)
+        Element.__init__(self, parent, layer, uid)
         self._text = Label(
             text,
             0,
@@ -537,54 +196,50 @@ class PageTab(Element):
             font_name=style.text.names.monospace,
             font_size=style.text.sizes.normal,
             anchor_y="bottom",
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.BODY(),
         )
         self._panel = RoundedRectangle(
             0.0,
             0.0,
-            self._text.content_width + 2 * style.format.corner_radius,
-            self._text.content_height + 2 * style.format.padding,
+            self._text.width + 2 * style.format.corner_radius,
+            self._text.height + 2 * style.format.padding,
             (style.format.corner_radius, 0.0, 0.0, style.format.corner_radius),
             (12, 1, 1, 12),
             color=style.colors.base,
-            group=OVERLAY_PRIMARY,
+            parent=self,
+            layer=self.BODY(1),
         )
-
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._panel.batch = batch
-        self._text.batch = batch
-
-    def contains_point(self, point: tuple[float, float]) -> bool:
-        l, b = self._panel.position
-        w, h = self._panel.width, self._panel.height
-        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+        self.content: Element = content
 
     @property
     def text(self) -> str:
-        return self._text.text
+        return self._text.label.text
 
-    @property
-    def width(self):
-        return self._panel.width
-
-    @property
-    def height(self):
-        return self._panel.height
+    def contains_point(self, point: tuple[float, float]) -> bool:
+        return self._panel.contains_point(point)
 
     def update_position(self, point: tuple[float, float]) -> None:
-        self._panel.position = point
-        self._text.position = (
-            point[0] + style.format.corner_radius,
-            point[1] + style.format.padding,
-            0.0,
+        self._panel.update_position(point)
+        self._text.update_position(
+            (
+                point[0] + style.format.corner_radius,
+                point[1] + style.format.padding,
+            )
         )
 
-    def select(self):
-        self._text.set_style("color", style.colors.highlight)
+    def get_position(self) -> Point:
+        return self._panel.get_position()
+
+    def get_size(self) -> tuple[float, float]:
+        return self._panel.get_size()
+
+    def select(self) -> None:
+        self._text.label.set_style("color", style.colors.highlight)
         self._panel.color = style.colors.base
 
-    def deselect(self):
-        self._text.set_style("color", style.colors.accent)
+    def deselect(self) -> None:
+        self._text.label.set_style("color", style.colors.accent)
         self._panel.color = style.colors.base
 
 
@@ -594,55 +249,56 @@ class PageRow(Element):
         Element.__init__(self)
         self._position: tuple[float, float] = (0.0, 0.0)
         self._size: tuple[float, float] = (0.0, 0.0)
-        self._batch: Batch | None = None
         self._tabs: list[PageTab] = []
         self._tab_map: dict[str, PageTab] = {}
 
-    def connect_renderer(self, batch: Batch | None) -> None:
-        self._batch = batch
-        for tab in self._tabs:
-            tab.connect_renderer(batch)
-
-    def contains_point(self, point: tuple[float, float]) -> bool:
+    def contains_point(self, point: Point) -> bool:
         l, t = self._position
         w, h = self._size
         return 0 <= point[0] - l <= w and 0 <= t - point[1] <= h
 
-    def get_hovered_tab(self, point: tuple[float, float]) -> PageTab | None:
+    def update_position(self, point: Point) -> None:
+        self._position = point
+        self.layout_tabs()
+
+    def get_position(self) -> Point:
+        return self._position
+
+    def get_size(self) -> Point:
+        return self._size
+
+    def get_hovered_tab(self, point: Point) -> PageTab | None:
         for tab in self._tabs:
             if tab.contains_point(point):
                 return tab
         return None
 
-    def update_position(self, point: tuple[float, float]) -> None:
-        self._position = point
-        self.layout_tabs()
-
-    def layout_tabs(self):
+    def layout_tabs(self) -> None:
         l, t = self._position
         w, h = 0.0, 0.0
         for tab in self._tabs:
             tab.update_position((l + w, t - tab.height))
             w = w + tab.width
             h = max(h, tab.height)
+        self._size = w, h
 
-    def add_tab(self, tab: PageTab, idx: int = -1):
+    def add_tab(self, tab: PageTab, idx: int = -1) -> None:
         if tab.text in self._tab_map:
             return
-        tab.connect_renderer(self._batch)
+        self.add_child(tab)
         self._tabs.insert(idx, tab)
         self._tab_map[tab.text] = tab
         self.layout_tabs()
 
-    def rem_tab(self, tab: PageTab):
+    def rem_tab(self, tab: PageTab) -> None:
         if tab.text not in self._tab_map:
             return
-        tab.disconnect_renderer()
+        self.remove_child(tab)
         self._tabs.remove(tab)
         self._tab_map.pop(tab.text)
         self.layout_tabs()
 
-    def select_tab(self, tab: PageTab, only: bool = False):
+    def select_tab(self, tab: PageTab, only: bool = False) -> None:
         if only:
             for other in self._tabs:
                 other.deselect()

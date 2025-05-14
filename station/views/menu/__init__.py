@@ -53,9 +53,8 @@ class MainMenuView(View):
                 ),
             )
 
-        self._popup = SelectionPopup(
-            (*show_credits, *launch), (self.center_x, self.center_y)
-        )
+        self._popup = SelectionPopup((*show_credits, *launch))
+        self._popup.update_position((self.center_x, self.center_y))
         self._gui.add_element(self._popup)
         self._fade_out: bool = False
         self._speed: float = style.menu.new_fade
@@ -93,6 +92,8 @@ class MainMenuView(View):
         l = self._popup.get_hovered_item((x, y))
         if l is not None:
             self._popup.highlight_action(l)
+        else:
+            self._popup.clear_highlight()
         self._background.cursor_motion(x, y, dx, dy)
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:

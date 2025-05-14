@@ -5,7 +5,7 @@ from resources import style
 
 from station.view import View
 from station.gui.frame import Frame, FrameController
-from station.gui.core import Gui
+from station.gui.core import GUI
 from station.gui.alert import AlertElement
 from station.input import inputs, Button, Axis
 from station.context import context
@@ -21,7 +21,7 @@ from .info import InfoFrame
 
 class LevelSelect:
 
-    def __init__(self, gui: Gui) -> None:
+    def __init__(self, gui: GUI) -> None:
         self._gui = gui
         self._offset = (0.0, 0.0)
         self._alerts: dict[str, AlertElement] = {}
@@ -62,7 +62,7 @@ class LevelSelect:
             if puzzle.comms:
                 for comm in puzzle.comms:
                     station_comms.say(comm.dialogue, comm.speaker, comm.mood)
-            context._comms_frame.update_comms()
+            context.update_comms()
 
 
 class GameView(View):
@@ -73,7 +73,7 @@ class GameView(View):
         self._background = ParallaxBackground(style.game.background)
         self._logo = Sprite(style.textures.logo_big)
         self._logo.color = (255, 255, 255, 0)
-        self._gui = Gui(self.window.default_camera)
+        self._gui = GUI()
 
         self._editor_frame = EditorFrame(0.0, (self.width, 0.0), 720)
         self._gui.add_element(self._editor_frame)

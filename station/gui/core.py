@@ -91,6 +91,8 @@ class Element:
     def add_child(self, child: Element) -> None:
         if child.uid in self.children:
             return
+        if child.parent is not None:
+            child.parent.remove_child(child)
         child.parent = self
         self.children[child.uid] = child
         if self.gui is not None:
@@ -132,6 +134,22 @@ class Element:
     def y(self) -> float:
         return self.get_position()[1]
 
+    # @property
+    # def left(self) -> float:
+    #     return self.get_left()
+
+    # @property
+    # def right(self) -> float:
+    #     return self.get_left() + self.width
+
+    # @property
+    # def bottom(self) -> float:
+    #     return self.get_bottom()
+
+    # @property
+    # def top(self) -> float:
+    #    return self.get_bottom() + self.height
+
     # -- VALUE METHODS --
 
     def contains_point(self, point: Point) -> bool:
@@ -147,6 +165,12 @@ class Element:
 
     def get_size(self) -> tuple[float, float]:
         raise NotImplementedError
+
+    # def get_left(self) -> False:
+    #    raise NotImplementedError
+
+    # def get_bottom(self) -> float:
+    #    raise NotImplementedError
 
 
 class GUI:

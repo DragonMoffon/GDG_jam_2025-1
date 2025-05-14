@@ -21,7 +21,7 @@ from resources import style
 try:
     import saves as save_path
 except ModuleNotFoundError:
-    Path('saves').mkdir(exist_ok=True)
+    Path("saves").mkdir(exist_ok=True)
     import saves as save_path
 
 if TYPE_CHECKING:
@@ -433,15 +433,23 @@ class Context:
 
         # TODO: AHHHHH
         return self._editor_frame._active_editor._puzzle
-    
+
+    def update_comms(self):
+        if self._comms_frame is None:
+            return
+        self._comms_frame.update_comms()
+
     def log_fatal_exception(self, exception: Exception | KeyboardInterrupt) -> None:
         if self._current_save is not None:
             self._current_save.log_fatal_exception(exception)
             return
         crash_time = datetime.now().strftime("%Y-%m-%d %H-%M")
-        with open(self._save_path / f"crash-{crash_time}_{uuid4().hex}.txt", "w", encoding="utf-8") as fp:
+        with open(
+            self._save_path / f"crash-{crash_time}_{uuid4().hex}.txt",
+            "w",
+            encoding="utf-8",
+        ) as fp:
             fp.write("".join(traceback.format_exception(exception)))
-        
 
 
 context = Context()

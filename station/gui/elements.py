@@ -5,6 +5,9 @@ from pyglet.gl import GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
 from pyglet.graphics.shader import ShaderProgram
 from pyglet.graphics import Batch, Group
 from pyglet.text import Label as pyLabel
+from pyglet.text.document import FormattedDocument, UnformattedDocument
+from pyglet.text.layout import IncrementalTextLayout
+from pyglet.text.caret import Caret
 from pyglet.customtypes import AnchorX, AnchorY, ContentVAlign
 from pyglet.image import AbstractImage, Animation
 from pyglet import shapes, sprite
@@ -23,7 +26,6 @@ class FLabel(Element):
         text: str = "",
         x: float = 0.0,
         y: float = 0.0,
-        z: float = 0.0,
         width: int | None = None,
         height: int | None = None,
         anchor_x: AnchorX = "left",
@@ -47,7 +49,7 @@ class FLabel(Element):
             text,
             x,
             y,
-            z,
+            0.0,
             width,
             height,
             anchor_x,
@@ -101,7 +103,6 @@ class Label(Element):
         text: str = "",
         x: float = 0.0,
         y: float = 0.0,
-        z: float = 0.0,
         width: int | None = None,
         height: int | None = None,
         anchor_x: AnchorX = "left",
@@ -125,7 +126,7 @@ class Label(Element):
             text,
             x,
             y,
-            z,
+            0.0,
             width,
             height,
             anchor_x,
@@ -362,3 +363,74 @@ class Sprite(Element):
 
     def get_size(self) -> tuple[float, float]:
         return self._sprite.height, self._sprite.width
+
+
+class TextInput(Element):
+
+    def __init__(
+        self,
+        text: str,
+        x: float,
+        y: float,
+        width: int,
+        height: int,
+        font_name: str,
+        font_size: int,
+        color: tuple[int, int, int] | tuple[int, int, int, int] = (255, 255, 255, 255),
+        anchor_x: AnchorX = "left",
+        anchor_y: AnchorY = "bottom",
+        multiline: bool = False,
+        dpi: float | None = None,
+        program: ShaderProgram | None = None,
+        wrap_lines: bool = False,
+        formatted: bool = False,
+        caret: bool = True,
+        parent: Element | None = None,
+        layer: Group | None = None,
+        uid: UUID | None = None,
+    ):
+        Element.__init__(self, parent, layer, uid)
+        if formatted:
+            self._document = FormattedDocument(text)
+        else:
+            self._document = UnformattedDocument(text)
+        self._document.set_style(
+            0,
+            len(text),
+            {"font_name": font_name, "font_size": font_size, "color": color},
+        )
+
+        self._layout = IncrementalTextLayout(
+            self._document,
+            x,
+            y,
+            0.0,
+            width,
+            height,
+            anchor_x,
+            anchor_y,
+            0,
+            multiline,
+            dpi,
+            program=program,
+            group=self.layer,
+            wrap_lines=wrap_lines,
+        )
+
+        if caret:
+            self._caret = Caret(self._layout, color=color)
+        else:
+            self._caret = None
+
+    def connect_renderer(self, batch: Batch | None) -> None:
+        self._layout.batch = batch
+        self._caret.batch = batch
+
+    def update_position(self, point: Point) -> None:
+        self._layout.position = point
+
+    def get_position(self) -> Point:
+        return self._layout.position
+
+    def get_size(self) -> tuple[float, float]:
+        return (self._layout.width, self._layout.height)
