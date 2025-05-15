@@ -4,8 +4,8 @@ from enum import Enum
 from pyglet.graphics import Batch, Group
 from pyglet.shapes import RoundedRectangle as pyRoundedRectangle
 from arcade import LBWH
-from arcade.camera import ViewportProjector
 from arcade.clock import GLOBAL_CLOCK
+from arcade.camera.default import ViewportProjector
 
 from resources import style, audio
 from station.input import inputs, Button, Axis
@@ -28,7 +28,6 @@ class FrameTab(Element):
         Element.__init__(self, parent, layer, uid)
         self._text = Label(
             "\n".join(text),
-            0,
             0,
             0,
             int(style.text.sizes.header) + 1,
@@ -104,7 +103,7 @@ class Frame(Element):
     def __init__(
         self,
         name: str,
-        tag_offset: float,
+        tab_offset: float,
         size: tuple[float, float],
         show_body: bool = False,
         show_shadow: bool = True,
@@ -116,8 +115,8 @@ class Frame(Element):
         Element.__init__(self, parent, layer, uid)
         self._name = name
         self._size = size
-        self._position = position
-        self._tag_offset: float = tag_offset
+        self._position = (0.0, 0.0)
+        self._tab_offset: float = tab_offset
         self._anchor_top: bool = anchor_top
 
         self._show_body: bool = True
@@ -158,7 +157,7 @@ class Frame(Element):
         clip_rect = LBWH(0.0, 0.0, *self._clip.size)
         viewport = ViewportProjector(clip_rect)
         radius = style.format.corner_radius
-        with self._clip.:
+        with self._clip.clip:
             with viewport.activate():
                 pyRoundedRectangle(
                     0,
@@ -170,20 +169,20 @@ class Frame(Element):
                 ).draw()
 
     def _calculate_tab_radii(self) -> tuple[float, int, float, int]:
-        tag_offset = self._tag_offset
+        tab_offset = self._tab_offset
         size = self._size
 
         radius = style.format.corner_radius + style.format.footer_size
         if self._anchor_top:
-            hide_top = tag_offset < radius and 0.0 < tag_offset + self._tab.height
+            hide_top = tab_offset < radius and 0.0 < tab_offset + self._tab.height
 
-            bottom_dist = size[1] - tag_offset - self._tab.height
+            bottom_dist = size[1] - tab_offset - self._tab.height
             hide_bottom = bottom_dist < radius and 0.0 < bottom_dist + self._tab.height
         else:
-            top_dist = size[1] - tag_offset - self._tab.height
+            top_dist = size[1] - tab_offset - self._tab.height
             hide_top = top_dist < radius and 0.0 < top_dist + self._tab.height
 
-            hide_bottom = tag_offset < radius and 0.0 < tag_offset + self._tab.height
+            hide_bottom = tab_offset < radius and 0.0 < tab_offset + self._tab.height
 
         top_radius = 0.0 if hide_top else radius
 
@@ -198,6 +197,9 @@ class Frame(Element):
     def connect_renderer(self, batch: Batch | None) -> None:
         self._clip.batch = batch
 
+    def set_visible(self, visible: bool) -> None:
+        self._clip.visible = visible and self.show_body
+
     def contains_point(self, point: Point) -> bool:
         return self._panel.contains_point(point) or self._tab.contains_point(point)
 
@@ -207,19 +209,17 @@ class Frame(Element):
     def update_position(self, point: Point) -> None:
         self._position = point
         self._panel.update_position(point)
-        self._clip._update_position(
-            (
-                point[0] + style.format.footer_size,
-                point[1] + style.format.footer_size
-            )
+        self._clip.position = (
+            point[0] + style.format.footer_size,
+            point[1] + style.format.footer_size,
         )
 
         tag_y = point[1] + (
-            self._panel.height - self._tag_offset - self._tab.height
+            self._panel.height - self._tab_offset - self._tab.height
             if self._anchor_top
-            else self._tag_offset
+            else self._tab_offset
         )
-        self._tab.update_position((point[0] - self.tab.width, tag_y))
+        self._tab.update_position((point[0] - self._tab.width, tag_y))
 
     def get_position(self) -> Point:
         return self._panel.get_position
@@ -239,6 +239,9 @@ class Frame(Element):
 
     def get_size(self) -> tuple[float, float]:
         return self._size
+
+    def get_tab_position(self) -> Point:
+        return self._tab.get_position()
 
     @property
     def show_body(self) -> bool:
@@ -277,7 +280,6 @@ class Frame(Element):
         self, x: float, y: float, scroll_x: float, scroll_y: float
     ) -> None: ...
 
-    def on_draw(self) -> None: ...
     def on_update(self, delta_time: float) -> None: ...
 
     def on_select(self) -> None: ...
@@ -305,6 +307,9 @@ class FrameController:
 
         self._animation_time: float = 0.0
         self._animation_mode: Enum = FrameAnimationMode.NONE
+
+        for frame in frames:
+            frame.update_position(position)
 
     def select_frame(self, frame: Frame) -> None:
         if frame == self._selected_frame:
@@ -355,7 +360,7 @@ class FrameController:
             cursor = inputs.cursor
             close_frame = True
             for frame in self._frames:
-                if frame == self._selected_frame and frame.tag_contains_point(cursor):
+                if frame == self._selected_frame and frame.tab_contains_point(cursor):
                     close_frame = True
                     break
                 if frame.contains_point(cursor):
@@ -409,16 +414,6 @@ class FrameController:
             and self._animation_mode == FrameAnimationMode.SHOW
         ):
             self._next_frame.on_cursor_scroll(x, y, scroll_x, scroll_y)
-
-    def on_draw(self) -> None:
-        if self._selected_frame is not None:
-            self._selected_frame.on_draw()
-
-        if (
-            self._next_frame is not None
-            and self._animation_mode == FrameAnimationMode.SHOW
-        ):
-            self._next_frame.on_draw()
 
     def on_update(self, delta_time: float) -> None:
         time = GLOBAL_CLOCK.time

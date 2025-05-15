@@ -46,6 +46,7 @@ class Element:
         self.layer: Group | None = layer
         self.uid: UUID = uid or uuid4()
         self.gui: GUI | None = None
+        self._visible: bool = True
 
         if parent is not None:
             parent.add_child(self)
@@ -78,7 +79,9 @@ class Element:
         return Group(self.layer.order - 1 + order, self.layer.parent)
 
     def HIGHLIGHT(self, order: int = 0) -> Group:
-        return Group(10 + order, self.layer.highlight)
+        if self.layer is None:
+            return Group(10 + order)
+        return Group(10 + order, self.layer.parent)
 
     # -- TREE METHODS --
 
@@ -86,6 +89,8 @@ class Element:
         return hash(self.uid)
 
     def __eq__(self, other: Element) -> bool:
+        if other is None:
+            return False
         return self.uid == other.uid
 
     def add_child(self, child: Element) -> None:
@@ -110,6 +115,9 @@ class Element:
         for child in self.children.values():
             child.clear_children()
             self.remove_child(child)
+
+    def set_visible(self, visible: bool):
+        pass
 
     def connect_renderer(self, batch: Batch | None) -> None:
         pass
@@ -149,6 +157,17 @@ class Element:
     # @property
     # def top(self) -> float:
     #    return self.get_bottom() + self.height
+
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, visible: bool) -> None:
+        self._visible = False
+        self.set_visible(visible)
+        for child in self.children.values():
+            child.visible = visible
 
     # -- VALUE METHODS --
 

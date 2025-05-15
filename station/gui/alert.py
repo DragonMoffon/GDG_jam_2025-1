@@ -97,28 +97,20 @@ class AlertElement(Element):
         return self._puzzle
 
     def contains_point(self, point: Point) -> bool:
-        l, b, *_ = self._icon.position
-        w, h = self._icon.width, self._icon.height
-        return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
+        return self._icon.contains_point(point)
 
     def update_position(self, point: Point) -> None:
-        self._icon.position = point[0], point[1], 0
-        self._select.position = (
-            point[0] - style.format.select_radius,
-            point[1] - style.format.select_radius,
+        self._icon.update_position(point)
+        self._select.update_position(
+            (
+                point[0] - style.format.select_radius,
+                point[1] - style.format.select_radius,
+            )
         )
         self._place_lines()
 
     def get_position(self) -> Point:
-        return self._icon.position
-
-    def update_size(self, size: tuple[float, float]) -> None:
-        self._icon.width, self._icon.height = size
-        self._body.width, self._body.height = size
-        self._select.width = size[0] + 2 * style.format.select_radius
-        self._select.height = size[1] + 2 * style.format.select_radius
-
-        self._place_lines()
+        return self._icon.get_position()
 
     def get_size(self) -> tuple[float, float]:
         return self._icon.width, self._icon.height
@@ -172,12 +164,12 @@ class AlertElement(Element):
                 ly2 = ly - style.format.corner_radius
 
         l1, l2, l3 = self._lines
-        l1.position = pin
-        l1.x2, l1.y2 = px, py
-        l2.position = px, py
-        l2.x2, l2.y2 = lx2, ly2
-        l3.position = lx2, ly2
-        l3.x2, l3.y2 = lx, ly
+        l1.update_position(pin)
+        l1.update_position2((px, py))
+        # l2.update_position((px, py))
+        # l2.update_position2((lx2, ly2))
+        l3.update_position((lx2, ly2))
+        l3.update_position2((lx, ly))
 
     def highlight(self) -> None:
         self._select.visible = True

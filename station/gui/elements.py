@@ -78,6 +78,9 @@ class FLabel(Element):
     def connect_renderer(self, batch: Batch | None) -> None:
         self._label.batch = batch
 
+    def set_visible(self, visible: bool) -> None:
+        self._label.visible = visible
+
     def contains_point(self, point: Point) -> bool:
         l, b = self._label.left, self._label.bottom
         w, h = self.get_size()
@@ -155,6 +158,9 @@ class Label(Element):
     def connect_renderer(self, batch: Batch | None) -> None:
         self._label.batch = batch
 
+    def set_visible(self, visible: bool) -> None:
+        self._label.visible = visible
+
     def contains_point(self, point: Point) -> bool:
         l, b = self._label.left, self._label.bottom
         w, h = self.get_size()
@@ -202,6 +208,9 @@ class Line(Element):
     def connect_renderer(self, batch: Batch | None) -> None:
         self._line.batch = batch
 
+    def set_visible(self, visible: bool) -> None:
+        self._line.visible = visible
+
     @property
     def line(self) -> shapes.Line:
         return self._line
@@ -236,9 +245,9 @@ class Line(Element):
     def update_position(self, point: Point) -> None:
         if point == self._line.position:
             return
-        x2, y2 = self._line.x2, self._line.y2
+        p2 = self._line.x2, self._line.y2
         self._line._x, self._line._y = point
-        self._line._x2, self._line._y2 = x2, y2
+        self._line._x2, self._line._y2 = p2
         self._update_vertices()
 
     def get_position(self) -> Point:
@@ -299,6 +308,9 @@ class RoundedRectangle(Element):
     def connect_renderer(self, batch: Batch | None) -> None:
         self._body.batch = batch
 
+    def set_visible(self, visible: bool) -> None:
+        self._body.visible = visible
+
     def contains_point(self, point: Point) -> bool:
         body = self._body
         l, b = body.position
@@ -347,8 +359,11 @@ class Sprite(Element):
     def connect_renderer(self, batch: Batch | None) -> None:
         self._sprite.batch = batch  # type: ignore -- None
 
+    def set_visible(self, visible: bool) -> None:
+        self._sprite.visible = visible
+
     def contains_point(self, point: Point) -> bool:
-        l, b = self._sprite.position
+        l, b, d = self._sprite.position
         w, h = self._sprite.width, self._sprite.height
         return 0 <= point[0] - l <= w and 0 <= point[1] - b <= h
 
@@ -425,6 +440,10 @@ class TextInput(Element):
     def connect_renderer(self, batch: Batch | None) -> None:
         self._layout.batch = batch
         self._caret.batch = batch
+
+    def set_visible(self, visible: bool) -> None:
+        self._layout.visible = visible
+        self._caret.visible = visible
 
     def update_position(self, point: Point) -> None:
         self._layout.position = point

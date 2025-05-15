@@ -1,4 +1,5 @@
 from arcade import draw_rect_filled
+from pyglet.graphics import Group
 from pyglet.sprite import Sprite
 
 from resources import style
@@ -13,16 +14,17 @@ from station.puzzle import Puzzle
 from station.graphics.background import ParallaxBackground
 from station.comms import comms as station_comms
 
-from .editor import EditorFrame
-from .settings import SettingsFrame
-from .comms import CommsFrame
-from .info import InfoFrame
+# from .editor import EditorFrame
+# from .settings import SettingsFrame
+# from .comms import CommsFrame
+# from .info import InfoFrame
 
 
 class LevelSelect:
 
-    def __init__(self, gui: GUI) -> None:
+    def __init__(self, gui: GUI, layer: Group | None = None) -> None:
         self._gui = gui
+        self._layer = layer
         self._offset = (0.0, 0.0)
         self._alerts: dict[str, AlertElement] = {}
 
@@ -55,7 +57,7 @@ class LevelSelect:
         for puzzle in available:
             if puzzle.name in self._alerts:
                 continue
-            alert = AlertElement(puzzle)
+            alert = AlertElement(puzzle, layer=self._layer)
             self._gui.add_element(alert)
             self._alerts[puzzle.name] = alert
             style.audio.notification.play()
@@ -70,41 +72,62 @@ class GameView(View):
     def __init__(self) -> None:
         View.__init__(self)
         self.background_color = style.game.background.color
-        self._background = ParallaxBackground(style.game.background)
-        self._logo = Sprite(style.textures.logo_big)
-        self._logo.color = (255, 255, 255, 0)
         self._gui = GUI()
 
-        # self._editor_frame = EditorFrame(0.0, (self.width, 0.0), 720)
-        # self._gui.add_element(self._editor_frame)
-        e_frame_height = 100.0
+        self._background_layer = Group(0)
+        self._alert_layer = Group(1)
+        self._frame_layer = Group(2)
+        self._overlay_layer = Group(3)
 
-        self._info_frame = InfoFrame(
-            e_frame_height + 2 * style.format.padding,
-            (self.width, 0.0),
-            720,
+        self._background = ParallaxBackground(
+            style.game.background,
+            self._background_layer,
+        )
+        self._background.connect_renderer(self._gui.renderer)
+        self._logo = Sprite(
+            style.textures.logo_big,
+            group=self._overlay_layer,
+            batch=self._gui.renderer,
+        )
+        self._logo.color = (255, 255, 255, 0)
+        self._editor_frame = Frame(
+            "EDITOR",
+            0.0,
+            (1000.0, self.height),
+            layer=self._frame_layer,
+        )
+        self._gui.add_element(self._editor_frame)
+        tab_offset = self._editor_frame.tab_height
+
+        self._info_frame = Frame(
+            "INFO",
+            tab_offset + style.format.padding,
+            (450, self.height),
+            layer=self._frame_layer,
         )
         self._gui.add_element(self._info_frame)
+        tab_offset += self._info_frame.tab_height
 
-        self._fade_in: bool = True
-        self._timer: float = 0.0
-
-        comm_offset = (
-            e_frame_height + self._info_frame.tag_height + 3 * style.format.padding
-        )
-        self._comms_frame = CommsFrame(
-            comm_offset,
-            (self.width, 0.0),
-            720,
+        self._comms_frame = Frame(
+            "COMMS",
+            tab_offset + 2 * style.format.padding,
+            (450, self.height),
+            layer=self._frame_layer,
         )
         self._gui.add_element(self._comms_frame)
 
-        self._setting_frame = SettingsFrame((self.width, 0.0), 720)
+        self._setting_frame = Frame(
+            "SETTINGS",
+            0.0,
+            (450, self.height),
+            anchor_top=False,
+            layer=self._frame_layer,
+        )
         self._gui.add_element(self._setting_frame)
 
         self._frame_controller = FrameController(
             (
-                None,
+                self._editor_frame,
                 self._setting_frame,
                 self._info_frame,
                 self._comms_frame,
@@ -112,21 +135,18 @@ class GameView(View):
             (self.width, 0.0),
         )
 
-        self._level_select: LevelSelect = LevelSelect(self._gui)
+        self._level_select: LevelSelect = LevelSelect(self._gui, self._alert_layer)
         self._level_check_time: float = self.window.time
 
-        style.audio.ambience.wind.play("ambience1", True)
+        self._fade_in: bool = True
+        self._timer: float = 0.0
 
     def on_show_view(self) -> None:
         self._level_check_time = self.window.time + 2
-        context.set_frames(
-            self._frame_controller,
-            None,
-            self._info_frame,
-            self._comms_frame,
-            self._setting_frame,
-        )
+        context.set_frames(self._frame_controller, None, None, None, None)
         context.set_level_select(self._level_select)
+
+        style.audio.ambience.wind.play("ambience1", True)
 
         self._fade_in = True
         self._timer = self.window.time
@@ -141,7 +161,6 @@ class GameView(View):
     def on_draw(self) -> None:
         self.clear()
         self._background.draw()
-        self._frame_controller.on_draw()
         self._gui.draw()
         if self._fade_in:
             fraction = (self.window.time - self._timer) / 3.0

@@ -1,7 +1,7 @@
 from math import cos, sin, tau
 
 from arcade.clock import GLOBAL_CLOCK
-from pyglet.graphics import Batch
+from pyglet.graphics import Batch, Group
 
 from resources import style
 from resources.style import FloatMotionMode, Background as StyleBackground
@@ -11,13 +11,18 @@ from station.graphics.backing import Backing
 
 class ParallaxBackground:
 
-    def __init__(self, background: StyleBackground | None = None):
+    def __init__(
+        self, background: StyleBackground | None = None, layer: Group | None = None
+    ):
         if background is None:
             background = style.menu.background
         self._data: StyleBackground = background
-        self._base: Backing = Backing(background.base, background.base_offset)
+        self._base: Backing = Backing(
+            background.base, background.base_offset, group=layer
+        )
         self._layers: tuple[Backing, ...] = tuple(
-            Backing(floating.texture, floating.offset) for floating in background.layers
+            Backing(floating.texture, floating.offset, group=layer)
+            for floating in background.layers
         )
 
         self.layer_offsets: list[tuple[float, float]] = [(0.0, 0.0)] * len(self._layers)
