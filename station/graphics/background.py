@@ -18,11 +18,11 @@ class ParallaxBackground:
             background = style.menu.background
         self._data: StyleBackground = background
         self._base: Backing = Backing(
-            background.base, background.base_offset, group=layer
+            background.base, background.base_offset, group=Group(0, layer)
         )
         self._layers: tuple[Backing, ...] = tuple(
-            Backing(floating.texture, floating.offset, group=layer)
-            for floating in background.layers
+            Backing(floating.texture, floating.offset, group=Group(idx + 1, layer))
+            for idx, floating in enumerate(background.layers)
         )
 
         self.layer_offsets: list[tuple[float, float]] = [(0.0, 0.0)] * len(self._layers)

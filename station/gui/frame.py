@@ -147,6 +147,7 @@ class Frame(Element):
             (0.0, 0.0), clip_size, clip_size, visible=show_body, group=self.BODY(1)
         )
         self._render_clip_mask()
+        self.
 
         self.clip_layer: FramebufferGroup = self._clip.target_group
 
@@ -168,7 +169,7 @@ class Frame(Element):
                     (12, 12, 1, 1),
                 ).draw()
 
-    def _calculate_tab_radii(self) -> tuple[float, int, float, int]:
+    def _calculate_tab_radii(self) -> tuple[float, float]:
         tab_offset = self._tab_offset
         size = self._size
 

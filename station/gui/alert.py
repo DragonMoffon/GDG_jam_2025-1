@@ -35,7 +35,7 @@ class AlertElement(Element):
             parent=self,
             layer=self.BODY(2),
         )
-        self._icon.color = style.colors.highlight
+        self._icon.sprite.color = style.colors.highlight
         self._body = RoundedRectangle(
             self._icon.x,
             self._icon.y,
@@ -120,22 +120,23 @@ class AlertElement(Element):
         self._place_lines()
 
     def _place_lines(self) -> None:
-        pin = self._pin[0] + self._pin_offset[0], self._pin[1] + self._pin_offset[1]
+        px = self._pin[0] + self._pin_offset[0]
+        py = self._pin[1] + self._pin_offset[1]
         loc = self._loc
 
         match self._pin_orientation:
             case AlertOrientation.LEFT:
-                px = pin[0] - style.format.corner_radius
-                py = pin[1]
+                px2 = px - style.format.corner_radius
+                py2 = py
             case AlertOrientation.TOP:
-                px = pin[0]
-                py = pin[1] + style.format.corner_radius
+                px2 = px
+                py2 = py + style.format.corner_radius
             case AlertOrientation.RIGHT:
-                px = pin[0] + style.format.corner_radius
-                py = pin[1]
+                px2 = px + style.format.corner_radius
+                py2 = py
             case AlertOrientation.BOTTOM:
-                px = pin[0]
-                py = pin[1] - style.format.corner_radius
+                px2 = px
+                py2 = py - style.format.corner_radius
 
         match self._loc_orientation:
             case AlertOrientation.LEFT:
@@ -164,12 +165,9 @@ class AlertElement(Element):
                 ly2 = ly - style.format.corner_radius
 
         l1, l2, l3 = self._lines
-        l1.update_position(pin)
-        l1.update_position2((px, py))
-        # l2.update_position((px, py))
-        # l2.update_position2((lx2, ly2))
-        l3.update_position((lx2, ly2))
-        l3.update_position2((lx, ly))
+        l1.update_positions((px, py), (px2, py2))
+        l2.update_positions((lx2, ly2), (px2, py2))
+        l3.update_positions((lx, ly), (lx2, ly2))
 
     def highlight(self) -> None:
         self._select.visible = True

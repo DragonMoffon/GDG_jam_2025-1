@@ -1,5 +1,6 @@
 from arcade import draw_rect_filled
 from pyglet.sprite import Sprite
+from pyglet.shapes import Line
 
 from resources import style
 
@@ -63,7 +64,7 @@ class MainMenuView(View):
         self._timer: float = 0.0
 
         self._debug_crash: bool = False
-
+        
     def new_save(self) -> None:
         self._fade_out = True
         self._timer = self.window.time

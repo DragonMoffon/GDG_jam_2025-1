@@ -200,7 +200,7 @@ class Line(Element):
             x, y, x2, y2, thickness, color, blend_src, blend_dest, None, None, program
         )
         Element.__init__(self, parent, layer, uid)
-        self._line.layer = self.layer
+        self._line.group = self.layer
 
     def _update_vertices(self) -> None:
         self._line._update_vertices()  # type: ignore -- W0212
@@ -246,7 +246,7 @@ class Line(Element):
         if point == self._line.position:
             return
         p2 = self._line.x2, self._line.y2
-        self._line._x, self._line._y = point
+        self._line.position = point
         self._line._x2, self._line._y2 = p2
         self._update_vertices()
 
@@ -259,6 +259,12 @@ class Line(Element):
 
     def get_position2(self) -> Point:
         return self._line.x2, self._line.y2
+
+    def update_positions(self, point1: Point, point2: Point) -> None:
+        self._line.position = point1
+        self._line._x2, self._line._y2 = point2
+        self._update_vertices()
+
 
     def get_size(self) -> tuple[float, float]:
         return self._line.x2 - self._line.x, self._line.y2 - self._line.y
