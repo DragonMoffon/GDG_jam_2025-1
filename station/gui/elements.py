@@ -8,8 +8,9 @@ from pyglet.text import Label as pyLabel
 from pyglet.text.document import FormattedDocument, UnformattedDocument
 from pyglet.text.layout import IncrementalTextLayout
 from pyglet.text.caret import Caret
-from pyglet.customtypes import AnchorX, AnchorY, ContentVAlign
-from pyglet.image import AbstractImage, Animation
+from pyglet.customtypes import AnchorX, AnchorY, HorizontalAlign
+from pyglet.image import AbstractImage
+from pyglet.image.animation import Animation
 from pyglet import shapes, sprite
 
 from station.graphics import format_label
@@ -39,7 +40,7 @@ class FLabel(Element):
         italic: bool | str = False,
         stretch: bool | str = False,
         color: tuple[int, int, int] | tuple[int, int, int, int] = (255, 255, 255, 255),
-        align: ContentVAlign = "left",
+        align: HorizontalAlign = "left",
         program: ShaderProgram | None = None,
         parent: Element | None = None,
         layer: Group | None = None,
@@ -72,7 +73,7 @@ class FLabel(Element):
         self._label.group = self.layer
 
     @property
-    def label(self) -> pyLabel:
+    def label(self) -> FLabel:
         return self._label
 
     def connect_renderer(self, batch: Batch | None) -> None:
@@ -119,7 +120,7 @@ class Label(Element):
         italic: bool | str = False,
         stretch: bool | str = False,
         color: tuple[int, int, int] | tuple[int, int, int, int] = (255, 255, 255, 255),
-        align: ContentVAlign = "left",
+        align: HorizontalAlign = "left",
         program: ShaderProgram | None = None,
         parent: Element | None = None,
         layer: Group | None = None,

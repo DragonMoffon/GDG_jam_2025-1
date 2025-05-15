@@ -1,6 +1,6 @@
 from typing import Any
 
-from pyglet.customtypes import AnchorX, AnchorY, ContentVAlign
+from pyglet.customtypes import AnchorX, AnchorY, HorizontalAlign
 from pyglet.text.document import FormattedDocument
 from pyglet.text import DocumentLabel
 from pyglet.graphics import Batch, Group
@@ -29,7 +29,7 @@ class FLabel(DocumentLabel):
         italic: bool | str = False,
         stretch: bool | str = False,
         color: tuple[int, int, int, int] | tuple[int, int, int] = (255, 255, 255, 255),
-        align: ContentVAlign = "left",
+        align: HorizontalAlign = "left",
         batch: Batch | None = None,
         group: Group | None = None,
         program: ShaderProgram | None = None,

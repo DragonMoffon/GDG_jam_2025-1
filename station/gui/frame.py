@@ -3,7 +3,7 @@ from enum import Enum
 
 from pyglet.graphics import Batch, Group
 from pyglet.shapes import RoundedRectangle as pyRoundedRectangle
-from arcade import LBWH
+from arcade import LBWH, Rect
 from arcade.clock import GLOBAL_CLOCK
 from arcade.camera.default import ViewportProjector
 
@@ -37,7 +37,7 @@ class FrameTab(Element):
             font_size=style.text.sizes.header,
             color=style.colors.highlight,
             parent=self,
-            layer=self.HIGHLIGHT(1),
+            layer=self.HIGHLIGHT(2),
         )
         self._text.label.set_style(
             "line_spacing", style.text.sizes.header + style.format.padding
@@ -53,7 +53,7 @@ class FrameTab(Element):
             (12, 12, 1, 1),
             color=style.colors.base,
             parent=self,
-            layer=self.HIGHLIGHT(),
+            layer=self.HIGHLIGHT(1),
         )
         self._shadow = RoundedRectangle(
             0.0,
@@ -65,7 +65,7 @@ class FrameTab(Element):
             color=style.colors.dark,
             program=get_shadow_shader(),
             parent=self,
-            layer=self.SHADOW(),
+            layer=self.HIGHLIGHT(0),
         )
 
     def contains_point(self, point: Point) -> bool:
@@ -147,7 +147,6 @@ class Frame(Element):
             (0.0, 0.0), clip_size, clip_size, visible=show_body, group=self.BODY(1)
         )
         self._render_clip_mask()
-        self.
 
         self.clip_layer: FramebufferGroup = self._clip.target_group
 
@@ -194,6 +193,10 @@ class Frame(Element):
     @property
     def tab_height(self) -> float:
         return self._tab.height
+    
+    @property
+    def clip_rect(self) -> Rect:
+        return LBWH(0.0, 0.0, *self._clip.size)
 
     def connect_renderer(self, batch: Batch | None) -> None:
         self._clip.batch = batch
@@ -223,9 +226,9 @@ class Frame(Element):
         self._tab.update_position((point[0] - self._tab.width, tag_y))
 
     def get_position(self) -> Point:
-        return self._panel.get_position
+        return self._panel.get_position()
 
-    def update_size(self, size: tuple[float, float]) -> None:
+    def update_size(self, size: tuple[int, int]) -> None:
         if size == self._size:
             return
         self._size = size

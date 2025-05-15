@@ -16,7 +16,7 @@ from station.comms import comms as station_comms
 
 # from .editor import EditorFrame
 # from .settings import SettingsFrame
-# from .comms import CommsFrame
+from .comms import CommsFrame
 # from .info import InfoFrame
 
 
@@ -108,10 +108,9 @@ class GameView(View):
         self._gui.add_element(self._info_frame)
         tab_offset += self._info_frame.tab_height
 
-        self._comms_frame = Frame(
-            "COMMS",
+        self._comms_frame = CommsFrame(
             tab_offset + 2 * style.format.padding,
-            (450, self.height),
+            self.height,
             layer=self._frame_layer,
         )
         self._gui.add_element(self._comms_frame)

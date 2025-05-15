@@ -17,8 +17,8 @@ Point = tuple[float, float]
 
 class ProjectorGroup(Group):
 
-    def __init__(self, projector: Projector, order: int = 0) -> None:
-        super().__init__(order)
+    def __init__(self, projector: Projector, order: int = 0, parent: Group | None = None) -> None:
+        super().__init__(order, parent)
         self.projector: Projector = projector
         self._previous_projector: Projector | None = None
 
