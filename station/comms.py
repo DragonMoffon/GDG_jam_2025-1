@@ -38,9 +38,9 @@ class CommunicatonLog:
 comms = CommunicatonLog()
 
 # Dummy data: get rid of this later!
-comms.say("CS returns to LMG the next day.")
-comms.say("Welcome to Linus Media Group! Come on in. I'll show you to your desk.", "Linus")
-comms.say("Thanks, Linus.", "CS")
-comms.say("Linus leads CS to his new desk.")
-comms.say("Wow! I thought this was a starting office. Why do I get such a cool setup?", "CS", "happy")
-comms.say("Actually, this is our *worst* setup. You'll get upgraded after you've been here for a while.", "Linus")
+# comms.say("CS returns to LMG the next day.")
+# comms.say("Welcome to Linus Media Group! Come on in. I'll show you to your desk.", "Linus")
+# comms.say("Thanks, Linus.", "CS")
+# comms.say("Linus leads CS to his new desk.")
+# comms.say("Wow! I thought this was a starting office. Why do I get such a cool setup?", "CS", "happy")
+# comms.say("Actually, this is our *worst* setup. You'll get upgraded after you've been here for a while.", "Linus")

@@ -45,7 +45,12 @@ class CommsFrame(Frame):
         if self.log is not None:
             self.remove_child(self.log)
             self.log.clear_children()
-        self.log = CommsLogElement(comms, self._clip.size[0], parent=self, layer=self.comms_layer)
+        self.log = CommsLogElement(
+            comms,
+            self._clip.size[0] - 2*style.format.corner_radius,
+            parent=self,
+            layer=self.comms_layer
+        )
         self.log.update_position((style.format.footer_size, self._clip.size[1]))
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
