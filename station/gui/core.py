@@ -32,6 +32,17 @@ class ProjectorGroup(Group):
         self._previous_projector.use()
         self._previous_projector = None
 
+    def __hash__(self) -> int:
+        return hash((self.order, self.parent))
+
+    def __eq__(self, other: Group) -> bool:
+        return (
+            other.__class__ == self.__class__
+            and other.order == self.order
+            and other.parent == self.parent
+            and other.projector is self.projector
+        )
+
 
 class Element:
 
@@ -112,7 +123,7 @@ class Element:
             self.gui.remove_element(child)
 
     def clear_children(self) -> None:
-        for child in self.children.values():
+        for child in tuple(self.children.values()):
             child.clear_children()
             self.remove_child(child)
 

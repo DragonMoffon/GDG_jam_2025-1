@@ -123,7 +123,7 @@ class FramebufferGroup(Group):
         return hash(
             (
                 int.from_bytes(self._framebuffer.glo),
-                self._color,
+                tuple(self._color),
                 self.order,
                 self.parent,
             )
@@ -234,13 +234,11 @@ class ClippingMask:
     def clip_texture(self) -> gl.Texture2D:
         return self._clip_framebuffer.color_attachments[0]
 
-    @property
-    def target_group(self) -> FramebufferGroup:
-        return FramebufferGroup(self._target_framebuffer, (0, 0, 0, 0))
+    def target_group(self, color: tuple[int, int, int, int] = (0, 0, 0, 0)) -> FramebufferGroup:
+        return FramebufferGroup(self._target_framebuffer, color)
 
-    @property
-    def clip_group(self) -> FramebufferGroup:
-        return FramebufferGroup(self._clip_framebuffer, (0, 0, 0, 0))
+    def clip_group(self, color: tuple[int, int, int, int] = (0, 0, 0, 0)) -> FramebufferGroup:
+        return FramebufferGroup(self._clip_framebuffer, color)
 
     @property
     def batch(self) -> Batch | None:

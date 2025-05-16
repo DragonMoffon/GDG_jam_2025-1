@@ -42,7 +42,6 @@ class MessageElement(LogElement):
             comm.speaker,
             0,
             0,
-            0,
             _w - (style.format.footer_size * 2),
             anchor_y="top",
             font_name=style.text.names.regular,
@@ -54,7 +53,6 @@ class MessageElement(LogElement):
         )
         self.dialogue_text = FLabel(
             comm.dialogue,
-            0,
             0,
             0,
             _w - (style.format.footer_size * 2),
@@ -96,19 +94,19 @@ class MessageElement(LogElement):
         return self.rectangle.contains_point(point)
 
     def update_position(self, point: Point) -> None:
-        self.rectangle.position = point
-        self.shadow_rectangle.position = (
+        self.rectangle.update_position(point)
+        self.shadow_rectangle.update_position((
             point[0] - style.format.drop_x,
             point[1] - style.format.drop_y,
-        )
-        self.speaker_text.y = (
+        ))
+        self.speaker_text.update_position((
+            point[0] + style.format.footer_size,
             point[1] + self.rectangle.height - style.format.footer_size
-        )
-        self.dialogue_text.y = (
+        ))
+        self.dialogue_text.update_position((
+             point[0] + style.format.footer_size,
             self.speaker_text.y - self.speaker_text.height - style.format.padding
-        )
-
-        self.speaker_text.x = self.dialogue_text.x = point[0] + style.format.footer_size
+        ))
 
     def get_position(self) -> Point:
         return self.rectangle.get_position()
@@ -126,6 +124,7 @@ class NarrationElement(LogElement):
         layer: Group | None = None,
         uid: UUID | None = None,
     ):
+        LogElement.__init__(self, parent, layer, uid)
         self.dialogue_text = FLabel(
             comm.dialogue,
             0,
@@ -154,7 +153,6 @@ class NarrationElement(LogElement):
             layer=self.BODY(),
         )
         self.rectangle.visible = False
-        super().__init__()
 
     def contains_point(self, point: Point) -> bool:
         return self.rectangle.contains_point(point)
@@ -197,7 +195,7 @@ class CommsLogElement(Element):
         self._position = point
         y = point[1]
         for element in self.elements:
-            y -= element.rectangle.height
+            y -= element.height
             element.update_position((point[0], y))
             y -= style.format.footer_size
         # don't include final padding

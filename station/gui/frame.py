@@ -148,7 +148,9 @@ class Frame(Element):
         )
         self._render_clip_mask()
 
-        self.clip_layer: FramebufferGroup = self._clip.target_group
+        self.clip_layer: FramebufferGroup = self._clip.target_group(style.colors.background)
+        self.clip_layer.set_state()
+        self.clip_layer.unset_state()
 
         self.show_body = show_body
         self.show_shadow = show_shadow
