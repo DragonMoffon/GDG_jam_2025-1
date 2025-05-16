@@ -1,6 +1,9 @@
 from __future__ import annotations
-from station.input import Button, Axis
+from pyglet.graphics import Group
 
+from station.input import Button, Axis
+from station.gui import GUI
+from station.controller import GraphController
 
 class EditorCommand:
     def execute(self): ...
@@ -25,7 +28,12 @@ class EditorMode[E: Editor]:
 
 class Editor:
 
-    def __init__(self, intial_mode: EditorMode[Editor]) -> None:
+    def __init__(self, intial_mode: EditorMode[Editor], gui: GUI, layer: Group | None, controller: GraphController) -> None:
+        # -- Editor Attributes --
+        self._gui: GUI = GUI()
+        self._layer: Group | None = None
+        self._controller: GraphController = controller
+
         # -- Mode Attributes --
         self._mode_stack: list[EditorMode[Editor]] = [intial_mode]
         self._mode: EditorMode[Editor] = intial_mode
@@ -35,8 +43,6 @@ class Editor:
         self._command_stack: list[EditorCommand] = []
         self._command_offset: int = 0
         self._max_command_stack: int = -1  # TODO
-
-        # -- Editor Attributes --
 
     def push_mode(self, mode: EditorMode[Editor]) -> None:
         # Push a mode onto the stack so that
