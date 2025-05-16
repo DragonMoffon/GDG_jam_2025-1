@@ -66,8 +66,12 @@ class NarrationElement(LogElement):
 
 class CommsLogElement(Element):
     def __init__(self, log: CommunicatonLog, width: float):
+        self.width = width
         self.elements = [LogElement.from_comm(comm, width) for comm in log.log]
         super().__init__()
+
+    def append(self, comm: Communication) -> None:
+        self.elements.append(LogElement.from_comm(comm, self.width))
 
     def update_position(self, point: Point) -> None:
         """TOP-LEFT"""

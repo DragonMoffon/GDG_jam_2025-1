@@ -7,6 +7,9 @@ class Communication:
     dialogue: str
     speaker: str | None
     mood: str | None
+    tab: str | None
+
+    read: bool = False
 
     @property
     def speaker_id(self) -> str:
@@ -21,19 +24,21 @@ class Communication:
         else:
             return f"{self.speaker_id}-{self.mood}"
 
+    def mark_read(self) -> None:
+        self.read = True
+
 
 class CommunicatonLog:
     def __init__(self):
         self.log: list[Communication] = []
-        self.notification = False
 
-    def say(self, s: str, speaker: str | None = None, mood: str | None = None) -> None:
-        self.log.append(Communication(s, speaker, mood))
-        self.notification = True
+    def say(self, s: str, speaker: str | None = None, mood: str | None = None, tab: str | None = None) -> None:
+        self.log.append(Communication(s, speaker, mood, tab))
         style.audio.incoming_comm.play("notification")
 
-    def read(self) -> None:
-        self.notification = False
+    def read_all(self) -> None:
+        for c in self.log:
+            c.mark_read()
 
 comms = CommunicatonLog()
 
