@@ -95,6 +95,9 @@ class ConnectionElement(Element):
     def get_position(self) -> Point:
         return self._start
 
+    def get_link(self, link: int) -> Point:
+        return self._links[link]
+
     def get_size(self) -> tuple[float, float]:
         return self._end[0] - self._start[0], self._end[1] - self._start[1]
 

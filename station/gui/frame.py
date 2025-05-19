@@ -91,11 +91,11 @@ class FrameTab(Element):
 
     @property
     def show_shadow(self) -> bool:
-        return self._shadow._body.visible
+        return self._shadow.rectangle.visible
 
     @show_shadow.setter
     def show_shadow(self, show: bool) -> None:
-        self._shadow._body.visible = show
+        self._shadow.rectangle.visible = show
 
 
 class Frame(Element):
@@ -148,7 +148,9 @@ class Frame(Element):
         )
         self._render_clip_mask()
 
-        self.clip_layer: FramebufferGroup = self._clip.target_group(style.colors.background)
+        self.clip_layer: FramebufferGroup = self._clip.target_group(
+            style.colors.background
+        )
         self.clip_layer.set_state()
         self.clip_layer.unset_state()
 
@@ -195,7 +197,7 @@ class Frame(Element):
     @property
     def tab_height(self) -> float:
         return self._tab.height
-    
+
     @property
     def clip_rect(self) -> Rect:
         return LBWH(0.0, 0.0, *self._clip.size)

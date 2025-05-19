@@ -33,7 +33,8 @@ from station.input import (
     TYPE_CHAR_SETS,
 )
 
+
 class EditorFrame(Frame):
-    
+
     def __init__(self):
         pass

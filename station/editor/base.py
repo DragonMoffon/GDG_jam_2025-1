@@ -1,9 +1,11 @@
 from __future__ import annotations
 from pyglet.graphics import Group
+from arcade import Camera2D
 
 from station.input import Button, Axis
 from station.gui import GUI
 from station.controller import GraphController
+
 
 class EditorCommand:
     def execute(self): ...
@@ -28,11 +30,19 @@ class EditorMode[E: Editor]:
 
 class Editor:
 
-    def __init__(self, intial_mode: EditorMode[Editor], gui: GUI, layer: Group | None, controller: GraphController) -> None:
+    def __init__(
+        self,
+        intial_mode: EditorMode[Editor],
+        gui: GUI,
+        layer: Group | None,
+        controller: GraphController,
+    ) -> None:
         # -- Editor Attributes --
-        self._gui: GUI = GUI()
-        self._layer: Group | None = None
+        self._gui: GUI = gui
+        self._base_layer: Group | None = layer
         self._controller: GraphController = controller
+
+        self._cursor: tuple[float, float] = ()
 
         # -- Mode Attributes --
         self._mode_stack: list[EditorMode[Editor]] = [intial_mode]
@@ -133,11 +143,13 @@ class Editor:
         self._mode.on_axis_change(axis, value_1, value_2)
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
+        self._cursor = (x, y)
         self._mode.on_cursor_motion(x, y, dx, dy)
 
     def on_cursor_scroll(
         self, x: float, y: float, scroll_x: float, scroll_y: float
     ) -> None:
+        self._cursor = (x, y)
         self._mode.on_cursor_scroll(x, y, scroll_x, scroll_y)
 
     def on_update(self, delta_time: float) -> None:
