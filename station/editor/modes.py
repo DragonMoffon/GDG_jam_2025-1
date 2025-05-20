@@ -11,6 +11,18 @@ from station.input import inputs, Button
 from .base import Editor, EditorMode
 from .commands import MoveElement
 
+class NoneMode[E: Editor](EditorMode[E]):
+
+    def __init__(self, editor: E) -> None:
+        super().__init__(editor)
+
+class PanCameraMode(EditorMode[Editor]):
+
+    def __init__(self, editor: Editor) -> None:
+        super().__init__(editor)
+        
+    def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
+        pass
 
 class DragBlockMode(EditorMode[Editor]):
 
@@ -23,7 +35,7 @@ class DragBlockMode(EditorMode[Editor]):
     def enter(self) -> None:
         self._selected_block.select()
         pos = self._selected_block.get_position()
-        cursor = self.editor._cursor  # TODO: Once projectors are sorted fix.
+        cursor = self._editor._cursor  # TODO: Once projectors are sorted fix.
         self._offset = cursor[0] - pos[0], cursor[1] - pos[1]
 
     def exit(self) -> None:
@@ -87,23 +99,34 @@ class CreateBlockMode(EditorMode[Editor]):
             self._editor.pop_mode()  # No adding a block for us
 
         # TODO: Once projectors are sorted fix.
-        self.selection_point = self._editor.cursor
-        layout_pos = self._editor.cursor
-        top = layout_pos[1] > 0.5 * self._height
-        right = layout_pos[0] > 0.5 * self._width
+        self.selection_point = pos = self._editor._cursor
+        layout_pos = self._editor._cursor
+        top = layout_pos[1] > 0.5 * self._editor.height
+        right = layout_pos[0] > 0.5 * self._editor.width
 
         dx = style.format.padding if right else -style.format.padding
         dy = style.format.padding if top else -style.format.padding
-        self.add_block_popup = SelectionPopup(tuple(PopupAction("")))
+        self.add_block_popup = SelectionPopup(
+            tuple(
+                PopupAction(typ.name, self._create_new_block, typ, pos)
+                for typ in self._editor.graph_controller.graph.available
+            ),
+            top,
+            right,
+            None,
+            self._editor.overlay_layer
+        )
+        self.add_block_popup.update_position(
+            (self.selection_point[0] + dx, self.selection_point[1] + dy)
+        )
 
     def _create_new_block(
         self, typ: BlockType, position: tuple[float, float]
-    ) -> BlockElement:
+    ):
         block = Block(typ)
         element = BlockElement(block)
         element.update_position(position)
         self._editor.graph_controller.add_block(element)
-        return element
 
 
 class CreateConnectionMode(EditorMode[Editor]): ...

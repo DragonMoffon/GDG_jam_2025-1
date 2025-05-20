@@ -5,8 +5,9 @@ from pyglet.graphics import Group
 
 from station.gui import GUI
 from station.controller import read_graph
-from .base import Editor, EditorMode
 
+from .base import Editor, EditorMode
+from .modes import NoneMode
 
 class SandboxEditor(Editor):
 
@@ -15,4 +16,4 @@ class SandboxEditor(Editor):
         Editor.__init__(self, initial, gui, layer, read_graph(source_path, gui, True))
 
 
-class SandboxNoneMode(EditorMode[SandboxEditor]): ...
+class SandboxNoneMode(NoneMode[SandboxEditor]): ...

@@ -3,7 +3,7 @@ from pyglet.graphics import Group
 from arcade import Camera2D, LBWH
 
 from station.input import Button, Axis
-from station.gui import GUI, ProjectorGroup
+from station.gui import GUI, ProjectorGroup, Point
 from station.controller import GraphController
 
 
@@ -44,12 +44,12 @@ class Editor:
         self._base_layer: Group | None = layer
         self._controller: GraphController = controller
 
-        self._content_camera: Camera2D(LBWH(0, 0, size[0], size[1]))
+        self._content_camera: Camera2D = Camera2D(LBWH(0, 0, size[0], size[1]))
         self._content_layer = ProjectorGroup(self._content_camera, 0, layer)
-        self._overlay_camera: Camera2D(LBWH(0, 0, size[0], size[1]))
+        self._overlay_camera: Camera2D = Camera2D(LBWH(0, 0, size[0], size[1]))
         self._overlay_layer = ProjectorGroup(self._overlay_camera, 1, layer)
 
-        self._cursor: tuple[float, float] = ()
+        self._cursor: tuple[float, float] = (0.0, 0.0)
 
         # -- Mode Attributes --
         self._mode_stack: list[EditorMode[Editor]] = [intial_mode]
@@ -80,6 +80,14 @@ class Editor:
     @property
     def graph_controller(self) -> GraphController:
         return self._controller
+    
+    @property
+    def width(self) -> float:
+        return self._size[0]
+    
+    @property
+    def height(self) -> float:
+        return self._size[1]
 
     def push_mode(self, mode: EditorMode[Editor]) -> None:
         # Push a mode onto the stack so that
@@ -200,3 +208,11 @@ class Editor:
         # to be in NoneMode when we
         # show/hide the editor
         pass
+
+    # -- Utility Functionality --
+    def pan_camera(self, dx: float, dy: float):
+        pass
+
+    def move_camera(self, new_position: Point, length: float):
+        pass
+

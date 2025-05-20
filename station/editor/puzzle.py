@@ -1,13 +1,12 @@
 from __future__ import annotations
 from pyglet.graphics import Group
 
-from resources import Pat
-
 from station.gui import GUI
 from station.controller import GraphController
 from station.puzzle import Puzzle
 
-from .base import Editor, EditorMode
+from .base import Editor
+from .modes import NoneMode
 
 
 class PuzzleEditor(Editor):
@@ -28,4 +27,4 @@ class PuzzleEditor(Editor):
         return self._puzzle
 
 
-class PuzzleNoneMode(EditorMode[PuzzleEditor]): ...
+class PuzzleNoneMode(NoneMode[PuzzleEditor]): ...
