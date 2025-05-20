@@ -6,7 +6,14 @@ from tomllib import load as load_toml
 from dataclasses import dataclass
 
 from station.comms import Communication
-from station.node.graph import BlockType, TestCase, OperationValue, STR_CAST, TYPE_CAST, _variable
+from station.node.graph import (
+    BlockType,
+    TestCase,
+    OperationValue,
+    STR_CAST,
+    TYPE_CAST,
+    _variable,
+)
 import station.node.blocks  # noqa: F401 -- importing sets up the blocks
 
 import resources.puzzles as pzls
@@ -50,7 +57,7 @@ class Puzzle:
 
 
 def load_puzzle(path: Path) -> Puzzle:
-    with open(path, "rb") as fp:
+    with path.open("rb") as fp:
         raw_data = load_toml(fp)
 
     config_data = raw_data["Config"]
@@ -80,10 +87,18 @@ def load_puzzle(path: Path) -> Puzzle:
     output_type = BlockType("Output", _variable, inputs=outputs.copy(), exclusive=True)
 
     if const_data:
-        const_types = {name: TYPE_CAST[type(value)] for name, value in const_data.items()}
-        const_values = {name: const_types[name](value) for name, value in const_data.items()}
+        const_types = {
+            name: TYPE_CAST[type(value)] for name, value in const_data.items()
+        }
+        const_values = {
+            name: const_types[name](value) for name, value in const_data.items()
+        }
         const_type = BlockType(
-            "Constant", _variable, outputs=const_types.copy(), config=const_types.copy(), exclusive=True
+            "Constant",
+            _variable,
+            outputs=const_types.copy(),
+            config=const_types.copy(),
+            exclusive=True,
         )
     else:
         const_values = {}
@@ -106,12 +121,14 @@ def load_puzzle(path: Path) -> Puzzle:
         }
         tests.append(TestCase(case_inputs, case_outputs))
 
-    comms_data: list[dict[str, str]] = raw_data.get(
-        "Comms", []
-    )
+    comms_data: list[dict[str, str]] = raw_data.get("Comms", [])
     comms: list[Communication] = []
     for comm in comms_data:
-        comms.append(Communication(comm["dialogue"], comm.get("speaker", None), comm.get("mood", None)))
+        comms.append(
+            Communication(
+                comm["dialogue"], comm.get("speaker", None), comm.get("mood", None)
+            )
+        )
 
     alert_data = raw_data["Alert"]
     alert = PuzzleAlert(
@@ -137,7 +154,7 @@ def load_puzzle(path: Path) -> Puzzle:
         constant_values=const_values,
         source_graph=graph,
         tests=tuple(tests),
-        comms=tuple(comms)
+        comms=tuple(comms),
     )
 
 

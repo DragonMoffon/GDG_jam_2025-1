@@ -1,7 +1,10 @@
 from resources import style
 
 from station.gui.core import Point
+from station.gui.util import PopupAction, SelectionPopup
 from station.gui.graph import BlockElement, ConnectionElement
+
+from station.node.graph import Block, BlockType
 
 from station.input import inputs, Button
 
@@ -69,7 +72,38 @@ class DragConnectionMode(EditorMode[Editor]):
             self._editor.pop_mode()
 
 
-class CreateBlockMode(EditorMode[Editor]): ...
+class CreateBlockMode(EditorMode[Editor]):
+
+    def __init__(
+        self,
+        editor: Editor,
+    ):
+        super().__init__(editor)
+        self.selection_point: Point = (0.0, 0.0)
+        self.add_block_popup: SelectionPopup | None = None
+
+    def enter(self) -> None:
+        if not self._editor.graph_controller.graph.available:
+            self._editor.pop_mode()  # No adding a block for us
+
+        # TODO: Once projectors are sorted fix.
+        self.selection_point = self._editor.cursor
+        layout_pos = self._editor.cursor
+        top = layout_pos[1] > 0.5 * self._height
+        right = layout_pos[0] > 0.5 * self._width
+
+        dx = style.format.padding if right else -style.format.padding
+        dy = style.format.padding if top else -style.format.padding
+        self.add_block_popup = SelectionPopup(tuple(PopupAction("")))
+
+    def _create_new_block(
+        self, typ: BlockType, position: tuple[float, float]
+    ) -> BlockElement:
+        block = Block(typ)
+        element = BlockElement(block)
+        element.update_position(position)
+        self._editor.graph_controller.add_block(element)
+        return element
 
 
 class CreateConnectionMode(EditorMode[Editor]): ...

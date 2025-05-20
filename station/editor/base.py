@@ -1,9 +1,9 @@
 from __future__ import annotations
 from pyglet.graphics import Group
-from arcade import Camera2D
+from arcade import Camera2D, LBWH
 
 from station.input import Button, Axis
-from station.gui import GUI
+from station.gui import GUI, ProjectorGroup
 from station.controller import GraphController
 
 
@@ -32,15 +32,22 @@ class Editor:
 
     def __init__(
         self,
+        size: tuple[int, int],
         intial_mode: EditorMode[Editor],
         gui: GUI,
         layer: Group | None,
         controller: GraphController,
     ) -> None:
         # -- Editor Attributes --
+        self._size: tuple[int, int] = size
         self._gui: GUI = gui
         self._base_layer: Group | None = layer
         self._controller: GraphController = controller
+
+        self._content_camera: Camera2D(LBWH(0, 0, size[0], size[1]))
+        self._content_layer = ProjectorGroup(self._content_camera, 0, layer)
+        self._overlay_camera: Camera2D(LBWH(0, 0, size[0], size[1]))
+        self._overlay_layer = ProjectorGroup(self._overlay_camera, 1, layer)
 
         self._cursor: tuple[float, float] = ()
 
@@ -54,11 +61,30 @@ class Editor:
         self._command_offset: int = 0
         self._max_command_stack: int = -1  # TODO
 
+    @property
+    def gui(self) -> GUI:
+        return self._gui
+
+    @property
+    def layer(self) -> Group | None:
+        return self._base_layer
+
+    @property
+    def content_layer(self) -> ProjectorGroup:
+        return self._content_layer
+
+    @property
+    def overlay_layer(self) -> ProjectorGroup:
+        return self._overlay_layer
+
+    @property
+    def graph_controller(self) -> GraphController:
+        return self._controller
+
     def push_mode(self, mode: EditorMode[Editor]) -> None:
         # Push a mode onto the stack so that
         # we can pop it off later returning
         # to our previous state (whatever it was).
-        # self._mode.exit() -- Exiting would stop this actually being a stack.
         self._mode_stack.append(mode)
         self._mode = mode
         self._mode.enter()
@@ -74,7 +100,6 @@ class Editor:
         self._mode.exit()
         self._mode_stack.pop(-1)
         self._mode = self._mode_stack[-1]
-        # self._mode.enter() -- Entering is only needed if we exit when we push.
 
     def set_mode(self, mode: EditorMode[Editor]) -> None:
         # Replace the top mode of the stack,
