@@ -4,7 +4,7 @@ from pathlib import Path
 from tomllib import load
 from uuid import UUID, uuid4
 from dataclasses import dataclass
-from typing import Self, TypeVar, Any, Generic, Protocol, Mapping, Callable
+from typing import Self, TypeVar, Any, Generic, Mapping, Callable
 
 from tomlkit import document, table, aot, inline_table, dump  # type: ignore -- unknownMemberType
 
@@ -118,25 +118,25 @@ TYPE_CAST: dict[type, type[OperationValue]] = {
     int: IntValue,
     float: FloatValue,
     bool: BoolValue,
-    str: StrValue
+    str: StrValue,
 }
 
 OperationReturn = (
-        Mapping[str, OperationValue]
-        | Mapping[str, FloatValue]
-        | Mapping[str, FloatValue | IntValue]
-        | Mapping[str, FloatValue | IntValue | BoolValue]
-        | Mapping[str, FloatValue | IntValue | StrValue]
-        | Mapping[str, FloatValue | BoolValue]
-        | Mapping[str, FloatValue | BoolValue | StrValue]
-        | Mapping[str, FloatValue | StrValue]
-        | Mapping[str, IntValue]
-        | Mapping[str, IntValue | BoolValue]
-        | Mapping[str, IntValue | BoolValue | StrValue]
-        | Mapping[str, IntValue | StrValue]
-        | Mapping[str, BoolValue]
-        | Mapping[str, BoolValue | StrValue]
-        | Mapping[str, StrValue]
+    Mapping[str, OperationValue]
+    | Mapping[str, FloatValue]
+    | Mapping[str, FloatValue | IntValue]
+    | Mapping[str, FloatValue | IntValue | BoolValue]
+    | Mapping[str, FloatValue | IntValue | StrValue]
+    | Mapping[str, FloatValue | BoolValue]
+    | Mapping[str, FloatValue | BoolValue | StrValue]
+    | Mapping[str, FloatValue | StrValue]
+    | Mapping[str, IntValue]
+    | Mapping[str, IntValue | BoolValue]
+    | Mapping[str, IntValue | BoolValue | StrValue]
+    | Mapping[str, IntValue | StrValue]
+    | Mapping[str, BoolValue]
+    | Mapping[str, BoolValue | StrValue]
+    | Mapping[str, StrValue]
 )
 
 BlockOperation = Callable[..., OperationReturn]
@@ -364,9 +364,11 @@ class Graph:
         input_block: UUID | None = None,
         output_block: UUID | None = None,
         *,
+        source: str | None = None,
         _: None = None,
     ) -> None:
         self._name: str = name
+        self._source: str | None = source
 
         self._blocks: dict[UUID, Block] = {}
         self._connections: dict[UUID, Connection] = {}
@@ -397,6 +399,10 @@ class Graph:
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def source(self) -> str | None:
+        return self._source
 
     @property
     def blocks(self) -> tuple[Block, ...]:

@@ -86,10 +86,20 @@ class SaveData:
     def number_attempted(self) -> int:
         return len(self._complete) + len(self._incomplete)
 
+    def update_graph(
+        self, graph: GraphController, puzzle: Puzzle | None = None
+    ) -> None:
+        """ """
+        pass
+
+    def save_graph(self, graph: GraphController, puzzle: Puzzle | None = None) -> None:
+        pass
+
     def save_puzzle(self, puzzle: Puzzle, solution: GraphController) -> None:
-        if puzzle.name in self._complete:
-            return  # TODO: discuss what to do when saving an already solved puzzle?? (turn into sandbox but _how_?)
-        target = f"{puzzle.name}.blk"
+        if puzzle.name not in self._complete:
+            target = f"{puzzle.name}_incomplete.blk"
+        else:
+            target = f"{puzzle.name}_sandbox.blk"
         pth = self._root / target
         self._incomplete[puzzle.name] = target
         write_graph_from_level(solution, puzzle, pth)
