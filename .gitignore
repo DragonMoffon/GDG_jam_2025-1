@@ -57,6 +57,7 @@ cython_debug/
 .save/
 
 # crash logs
+saves/
 crash-*/
 crash-*.txt
 early-crash*.txt
