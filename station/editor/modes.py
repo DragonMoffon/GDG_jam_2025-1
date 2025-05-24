@@ -35,7 +35,7 @@ class DragBlockMode(EditorMode[Editor]):
     def enter(self) -> None:
         self._selected_block.select()
         pos = self._selected_block.get_position()
-        cursor = self._editor._cursor  # TODO: Once projectors are sorted fix.
+        cursor = self._editor.content_cursor
         self._offset = cursor[0] - pos[0], cursor[1] - pos[1]
 
     def exit(self) -> None:
@@ -73,8 +73,7 @@ class DragConnectionMode(EditorMode[Editor]):
         pass
 
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
-        # TODO: Once projectors are sorted fix.
-        self._selected_connection.update_link(self._link, (x, y))
+        self._selected_connection.update_link(self._link, self._editor.content_cursor)
 
     def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
         if pressed:
@@ -99,8 +98,8 @@ class CreateBlockMode(EditorMode[Editor]):
             self._editor.pop_mode()  # No adding a block for us
 
         # TODO: Once projectors are sorted fix.
-        self.selection_point = pos = self._editor._cursor
-        layout_pos = self._editor._cursor
+        self.selection_point = pos = self._editor.content_cursor
+        layout_pos = self._editor.screen_cursor
         top = layout_pos[1] > 0.5 * self._editor.height
         right = layout_pos[0] > 0.5 * self._editor.width
 

@@ -89,6 +89,34 @@ class Editor:
     def height(self) -> float:
         return self._size[1]
 
+    @property
+    def content_camera(self) -> Camera2D:
+        return self._content_camera
+    
+    @property
+    def content_cursor(self) -> Point:
+        x, y, *_ = self._content_camera.unproject(self._cursor)
+        return x, y
+    
+    def project_content_point(self, position: Point) -> Point:
+        return self._content_camera.project(position)
+    
+    @property
+    def overlay_camera(self) -> Camera2D:
+        return self._overlay_camera
+    
+    @property
+    def overlay_cursor(self) -> Point:
+        x, y, *_ = self._overlay_camera.unproject(self._cursor)
+        return x, y
+    
+    def project_overlay_point(self, position: Point) -> Point:
+        return self._overlay_camera.project(position)
+    
+    @property
+    def screen_cursor(self) -> Point:
+        return self._cursor
+
     def push_mode(self, mode: EditorMode[Editor]) -> None:
         # Push a mode onto the stack so that
         # we can pop it off later returning
