@@ -11,8 +11,10 @@ import pyglet.gl as pygl
 _backing_vertex_souce = """#version 330 core
 in vec3 in_position;
 in vec2 in_uv;
+in vec4 in_color;
 
 out vec2 vs_uv;
+out vec4 vs_color;
 
 uniform WindowBlock {
     mat4 projection;
@@ -22,17 +24,19 @@ uniform WindowBlock {
 void main(){
     gl_Position = window.projection * window.view * vec4(in_position, 1.0);
     vs_uv = in_uv;
+    vs_color = in_color;
 }
 """
 _backing_fragment_source = """#version 330 core
 in vec2 vs_uv;
+in vec4 vs_color;
 
 out vec4 fs_colour;
 
 uniform sampler2D backing;
 
 void main(){
-    fs_colour = texture(backing, vs_uv);
+    fs_colour = texture(backing, vs_uv) * vs_color;
 }
 
 """
@@ -120,6 +124,7 @@ class Backing:
         wrap_y: bool = True,
         linear_x: bool = False,
         linear_y: bool = False,
+        color: tuple[int, int, int] | tuple[int, int, int, int] = (255, 255, 255, 255),
         program: ShaderProgram | None = None,
         batch: Batch | None = None,
         group: Group | None = None,
@@ -131,6 +136,7 @@ class Backing:
         self._size: tuple[float, float] = size
         self._scale: tuple[int, int] = image.width, image.height
         self._shift: tuple[float, float] = shift
+        self._color: tuple[float, float, float, float] = (color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, 1.0 if len(color) < 4 else color[3] / 255.0)
 
         self._wrap = (
             gl.REPEAT if wrap_x else gl.CLAMP_TO_EDGE,
@@ -165,6 +171,7 @@ class Backing:
         return sl, sb, sl, st, sr, st, sr, sb
 
     def _create_vertex_list(self) -> None:
+        c = self._color
         self._vertex_list = self._program.vertex_list_indexed(
             4,
             pygl.GL_TRIANGLES,
@@ -173,6 +180,7 @@ class Backing:
             self._group,  # type: ignore
             in_position=("f", self._calculate_position()),
             in_uv=("f", self._calculate_uv_shift()),
+            in_color=("f", (*c, *c, *c, *c))
         )
 
     def _create_backing_group(self):

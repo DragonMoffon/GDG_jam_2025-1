@@ -371,9 +371,8 @@ class ConnectionNodeElement(Element):
         self._sprite = Sprite(
             style.game.editor.node_inactive, 0.0, 0.0, 0.0, parent=self
         )
-        self._sprite.width = 2 * style.format.point_radius
-        self._sprite.height = 2 * style.format.point_radius
-        self._sprite.color = style.colors.highlight
+        self._sprite.update_size((2 * style.format.point_radius, 2 * style.format.point_radius))
+        self._sprite.sprite.color = style.colors.highlight
 
         self._name: str = name
         self._label: Label | None = None
@@ -418,7 +417,7 @@ class ConnectionNodeElement(Element):
         return self._label.get_position()
 
     def get_size(self) -> tuple[float, float]:
-        w, h = self._sprite.get_size
+        w, h = self._sprite.get_size()
         if self._label is None:
             return w, h
         return w + style.format.padding + self._label.width, h

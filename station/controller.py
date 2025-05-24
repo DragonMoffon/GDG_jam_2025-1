@@ -211,7 +211,7 @@ def read_graph(path: Path, gui: GUI, sandbox: bool = False) -> GraphController:
     )
 
     variable_types: dict[str, BlockType] = {}
-    for variable in block_table.get("Variable", []):
+    for variable in block_table.get("Variables", []):
         inputs = {name: STR_CAST[typ] for name, typ in variable["inputs"].items()}
         outputs = {name: STR_CAST[typ] for name, typ in variable["outputs"].items()}
         config = outputs.copy()
@@ -239,7 +239,7 @@ def read_graph(path: Path, gui: GUI, sandbox: bool = False) -> GraphController:
             for name, value in block.get("config", {}).items()
         }
 
-        graph_block = Block(block_type, uid, *config)
+        graph_block = Block(block_type, uid, **config)
         element = BlockElement(graph_block)
         element.update_position(block.get("position", (0.0, 0.0)))
         controller.add_block(element, add_temp=False)

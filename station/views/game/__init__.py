@@ -14,7 +14,7 @@ from station.puzzle import Puzzle
 from station.graphics.background import ParallaxBackground
 from station.comms import comms as station_comms
 
-# from .editor import EditorFrame
+from .editor import EditorFrame
 # from .settings import SettingsFrame
 from .comms import CommsFrame
 # from .info import InfoFrame
@@ -90,13 +90,10 @@ class GameView(View):
             batch=self._gui.renderer,
         )
         self._logo.color = (255, 255, 255, 0)
-        self._editor_frame = Frame(
-            "EDITOR",
-            0.0,
-            (1000.0, self.height),
-            layer=self._frame_layer,
-        )
+        
+        self._editor_frame = EditorFrame(0.0, self.height, layer=self._frame_layer)
         self._gui.add_element(self._editor_frame)
+        self._editor_frame.open_sandbox()
         tab_offset = self._editor_frame.tab_height
 
         self._info_frame = Frame(

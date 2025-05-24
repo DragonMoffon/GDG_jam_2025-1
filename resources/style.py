@@ -2,7 +2,6 @@ from importlib.resources import path
 from enum import IntEnum
 from pathlib import Path
 from zipfile import Path as ZipPath
-import zipfile
 from typing import Any, Self
 from dataclasses import dataclass, fields
 import tomllib
@@ -214,7 +213,8 @@ class Panels(StyleTable):
 @dataclass
 class Editor(StyleTable):
     blink_speed: float
-    background: Path
+    grid_color: tuple[int, int, int, int]
+    grid_texture: AbstractImage
 
     puzzle_alert: AbstractImage
 
@@ -237,7 +237,7 @@ class Editor(StyleTable):
     def create(cls, data: dict[str, Any], source: StylePath) -> Self:
         return cls(
             blink_speed=data.pop("blink_speed"),
-            background=source / data.pop("background"),
+            grid_color=tuple(data.pop("grid_color")),
             **{name: load_texture(source / pth) for name, pth in data.items()},
         )
 

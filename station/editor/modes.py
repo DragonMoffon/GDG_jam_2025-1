@@ -22,7 +22,14 @@ class PanCameraMode(EditorMode[Editor]):
         super().__init__(editor)
         
     def on_cursor_motion(self, x: float, y: float, dx: float, dy: float) -> None:
-        pass
+        pos = self._editor.content_camera.position
+        self._editor.move_camera((pos[0] - dx, pos[1] - dy))
+
+    def on_input(self, button: Button, modifiers: int, pressed: bool) -> None:
+        if pressed or button != inputs.PRIMARY_CLICK:
+            return
+        
+        self._editor.pop_mode()
 
 class DragBlockMode(EditorMode[Editor]):
 
@@ -97,7 +104,6 @@ class CreateBlockMode(EditorMode[Editor]):
         if not self._editor.graph_controller.graph.available:
             self._editor.pop_mode()  # No adding a block for us
 
-        # TODO: Once projectors are sorted fix.
         self.selection_point = pos = self._editor.content_cursor
         layout_pos = self._editor.screen_cursor
         top = layout_pos[1] > 0.5 * self._editor.height

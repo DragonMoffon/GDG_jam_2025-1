@@ -2,10 +2,12 @@ from __future__ import annotations
 from pyglet.graphics import Group
 from arcade import Camera2D, LBWH
 
+from resources import style
+
 from station.input import Button, Axis
 from station.gui import GUI, ProjectorGroup, Point
 from station.controller import GraphController
-
+from station.graphics.backing import Backing
 
 class EditorCommand:
     def execute(self): ...
@@ -26,7 +28,6 @@ class EditorMode[E: Editor]:
     ) -> None: ...
     def on_update(self, delta_time: float) -> None: ...
     def on_draw(self) -> None: ...
-
 
 class Editor:
 
@@ -50,6 +51,15 @@ class Editor:
         self._overlay_layer = ProjectorGroup(self._overlay_camera, 1, layer)
 
         self._cursor: tuple[float, float] = (0.0, 0.0)
+
+        self._backing = Backing(
+            style.game.editor.grid_texture,
+            (0.0, 0.0),
+            size,
+            color=style.game.editor.grid_color,
+            group=self._base_layer,
+        )
+        self._backing.batch = gui.renderer
 
         # -- Mode Attributes --
         self._mode_stack: list[EditorMode[Editor]] = [intial_mode]
@@ -97,10 +107,7 @@ class Editor:
     def content_cursor(self) -> Point:
         x, y, *_ = self._content_camera.unproject(self._cursor)
         return x, y
-    
-    def project_content_point(self, position: Point) -> Point:
-        return self._content_camera.project(position)
-    
+
     @property
     def overlay_camera(self) -> Camera2D:
         return self._overlay_camera
@@ -110,8 +117,6 @@ class Editor:
         x, y, *_ = self._overlay_camera.unproject(self._cursor)
         return x, y
     
-    def project_overlay_point(self, position: Point) -> Point:
-        return self._overlay_camera.project(position)
     
     @property
     def screen_cursor(self) -> Point:
@@ -238,9 +243,12 @@ class Editor:
         pass
 
     # -- Utility Functionality --
-    def pan_camera(self, dx: float, dy: float):
+    def move_camera(self, position: Point) -> Point:
+        self._content_camera.position = position
         pass
 
-    def move_camera(self, new_position: Point, length: float):
-        pass
-
+    def project_content_point(self, position: Point) -> Point:
+        return self._content_camera.project(position)
+    
+    def project_overlay_point(self, position: Point) -> Point:
+        return self._overlay_camera.project(position)
